@@ -4,4 +4,10 @@
 ...
 
 ## implementation in dir: code
-...
+### Install
+To install hmmlearn library, run:
+```
+$ cd code/hmmlearn
+$ python setup-py install
+```
+
