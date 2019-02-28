@@ -8,6 +8,6 @@
 To install hmmlearn library, run:
 ```
 $ cd code/hmmlearn
-$ python setup-py install
+$ python setup.py install
 ```
 
