@@ -20,7 +20,7 @@ from .stats import log_multivariate_normal_density
 from .base import _BaseHMM
 from .utils import iter_from_X_lengths, normalize, fill_covars
 
-__all__ = ["GMMHMM", "GaussianHMM", "MultinomialHMM"]
+__all__ = ["GMMHMM", "GaussianHMM", "MultinomialHMM", "GenHMM"]
 
 COVARIANCE_TYPES = frozenset(("spherical", "diag", "full", "tied"))
 
@@ -856,6 +856,225 @@ class GMMHMM(_BaseHMM):
 
     def _do_mstep(self, stats):
         super(GMMHMM, self)._do_mstep(stats)
+
+        n_samples = stats['n_samples']
+        n_features = self.n_features
+
+        # Maximizing weights
+        alphas_minus_one = self.weights_prior - 1
+        new_weights_numer = stats['post_mix_sum'] + alphas_minus_one
+        new_weights_denom = (
+            stats['post_sum'] + np.sum(alphas_minus_one, axis=1)
+        )[:, np.newaxis]
+        new_weights = new_weights_numer / new_weights_denom
+
+        # Maximizing means
+        lambdas, mus = self.means_weight, self.means_prior
+        new_means_numer = np.einsum(
+            'ijk,il->jkl',
+            stats['post_comp_mix'], stats['samples']
+        ) + lambdas[:, :, np.newaxis] * mus
+        new_means_denom = (stats['post_mix_sum'] + lambdas)[:, :, np.newaxis]
+        new_means = new_means_numer / new_means_denom
+
+        # Maximizing covariances
+        centered_means = self.means_ - mus
+
+        if self.covariance_type == 'full':
+            centered = stats['centered'].reshape((
+                n_samples, self.n_components, self.n_mix, self.n_features, 1
+            ))
+            centered_t = stats['centered'].reshape((
+                n_samples, self.n_components, self.n_mix, 1, self.n_features
+            ))
+            centered_dots = centered * centered_t
+
+            psis_t = np.transpose(self.covars_prior, axes=(0, 1, 3, 2))
+            nus = self.covars_weight
+
+            centr_means_resh = centered_means.reshape((
+                self.n_components, self.n_mix, self.n_features, 1
+            ))
+            centr_means_resh_t = centered_means.reshape((
+                self.n_components, self.n_mix, 1, self.n_features
+            ))
+            centered_means_dots = centr_means_resh * centr_means_resh_t
+
+            new_cov_numer = np.einsum(
+                'ijk,ijklm->jklm',
+                stats['post_comp_mix'], centered_dots
+            ) + psis_t + (lambdas[:, :, np.newaxis, np.newaxis] *
+                          centered_means_dots)
+            new_cov_denom = (
+                stats['post_mix_sum'] + 1 + nus + self.n_features + 1
+            )[:, :, np.newaxis, np.newaxis]
+
+            new_cov = new_cov_numer / new_cov_denom
+        elif self.covariance_type == 'diag':
+            centered2 = stats['centered'] ** 2
+            centered_means2 = centered_means ** 2
+
+            alphas = self.covars_prior
+            betas = self.covars_weight
+
+            new_cov_numer = np.einsum(
+                'ijk,ijkl->jkl',
+                stats['post_comp_mix'], centered2
+            ) + lambdas[:, :, np.newaxis] * centered_means2 + 2 * betas
+            new_cov_denom = (
+                stats['post_mix_sum'][:, :, np.newaxis] + 1 + 2 * (alphas + 1)
+            )
+
+            new_cov = new_cov_numer / new_cov_denom
+        elif self.covariance_type == 'spherical':
+            centered_norm2 = np.sum(stats['centered'] ** 2, axis=-1)
+
+            alphas = self.covars_prior
+            betas = self.covars_weight
+
+            centered_means_norm2 = np.sum(centered_means ** 2, axis=-1)
+
+            new_cov_numer = np.einsum(
+                'ijk,ijk->jk',
+                stats['post_comp_mix'], centered_norm2
+            ) + lambdas * centered_means_norm2 + 2 * betas
+            new_cov_denom = (
+                n_features * stats['post_mix_sum'] + n_features +
+                2 * (alphas + 1)
+            )
+
+            new_cov = new_cov_numer / new_cov_denom
+        elif self.covariance_type == 'tied':
+            centered = stats['centered'].reshape((
+                n_samples, self.n_components, self.n_mix, self.n_features, 1
+            ))
+            centered_t = stats['centered'].reshape((
+                n_samples, self.n_components, self.n_mix, 1, self.n_features
+            ))
+            centered_dots = centered * centered_t
+
+            psis_t = np.transpose(self.covars_prior, axes=(0, 2, 1))
+            nus = self.covars_weight
+
+            centr_means_resh = centered_means.reshape((
+                self.n_components, self.n_mix, self.n_features, 1
+            ))
+            centr_means_resh_t = centered_means.reshape((
+                self.n_components, self.n_mix, 1, self.n_features
+            ))
+            centered_means_dots = centr_means_resh * centr_means_resh_t
+
+            lambdas_cmdots_prod_sum = np.einsum(
+                'ij,ijkl->ikl',
+                lambdas, centered_means_dots
+            )
+
+            new_cov_numer = np.einsum(
+                'ijk,ijklm->jlm',
+                stats['post_comp_mix'], centered_dots
+            ) + lambdas_cmdots_prod_sum + psis_t
+            new_cov_denom = (
+                stats['post_sum'] + self.n_mix + nus + self.n_features + 1
+            )[:, np.newaxis, np.newaxis]
+
+            new_cov = new_cov_numer / new_cov_denom
+
+        # Assigning new values to class members
+        self.weights_ = new_weights
+        self.means_ = new_means
+        self.covars_ = new_cov
+
+
+class GenHMM(_BaseHMM):
+
+    def __init__(self, n_components=1, startprob_prior=1.0, transmat_prior=1.0,
+                 algorithm="viterbi", random_state=None, n_iter=10, tol=1e-2,
+                 verbose=False, params="stmcw",
+                 init_params="stmcw"):
+
+        _BaseHMM.__init__(self, n_components,
+                          startprob_prior=startprob_prior,
+                          transmat_prior=transmat_prior,
+                          algorithm=algorithm, random_state=random_state,
+                          n_iter=n_iter, tol=tol, verbose=verbose,
+                          params=params, init_params=init_params)
+
+
+    def _init(self, X, lengths=None):
+        # Initializes Start and transition matrix to 1 / n_components
+        super(GenHMM, self)._init(X, lengths=lengths)
+
+
+    def _generate_sample_from_state(self, state, random_state=None):
+        if random_state is None:
+            random_state = self.random_state
+        random_state = check_random_state(random_state)
+        # TODO: Our stuff
+
+
+    def _compute_log_likelihood(self, X):
+        n_samples, _ = X.shape
+        res = np.zeros((n_samples, self.n_components))
+        # TODO: Our stuff
+        return res
+
+    def _compute_posteriors(self, fwdlattice, bwdlattice):
+        # gamma is guaranteed to be correctly normalized by logprob at
+        # all frames, unless we do approximate inference using pruning.
+        # So, we will normalize each frame explicitly in case we
+        # pruned too aggressively.
+
+        # TODO: Our stuff
+
+        return fwdlattice + bwdlattice
+
+
+    def _initialize_sufficient_statistics(self):
+        stats = super(GenHMM, self)._initialize_sufficient_statistics()
+        stats['n_samples'] = 0
+        stats['post_comp_mix'] = None
+        stats['post_mix_sum'] = np.zeros((self.n_components, self.n_mix))
+        stats['post_sum'] = np.zeros(self.n_components)
+        stats['samples'] = None
+        stats['centered'] = None
+        return stats
+
+
+    def _accumulate_sufficient_statistics(self, stats, X, framelogprob,
+                                          post_comp, fwdlattice, bwdlattice):
+
+
+        super(GMMHMM, self)._accumulate_sufficient_statistics(
+            stats, X, framelogprob, post_comp, fwdlattice, bwdlattice
+        )
+        # TODO: Our stuff
+
+        n_samples, _ = X.shape
+
+        stats['n_samples'] = n_samples
+        stats['samples'] = X
+
+        prob_mix = np.zeros((n_samples, self.n_components, self.n_mix))
+        for p in range(self.n_components):
+            log_denses = self._compute_log_weighted_gaussian_densities(X, p)
+            with np.errstate(under="ignore"):
+                prob_mix[:, p, :] = np.exp(log_denses) + np.finfo(np.float).eps
+
+        prob_mix_sum = np.sum(prob_mix, axis=2)
+        post_mix = prob_mix / prob_mix_sum[:, :, np.newaxis]
+        post_comp_mix = post_comp[:, :, np.newaxis] * post_mix
+        stats['post_comp_mix'] = post_comp_mix
+
+        stats['post_mix_sum'] = np.sum(post_comp_mix, axis=0)
+        stats['post_sum'] = np.sum(post_comp, axis=0)
+
+        stats['centered'] = X[:, np.newaxis, np.newaxis, :] - self.means_
+
+
+    def _do_mstep(self, stats):
+        super(GMMHMM, self)._do_mstep(stats)
+
+        # TODO: Our stuff
 
         n_samples = stats['n_samples']
         n_features = self.n_features
