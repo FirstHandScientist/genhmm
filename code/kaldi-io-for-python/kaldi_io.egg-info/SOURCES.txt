@@ -1,0 +1,9 @@
+README.md
+setup.py
+kaldi_io/__init__.py
+kaldi_io/kaldi_io.py
+kaldi_io.egg-info/PKG-INFO
+kaldi_io.egg-info/SOURCES.txt
+kaldi_io.egg-info/dependency_links.txt
+kaldi_io.egg-info/requires.txt
+kaldi_io.egg-info/top_level.txt

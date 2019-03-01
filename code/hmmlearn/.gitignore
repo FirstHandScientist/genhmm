@@ -1,0 +1,16 @@
+*.egg-info/
+.*.swp
+*.o
+*.pyc
+*.pyd
+*.so
+.cache/
+.eggs/
+.ipynb_checkpoints/
+.pytest_cache/
+build/
+dist/
+htmlcov/
+oprofile_data/
+.coverage
+.gdb_history

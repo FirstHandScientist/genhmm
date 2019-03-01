@@ -1,0 +1,5 @@
+/code/hmmlearn/.git*
+.idea/
+data/
+*.pkl
+timit-preprocessor/data*
