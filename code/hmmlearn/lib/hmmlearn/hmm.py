@@ -1010,12 +1010,13 @@ class GenHMM(_BaseHMM):
             random_state = self.random_state
         random_state = check_random_state(random_state)
         # TODO: Our stuff
-
+        ##  The is the sampling function of our model, we already have actually.
 
     def _compute_log_likelihood(self, X):
         n_samples, _ = X.shape
         res = np.zeros((n_samples, self.n_components))
         # TODO: Our stuff
+        ## This is the forward function of our model, forwarding gives the log likelihood value
         return res
 
     def _compute_posteriors(self, fwdlattice, bwdlattice):
@@ -1025,6 +1026,7 @@ class GenHMM(_BaseHMM):
         # pruned too aggressively.
 
         # TODO: Our stuff
+        ## computing the prob(s|X)??
 
         return fwdlattice + bwdlattice
 
