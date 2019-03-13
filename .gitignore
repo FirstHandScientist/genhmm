@@ -1,10 +1,19 @@
+# Other sub git repo
 /code/hmmlearn/.git*
+
+# Pycharm cache
 .idea/
 
-*.pkl
-timit-preprocessor/data*
-
-#Manuscript
+# Intermediate datafiles
+data/TIMIT.zip
+data/TIMIT/*
+data/timit/*
+*.scp
+*.lbl
+*.ark
+.data
+data/34e2b78745138186976cbc27939b1b34d18bd5b3.torrent
+# Latex intermediates
 *.aux
 *.log
 
