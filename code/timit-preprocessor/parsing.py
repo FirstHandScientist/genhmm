@@ -4,7 +4,6 @@ import os
 import sys
 import argparse
 
-
 def main():
     target_folder = os.path.join(args.datapath, args.folder)
     target = args.folder
@@ -38,7 +37,7 @@ if __name__ == "__main__":
     parser.add_argument('folder', metavar="<train|test>", type=str)
     args = parser.parse_args()
 
-    MATERIAL_PATH = 'data/material'
+    MATERIAL_PATH = '.data/material'
     if not os.path.exists(MATERIAL_PATH):
         os.makedirs(MATERIAL_PATH)
 
