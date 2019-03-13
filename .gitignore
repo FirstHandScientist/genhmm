@@ -3,3 +3,8 @@
 data/
 *.pkl
 timit-preprocessor/data*
+
+#Manuscript
+*.aux
+*.log
+
