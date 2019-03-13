@@ -113,7 +113,7 @@ Since model $\bm{H}$ contains hidden sequential variable $\ubm{s}$, we can not d
   % \end{equation}
   The ``expected likelihood'' function:
   \begin{equation}\label{eq:em-q-funciton}
-    \Qq(\bm{H}; \bm{H}^{\mathrm{old}}) = \EE_{p(\ubmr{s}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})}\left[ \sum_{r=1}^{R}\log\,p(\ubmr{x}{r}, \ubmr{s}{r}; \bm{H}) \right]
+    \Qq(\bm{H}; \bm{H}^{\mathrm{old}}) = \ \sum_{r=1}^{R}EE_{p(\ubmr{s}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})}\left[\log\,p(\ubmr{x}{r}, \ubmr{s}{r}; \bm{H}) \right]
   \end{equation}
 \item M-step: the optimization step:
   \begin{equation}\label{eq:em-m-opt}
