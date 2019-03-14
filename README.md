@@ -9,22 +9,32 @@
 ## implementation in dir: code
 Flow model takes the batch size as a parameter for constructing model structure, we need take this into consideration. 
 
-### Install
-To install hmmlearn library (https://github.com/hmmlearn/hmmlearn), run:
-```
-$ cd code/hmmlearn
-$ python setup.py install
-```
-or 
+## Installation
+To install hmmlearn library, run:
+ 
 ```
 $ pip install --upgrade --user hmmlearn
 ```
-See the repository for details.
+or
+```
+$ git clone  https://github.com/hmmlearn/hmmlearn.git src/
+$ cd src/hmmlearn
+$ python setup.py install
+```
+Go to https://github.com/hmmlearn/hmmlearn for details.
+
 ### TIMIT dataset
-See `src/timit-preprocessor` for information on how to process the raw timit dataset.
-The processed and labeled time series are anyways available in `data/test13.pkl` and `data/train13.pkl`.
+Read `src/timit-preprocessor/README` for information on how to process the raw timit dataset.
+The processed and labeled time series are anyways available in a compressed form `data/test13.gz` and `data/train13.gz`.
+You can decompress them using:
+```
+$ gunzip -c data/test13.gz > test13.pkl
+$ gunzip -c data/train13.gz > train13.pkl
+```
 
 ### Run example
 ```
 python bin/test.py data/ test13.pkl train13.pkl hparams/test.json
 ```
+
+
