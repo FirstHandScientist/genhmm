@@ -92,7 +92,7 @@ class GenHMM(_BaseHMM):
         f_s = [np.vectorize(partial(_compute_log_likelihood_per_state, nets=self.networks[s], pi_s=self.pi[s])\
                             , signature="(k)->()") for s in range(self.n_components)]
 
-        # For each state
+        # For each component
         for i, llh_fun in enumerate(f_s):
             llh[:, i] = llh_fun(X)
 
