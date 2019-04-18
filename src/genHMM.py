@@ -1,23 +1,36 @@
 # file genHMM.py
 
 import numpy as np
-from hmmlearn.utils import normalize
+from hmmlearn.utils import normalize, log_mask_zero
 from src.glow.models import Glow, FlowNet
 from src.glow.config import JsonConfig
+from src.realnvp import RealNVP
+
 from hmmlearn.base import _BaseHMM
+from hmmlearn.base import _hmmc
+
 from functools import partial
 
+import torch
+from torch import nn, distributions
+from torch.autograd import Variable
 
 class GenHMM(_BaseHMM):
     def __init__(self, n_components=None, n_prob_components=None, hparams=None,\
-            algorithm="viterbi", random_state=None, n_iter=10, tol=1e-2, verbose=False, params="st", init_params="st",\
-                 image_shape=(28, 28, 3)):
+            algorithm="viterbi", random_state=None, n_iter=10, tol=1e-2, verbose=False,
+                 params="stmg", init_params="stmg",\
+                 image_shape=(28, 28, 3), dtype=torch.FloatTensor):
+
 
         _BaseHMM.__init__(self, n_components,
                           algorithm=algorithm, random_state=random_state, n_iter=n_iter,
                           tol=tol, params=params, verbose=verbose, init_params=init_params)
-        self.image_shape=image_shape
+        self.image_shape = image_shape
+
         self.n_components = n_components
+        # Handy renaming
+        self.n_states = self.n_components
+
         self.n_prob_components = n_prob_components
         self.hparams = JsonConfig(hparams)
 
@@ -25,18 +38,18 @@ class GenHMM(_BaseHMM):
 
         self.init_transmat()
         self.init_startprob()
-        self.init_gen()
+        self.dtype = dtype
 
+        self.init_gen()
         self.init_future()
 
-        print("here")
 
     def init_startprob(self):
         """
         Initialize HMM initial coefficients.
         """
-        init = 1. / self.n_components
-        self.startprob_ = np.full(self.n_components, init)
+        init = 1. / self.n_states
+        self.startprob_ = np.full(self.n_states, init)
         return self
 
     def init_transmat(self):
@@ -44,7 +57,7 @@ class GenHMM(_BaseHMM):
         Initialize HMM transition matrix.
         """
         init = 1/self.n_components
-        self.transmat_ = np.full((self.n_components, self.n_components),
+        self.transmat_ = np.full((self.n_states, self.n_states),
                                  init)
         return self
 
@@ -52,20 +65,40 @@ class GenHMM(_BaseHMM):
         """
         Initialize HMM probabilistic model.
         """
+        H = 28
+        D = 14
+        nchain = 3
+        d = D // 2
 
-        # Init latent selector variable
-        self.pi = np.random.rand(self.n_components, self.n_prob_components)
+        nets = lambda: nn.Sequential(nn.Linear(D, H), nn.LeakyReLU(), nn.Linear(H, H), nn.LeakyReLU(), nn.Linear(H, D),
+                                     nn.Tanh())
+        nett = lambda: nn.Sequential(nn.Linear(D, H), nn.LeakyReLU(), nn.Linear(H, H), nn.LeakyReLU(), nn.Linear(H, D))
+
+        masks = torch.from_numpy(np.array([[0]*d + [1]*(D-d), [1]*d + [0]*(D-d)] * nchain).astype(np.float32))
+
+        prior = distributions.MultivariateNormal(torch.zeros(D), torch.eye(D))
+        self.flow = RealNVP(nets, nett, masks, prior)
+
+
+        #  Init mixture
+        self.pi = np.random.rand(self.n_states, self.n_prob_components)
         normalize(self.pi, axis=1)
 
         # Init networks
+        #self.networks = [Glow(self.hparams) for _ in range(self.n_prob_components*self.n_components)]
+        self.networks = [RealNVP(nets, nett, masks, prior) for _ in range(self.n_prob_components*self.n_states)]
 
-        self.networks = [Glow(self.hparams) for _ in range(self.n_prob_components*self.n_components)]
-        #self.networks = [FlowNet(image_shape=self.image_shape,hidden_channels=5, L=2, K=2,\
-        #                         flow_coupling="additive", flow_permutation="shuffle")\
-        #                 for _ in range(self.n_prob_components * self.n_components)]
+        # Optimizer
+        self.optimizer = torch.optim.Adam(sum([
+                                            [p for p in flow.parameters() if p.requires_grad == True]\
+                                            for flow in self.networks], []), lr=1e-4)
 
-        self.networks = np.array(self.networks).reshape(self.n_components, self.n_prob_components)
+        self.loss_ = Variable(self.dtype(np.zeros((self.n_states, self.n_prob_components))))
+
+        # Reshape in a n_components (n_states) x n_prob_components array
+        self.networks = np.array(self.networks).reshape(self.n_states, self.n_prob_components)
         return self
+
 
     def llh(self, X):
         return self._compute_log_likelihood(X)
@@ -87,16 +120,20 @@ class GenHMM(_BaseHMM):
         """
 
         n_samples = X.shape[0]
-        llh = np.zeros((n_samples, self.n_components))
+        llh = np.zeros((n_samples, self.n_states))
 
-        f_s = [np.vectorize(partial(_compute_log_likelihood_per_state, nets=self.networks[s], pi_s=self.pi[s])\
-                            , signature="(k)->()") for s in range(self.n_components)]
+        # One likelihood function per state
+        f_s = [partial(self._compute_log_likelihood_per_state, s=s)\
+                             for s in range(self.n_states)]
 
-        # For each component
+        X_ = self.dtype(X)
+
+        # For each state
         for i, llh_fun in enumerate(f_s):
-            llh[:, i] = llh_fun(X)
-
+            llh[:, i] = self.to_numpy(llh_fun(X_))
+            self.loss_[i, :] = self.dtype(self.loss)
         return llh
+
 
     def _generate_sample_from_state(self, state, random_state=None):
         """Generates a random sample from a given component.
@@ -116,6 +153,7 @@ class GenHMM(_BaseHMM):
             A random sample from the emission distribution corresponding
             to a given component.
         """
+        return self.to_numpy(self.networks[state].sample(1))
 
 
     def _initialize_sufficient_statistics(self):
@@ -140,10 +178,71 @@ class GenHMM(_BaseHMM):
             posterior probability of transitioning between the i-th to j-th
             states.
         """
+
         stats = {'nobs': 0,
-                 'start': np.zeros(self.n_components),
-                 'trans': np.zeros((self.n_components, self.n_components))}
+                 'start': np.zeros(self.n_states),
+                 'trans': np.zeros((self.n_states, self.n_states)),
+                 'mixture': np.zeros((self.n_states, self.n_prob_components)),
+                 'loss': Variable(self.dtype(np.zeros((self.n_states, self.n_prob_components))),
+                                  requires_grad=False)
+                 }
+
         return stats
+
+    def _accumulate_sufficient_statistics(self, stats, X, framelogprob,
+                                          posteriors, fwdlattice, bwdlattice):
+        """Updates sufficient statistics from a given sample.
+
+        Parameters
+        ----------
+        stats : dict
+            Sufficient statistics as returned by
+            :meth:`~base._BaseHMM._initialize_sufficient_statistics`.
+
+        X : array, shape (n_samples, n_features)
+            Sample sequence.
+
+        framelogprob : array, shape (n_samples, n_components)
+            Log-probabilities of each sample under each of the model states.
+
+        posteriors : array, shape (n_samples, n_components)
+            Posterior probabilities of each sample being generated by each
+            of the model states.
+
+        fwdlattice, bwdlattice : array, shape (n_samples, n_components)
+            Log-forward and log-backward probabilities.
+        """
+
+        stats['nobs'] += 1
+        if 's' in self.params:
+            stats['start'] += posteriors[0]
+
+        if 't' in self.params:
+            n_samples, n_components = framelogprob.shape
+            # when the sample is of length 1, it contains no transitions
+            # so there is no reason to update our trans. matrix estimate
+            if n_samples <= 1:
+                return
+
+            log_xi_sum = np.full((n_components, n_components), -np.inf)
+            _hmmc._compute_log_xi_sum(n_samples, n_components, fwdlattice,
+                                      log_mask_zero(self.transmat_),
+                                      bwdlattice, framelogprob,
+                                      log_xi_sum)
+            with np.errstate(under="ignore"):
+                stats['trans'] += np.exp(log_xi_sum)
+
+        if 'm' in self.params:
+            n_samples, n_states = framelogprob.shape
+            gamma_ = np.zeros((self.n_states, self.n_prob_components, n_samples))
+            for i, m, t in zip(range(self.n_states), range(self.n_prob_components), range(n_samples)):
+                gamma_[i, m, t] = posteriors[t, i] * self.pi[i, m]
+
+            stats["mixture"] += gamma_.sum(2)
+
+        if 'g' in self.params:
+            #stats["loss"] += self.loss_
+            pass
 
     def _do_mstep(self, stats):
         """Performs the M-step of EM algorithm.
@@ -160,13 +259,24 @@ class GenHMM(_BaseHMM):
             self.startprob_ = np.where(self.startprob_ == 0.0,
                                        self.startprob_, startprob_)
             normalize(self.startprob_)
+
         if 't' in self.params:
             transmat_ = self.transmat_prior - 1.0 + stats['trans']
             self.transmat_ = np.where(self.transmat_ == 0.0,
                                       self.transmat_, transmat_)
             normalize(self.transmat_, axis=1)
 
+        if 'm' in self.params:
+            self.pi = stats["mixture"]
 
+            # In case we get a line of zeros in the stats
+            self.pi[self.pi.sum(1) == 0, :] = np.ones(self.n_prob_components) / self.n_prob_components
+            normalize(self.pi, axis=1)
+
+        if 'g' in self.params:
+            self.optimizer.step()
+            self.optimizer.zero_grad()
+            pass
 
     def init_future(self):
         """
@@ -195,11 +305,22 @@ class GenHMM(_BaseHMM):
         -------
         k: int, index of component in state s
         """
-        return np.random.choice(np.arange(self.n_components), 1, p=self.pi[s])[0]
+        return np.random.choice(np.arange(self.n_states), 1, p=self.pi[s])[0]
+
+    @staticmethod
+    def to_numpy(x):
+        return x.detach().numpy()
 
 
-def _compute_log_likelihood_per_state(x, nets=None, pi_s=None):
-    out = [nets[k](x) for k in range(pi_s.shape[0])]
-    llh_k = -np.array([o[1].detach().numpy()[0] for o in out])
+    def _compute_log_likelihood_per_state(self, x, s):
+        """Input types must be torch.tensor."""
+        # Compute llh per prob model component
+        llh_k = [self.networks[s, k].log_prob(x).reshape(1, -1) for k in range(self.pi[s].shape[0])]
 
-    return (np.log(pi_s) + llh_k).sum()
+        self.loss = [-llh_k[k].sum() for k in range(self.pi[s].shape[0])]
+
+        # For each mixture component,
+        for k in range(self.pi[s].shape[0]):
+            self.loss[k].backward()
+
+        return (self.dtype(self.pi[s]).log().reshape(-1, 1) + torch.cat(llh_k, dim=0)).sum(0)
