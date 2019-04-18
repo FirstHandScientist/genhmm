@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
     # split
     d = 1
-    H = 10
+    H = 40
 
     w11 = Variable(torch.randn(d, H).type(dtype), requires_grad=True)
     w21 = Variable(torch.randn(H, d).type(dtype), requires_grad=True)
@@ -73,17 +73,18 @@ if __name__ == "__main__":
     x2 = X[:, D-d:]
 
     def m(x, w1=None, w2=None):
-        return x.mm(w1).clamp(min=0).mm(w2)
+        return x.mm(w1).LeakyRelu().mm(w2)
 
     m1 = partial(m, w1=w11, w2=w21)
     m2 = partial(m, w1=w12, w2=w22)
-    ########
-    # Additive coupling function
 
+    ########
+    # Coupling function
     def g(x1, x2, m):
-        #logdet = torch.FloatTensor(np.array([1.])).log()
-        logdet = m(x1).abs().log().sum()
-        return x2 * m(x1), logdet
+        # logdet = torch.FloatTensor(np.array([1.])).log()
+        mx1 = m(x1)
+        logdet = mx1.abs().log().sum()
+        return x2 * mx1, logdet
 
 
     def f(x1, x2, s, g, m1,m2):
@@ -93,16 +94,16 @@ if __name__ == "__main__":
         y1_2, logdet2 = g(y2_1, y1_1, m2)
         y2_2 = y2_1
 
-        y1 = y1_2 * s[0]
-        y2 = y2_2 * s[1]
-        logdet = logdet1 + logdet2 + s.abs().log().sum()
+        y1 = y1_2 #* s[0]
+        y2 = y2_2 #* s[1]
+        logdet = logdet1 + logdet2 #+ s.abs().log().sum()
         return y1, y2, logdet
     #########
 
     # Inverse
     def f_i(y1, y2, s, g_i, m1,m2):
-        y1_2 = y1 / s[0]
-        y2_2 = y2 / s[1]
+        y1_2 = y1 #/ s[0]
+        y2_2 = y2 #/ s[1]
 
         y2_1 = y2_2
         y1_1 = g_i(y2_1, y1_2, m2)
@@ -129,7 +130,7 @@ if __name__ == "__main__":
     # Compute llh
 
     learning_rate = 1e-4
-    for t in range(20):
+    for t in range(500):
         # h.clf()
         # plotfun(x, y, h=h, alpha=.1)
         # Forward pass
@@ -152,36 +153,40 @@ if __name__ == "__main__":
         w21.data += learning_rate * w21.grad.data
         w12.data += learning_rate * w12.grad.data
         w22.data += learning_rate * w22.grad.data
-
-        s.data += learning_rate * s.grad.data
+        #s.data += learning_rate * s.grad.data
 
         w11.grad.data.zero_()
         w21.grad.data.zero_()
         w12.grad.data.zero_()
         w22.grad.data.zero_()
 
-        s.grad.data.zero_()
+        # s.grad.data.zero_()
+
+    z1, z2, _ = f(x1, x2, s, g, m1, m2)
+    xr1, xr2 = f_i(z1, z2, s, g_i, m1, m2)
+    #  print(t, (x1-xr1).mean().data, (x2-xr2).mean().data)
 
 
-        plt.pause(1)
+    # Computed Z
+    f_ix = torch.cat((xr1, xr2), 1).detach().numpy()
+    z = torch.cat((z1, z2), 1)
 
-    nsample = 1000
-
-    #h = dtype(np.random.randn(nsample, 2))
-    h1 = z[:, :d]
-    h2 = z[:, D - d:]
-
-    xhat1, xhat2 = f_i(h1, h2, s, g_i, m1, m2)
-    f_ix = torch.cat((xhat1, xhat2), 1).detach().numpy()
 
     fig = plt.figure()
     plotfun(x, y, h=fig, alpha=.1, label="x")
     plotfun(z.detach().numpy(), y, h=fig, label="z ~ p_Z")
     plotfun(f_ix, h=fig, alpha=.5, marker="+", c='black', label="x=f^{-1}(z)")
     fig.legend()
+    plt.title("Learned implicit space")
     plt.pause(0.001)
 
-    #ax.lines.pop(1)
+    #  Sample Z
+    nsample = 1000
+    z = dtype(np.random.randn(nsample, 2))
+    z1 = z[:, :d]
+    z2 = z[:, D-d]
+
+    xg1, xg2 = f_ix(z1, z2, s, g_i, m1, m2)
 
 
     # Sampling
