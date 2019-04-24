@@ -236,11 +236,13 @@ class GenHMM(_BaseHMM):
             n_samples, n_states = framelogprob.shape
             gamma_ = np.zeros((self.n_states, self.n_prob_components, n_samples))
             for i, m, t in zip(range(self.n_states), range(self.n_prob_components), range(n_samples)):
+                # TODO: check self.pi[i,m], i think it does not take into account the sequence
                 gamma_[i, m, t] = posteriors[t, i] * self.pi[i, m]
 
             stats["mixture"] += gamma_.sum(2)
 
         if 'g' in self.params:
+            # TODO: make sure the graph does not grow during forward and backward.
             #stats["loss"] += self.loss_
             pass
 
