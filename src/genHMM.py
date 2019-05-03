@@ -39,7 +39,7 @@ class GenHMM(_BaseHMM):
         self.init_transmat()
         self.init_startprob()
         self.dtype = dtype
-
+        self.pytovar = lambda x: Variable(self.dtype(x), requires_grad=False)
         self.init_gen()
         self.init_future()
 
@@ -93,7 +93,8 @@ class GenHMM(_BaseHMM):
                                             [p for p in flow.parameters() if p.requires_grad == True]\
                                             for flow in self.networks], []), lr=1e-4)
 
-        self.loss_ = Variable(self.dtype(np.zeros((self.n_states, self.n_prob_components))))
+        # self.loss_ = Variable(self.dtype(np.zeros((self.n_states, self.n_prob_components))), requires_grad=True)
+        self.loss_ = [0 for _ in range(self.n_states)]
 
         # Reshape in a n_components (n_states) x n_prob_components array
         self.networks = np.array(self.networks).reshape(self.n_states, self.n_prob_components)
@@ -121,7 +122,8 @@ class GenHMM(_BaseHMM):
 
         n_samples = X.shape[0]
         llh = np.zeros((n_samples, self.n_states))
-
+        self.loglh_sk_detached = np.zeros((self.n_states, self.n_prob_components, n_samples))
+        self.loglh_sk = Variable(self.dtype(np.zeros((self.n_states, self.n_prob_components, n_samples))), requires_grad=True)
         # One likelihood function per state
         f_s = [partial(self._compute_log_likelihood_per_state, s=s)\
                              for s in range(self.n_states)]
@@ -130,8 +132,8 @@ class GenHMM(_BaseHMM):
 
         # For each state
         for i, llh_fun in enumerate(f_s):
-            llh[:, i] = self.to_numpy(llh_fun(X_))
-            self.loss_[i, :] = self.dtype(self.loss)
+            llh[:, i] = llh_fun(X_)
+            self.loss_[i] = self.loss
         return llh
 
 
@@ -234,6 +236,8 @@ class GenHMM(_BaseHMM):
 
         if 'm' in self.params:
             n_samples, n_states = framelogprob.shape
+
+
             gamma_ = np.zeros((self.n_states, self.n_prob_components, n_samples))
             for i, m, t in zip(range(self.n_states), range(self.n_prob_components), range(n_samples)):
                 # TODO: check self.pi[i,m], i think it does not take into account the sequence
@@ -242,8 +246,12 @@ class GenHMM(_BaseHMM):
             stats["mixture"] += gamma_.sum(2)
 
         if 'g' in self.params:
-            # TODO: make sure the graph does not grow during forward and backward.
-            #stats["loss"] += self.loss_
+            #  TODO: make sure the graph does not grow during forward and backward.
+            # stats["loss"] += self.loss
+            tmp = self.loglh_sk_detached + np.log(self.pi.reshape(n_states, self.n_prob_components, 1))
+            logpk_sX = tmp - tmp.sum(1).reshape(n_states, 1, n_samples)
+            brackets=(self.pytovar(self.loglh_sk) + self.pytovar(np.log(self.pi.reshape(n_states, self.n_prob_components, 1))))
+
             pass
 
     def _do_mstep(self, stats):
@@ -313,16 +321,20 @@ class GenHMM(_BaseHMM):
     def to_numpy(x):
         return x.detach().numpy()
 
-
     def _compute_log_likelihood_per_state(self, x, s):
         """Input types must be torch.tensor."""
         # Compute llh per prob model component
-        llh_k = [self.networks[s, k].log_prob(x).reshape(1, -1) for k in range(self.pi[s].shape[0])]
+        loglh_sk = [self.networks[s, k].log_prob(x).reshape(1, -1) for k in range(self.pi[s].shape[0])]
 
-        self.loss = [-llh_k[k].sum() for k in range(self.pi[s].shape[0])]
+        self.loss = torch.cat(loglh_sk, dim=0)
+        self.loglh_sk[s] = self.loss
+        self.loglh_sk_detached[s] = self.loss.detach().numpy()
 
         # For each mixture component,
-        for k in range(self.pi[s].shape[0]):
-            self.loss[k].backward()
+        #for k in range(self.pi[s].shape[0]):
+        #    self.loss[k].backward()
 
-        return (self.dtype(self.pi[s]).log().reshape(-1, 1) + torch.cat(llh_k, dim=0)).sum(0)
+        logPIk_s = self.dtype(self.pi[s]).log().reshape(-1, 1)
+
+        self.loss = logPIk_s + self.loss
+        return self.loss.detach().numpy().sum(0)
