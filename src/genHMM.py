@@ -1,6 +1,8 @@
 # file genHMM.py
 
 import numpy as np
+from scipy.special import logsumexp as lsexp
+
 from hmmlearn.utils import normalize, log_mask_zero
 from src.glow.models import Glow, FlowNet
 from src.glow.config import JsonConfig
@@ -8,40 +10,38 @@ from src.realnvp import RealNVP
 
 from hmmlearn.base import _BaseHMM
 from hmmlearn.base import _hmmc
-
+from hmmlearn.hmm import GMMHMM
 from functools import partial
 
 import torch
 from torch import nn, distributions
 from torch.autograd import Variable
 
+
 class GenHMM(_BaseHMM):
-    def __init__(self, n_components=None, n_prob_components=None, hparams=None,\
+    def __init__(self, n_components=None, n_prob_components=None,
             algorithm="viterbi", random_state=None, n_iter=10, tol=1e-2, verbose=False,
-                 params="stmg", init_params="stmg",\
-                 image_shape=(28, 28, 3), dtype=torch.FloatTensor):
+                 params="stmg", init_params="stmg", dtype=torch.FloatTensor):
 
 
-        _BaseHMM.__init__(self, n_components,
-                          algorithm=algorithm, random_state=random_state, n_iter=n_iter,
+        _BaseHMM.__init__(self, n_components, algorithm=algorithm, random_state=random_state, n_iter=n_iter,
                           tol=tol, params=params, verbose=verbose, init_params=init_params)
-        self.image_shape = image_shape
 
         self.n_components = n_components
         # Handy renaming
         self.n_states = self.n_components
-
+        self.dtype = dtype
         self.n_prob_components = n_prob_components
-        self.hparams = JsonConfig(hparams)
+        self.params = params
+        self.init_params = init_params
 
         self.model_params = ["transmat_", "startprob_", "networks", "pi"]
 
         self.init_transmat()
         self.init_startprob()
-        self.dtype = dtype
-        self.pytovar = lambda x: Variable(self.dtype(x), requires_grad=False)
+
         self.init_gen()
-        self.init_future()
+        #self.init_future()
 
 
     def init_startprob(self):
@@ -85,18 +85,13 @@ class GenHMM(_BaseHMM):
         normalize(self.pi, axis=1)
 
         # Init networks
-        #self.networks = [Glow(self.hparams) for _ in range(self.n_prob_components*self.n_components)]
         self.networks = [RealNVP(nets, nett, masks, prior) for _ in range(self.n_prob_components*self.n_states)]
 
         # Optimizer
-        self.optimizer = torch.optim.Adam(sum([
-                                            [p for p in flow.parameters() if p.requires_grad == True]\
+        self.optimizer = torch.optim.Adam(sum([[p for p in flow.parameters() if p.requires_grad == True]\
                                             for flow in self.networks], []), lr=1e-4)
 
-        # self.loss_ = Variable(self.dtype(np.zeros((self.n_states, self.n_prob_components))), requires_grad=True)
-        self.loss_ = [0 for _ in range(self.n_states)]
-
-        # Reshape in a n_components (n_states) x n_prob_components array
+        # Reshape in a n_states x n_prob_components array
         self.networks = np.array(self.networks).reshape(self.n_states, self.n_prob_components)
         return self
 
@@ -122,18 +117,19 @@ class GenHMM(_BaseHMM):
 
         n_samples = X.shape[0]
         llh = np.zeros((n_samples, self.n_states))
-        self.loglh_sk_detached = np.zeros((self.n_states, self.n_prob_components, n_samples))
-        self.loglh_sk = Variable(self.dtype(np.zeros((self.n_states, self.n_prob_components, n_samples))), requires_grad=True)
-        # One likelihood function per state
-        f_s = [partial(self._compute_log_likelihood_per_state, s=s)\
-                             for s in range(self.n_states)]
+
+        self.loglh_sk = self.var_nograd(np.zeros((self.n_states, self.n_prob_components, n_samples)))
+        self.logPIk_s = self.var_nograd(self.pi).log()
 
         X_ = self.dtype(X)
 
+        # One likelihood function per state
+        f_s = [partial(self._compute_log_likelihood_per_state, x=X_, s=s)
+               for s in range(self.n_states)]
+
         # For each state
         for i, llh_fun in enumerate(f_s):
-            llh[:, i] = llh_fun(X_)
-            self.loss_[i] = self.loss
+            llh[:, i] = llh_fun()
         return llh
 
 
@@ -185,8 +181,7 @@ class GenHMM(_BaseHMM):
                  'start': np.zeros(self.n_states),
                  'trans': np.zeros((self.n_states, self.n_states)),
                  'mixture': np.zeros((self.n_states, self.n_prob_components)),
-                 'loss': Variable(self.dtype(np.zeros((self.n_states, self.n_prob_components))),
-                                  requires_grad=False)
+                 'loss': self.var_nograd(np.array([0]))
                  }
 
         return stats
@@ -248,11 +243,25 @@ class GenHMM(_BaseHMM):
         if 'g' in self.params:
             #  TODO: make sure the graph does not grow during forward and backward.
             # stats["loss"] += self.loss
-            tmp = self.loglh_sk_detached + np.log(self.pi.reshape(n_states, self.n_prob_components, 1))
-            logpk_sX = tmp - tmp.sum(1).reshape(n_states, 1, n_samples)
-            brackets=(self.pytovar(self.loglh_sk) + self.pytovar(np.log(self.pi.reshape(n_states, self.n_prob_components, 1))))
 
-            pass
+            # Resize P(chi | S) for broadcasting
+            logPIk_s_ext = self.var_nograd(self.logPIk_s.reshape(self.n_states, self.n_prob_components, 1))
+
+            # Brackets = log-P(X | chi, S) + log-P(chi | s)
+            brackets = self.loglh_sk + logPIk_s_ext
+
+            # Compute log-p(chi | s, X) = log-P(X|s,chi) + log-P(chi|s) - log\sum_{chi} exp ( log-P(X|s,chi) + log-P(chi|s) )
+            log_num = self.loglh_sk.detach() + logPIk_s_ext
+            log_denom = self.var_nograd(lsexp(self.loglh_sk.detach() + logPIk_s_ext, axis=1))
+
+            logpk_sX = log_num - log_denom.reshape(n_states, 1, n_samples)
+
+            post = self.var_nograd(posteriors.swapaxes(0, 1))  # Transform into n_states x n_samples
+
+            #  The .sum(1) call sums on the components and .sum() sums on all states and samples
+            loss = (post * (torch.exp(logpk_sX) * brackets).sum(1)).sum()
+            loss.backward()
+            stats['loss'] += loss.detach()
 
     def _do_mstep(self, stats):
         """Performs the M-step of EM algorithm.
@@ -262,6 +271,7 @@ class GenHMM(_BaseHMM):
         stats : dict
             Sufficient statistics updated from all available samples.
         """
+
         # The ``np.where`` calls guard against updating forbidden states
         # or transitions in e.g. a left-right HMM.
         if 's' in self.params:
@@ -286,6 +296,7 @@ class GenHMM(_BaseHMM):
         if 'g' in self.params:
             self.optimizer.step()
             self.optimizer.zero_grad()
+            print(stats['loss'])
             pass
 
     def init_future(self):
@@ -321,20 +332,24 @@ class GenHMM(_BaseHMM):
     def to_numpy(x):
         return x.detach().numpy()
 
-    def _compute_log_likelihood_per_state(self, x, s):
+    def var_nograd(self, x):
+        return Variable(self.dtype(x), requires_grad=False)
+
+    def var_grad(self, x):
+        return Variable(self.dtype(x), requires_grad=True)
+
+    def _compute_log_likelihood_per_state(self, x=None, s=None):
         """Input types must be torch.tensor."""
         # Compute llh per prob model component
         loglh_sk = [self.networks[s, k].log_prob(x).reshape(1, -1) for k in range(self.pi[s].shape[0])]
 
         self.loss = torch.cat(loglh_sk, dim=0)
+
         self.loglh_sk[s] = self.loss
-        self.loglh_sk_detached[s] = self.loss.detach().numpy()
+        #self.loglh_sk_detached[s] = self.loss.detach().numpy()
 
         # For each mixture component,
-        #for k in range(self.pi[s].shape[0]):
+        # for k in range(self.pi[s].shape[0]):
         #    self.loss[k].backward()
 
-        logPIk_s = self.dtype(self.pi[s]).log().reshape(-1, 1)
-
-        self.loss = logPIk_s + self.loss
-        return self.loss.detach().numpy().sum(0)
+        return self.var_nograd(self.logPIk_s[s].reshape(self.n_prob_components,1) + self.loss).detach().numpy().sum(0)
