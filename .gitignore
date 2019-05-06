@@ -3,7 +3,8 @@
 
 # Pycharm cache
 .idea/
-
+# Python cache
+__pycache__
 # Intermediate datafiles
 data/TIMIT.zip
 data/TIMIT/*
