@@ -20,7 +20,7 @@ from torch.autograd import Variable
 
 class GenHMM(_BaseHMM):
     def __init__(self, n_components=None, n_prob_components=None,
-            algorithm="viterbi", random_state=None, n_iter=10, tol=1e-2, verbose=False,
+            algorithm="viterbi", random_state=None, n_iter=100, em_skip=10, tol=1e-2, verbose=False,
                  params="stmg", init_params="stmg", dtype=torch.FloatTensor):
 
 
@@ -34,6 +34,8 @@ class GenHMM(_BaseHMM):
         self.n_prob_components = n_prob_components
         self.params = params
         self.init_params = init_params
+        self.em_skip = em_skip
+        self.em_skip_cond = lambda: self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0 # or self.monitor_.iter == 0:
 
         self.model_params = ["transmat_", "startprob_", "networks", "pi"]
 
@@ -98,7 +100,6 @@ class GenHMM(_BaseHMM):
 
     def llh(self, X):
         return self._compute_log_likelihood(X)
-
 
     def _compute_log_likelihood(self, X):
         """Computes per-component log probability under the model.
@@ -178,6 +179,7 @@ class GenHMM(_BaseHMM):
         """
 
         stats = {'nobs': 0,
+                 'nframes':0,
                  'start': np.zeros(self.n_states),
                  'trans': np.zeros((self.n_states, self.n_states)),
                  'mixture': np.zeros((self.n_states, self.n_prob_components)),
@@ -211,11 +213,19 @@ class GenHMM(_BaseHMM):
         """
 
         stats['nobs'] += 1
+        stats['nframes'] += X.shape[0]
+
+        if self.em_skip_cond():
+            saved_params= self.params
+            self.params = 'g'
+
+        n_samples, n_components = framelogprob.shape
+        n_samples, n_states = framelogprob.shape
+
         if 's' in self.params:
             stats['start'] += posteriors[0]
 
         if 't' in self.params:
-            n_samples, n_components = framelogprob.shape
             # when the sample is of length 1, it contains no transitions
             # so there is no reason to update our trans. matrix estimate
             if n_samples <= 1:
@@ -230,13 +240,18 @@ class GenHMM(_BaseHMM):
                 stats['trans'] += np.exp(log_xi_sum)
 
         if 'm' in self.params:
-            n_samples, n_states = framelogprob.shape
 
-
+            max_loglh = torch.max(torch.max(self.var_nograd(self.loglh_sk), dim=2)[0], dim=1)[0]
+            #max_loglh = 0
             gamma_ = np.zeros((self.n_states, self.n_prob_components, n_samples))
-            for i, m, t in zip(range(self.n_states), range(self.n_prob_components), range(n_samples)):
-                # TODO: check self.pi[i,m], i think it does not take into account the sequence
-                gamma_[i, m, t] = posteriors[t, i] * self.pi[i, m]
+
+            for i in range(self.n_states):
+                    for t in range(n_samples):
+                        for m in range(self.n_prob_components):
+                            gamma_[i, m, t] = self.pi[i, m] * self.var_nograd(self.loglh_sk - max_loglh[i])[i, m, t].exp()
+
+                        gamma_[i, :, t] /= (gamma_[i,:,t].sum() + 1e-6)   #.reshape(self.n_states,1,n_samples)
+                        gamma_[i, :, t] *= posteriors[t, i]
 
             stats["mixture"] += gamma_.sum(2)
 
@@ -254,14 +269,19 @@ class GenHMM(_BaseHMM):
             log_num = self.loglh_sk.detach() + logPIk_s_ext
             log_denom = self.var_nograd(lsexp(self.loglh_sk.detach() + logPIk_s_ext, axis=1))
 
-            logpk_sX = log_num - log_denom.reshape(n_states, 1, n_samples)
+            logpk_sX = log_num - log_denom.reshape(self.n_states, 1, n_samples)
 
             post = self.var_nograd(posteriors.swapaxes(0, 1))  # Transform into n_states x n_samples
 
             #  The .sum(1) call sums on the components and .sum() sums on all states and samples
-            loss = (post * (torch.exp(logpk_sX) * brackets).sum(1)).sum()
+            loss = -(post * (torch.exp(logpk_sX) * brackets).sum(1)).sum()/stats['nobs']
             loss.backward()
-            stats['loss'] += loss.detach()
+            stats['loss'] += float(loss.detach().numpy())
+
+        if self.em_skip_cond():
+            self.params = saved_params
+
+
 
     def _do_mstep(self, stats):
         """Performs the M-step of EM algorithm.
@@ -271,6 +291,11 @@ class GenHMM(_BaseHMM):
         stats : dict
             Sufficient statistics updated from all available samples.
         """
+
+        if self.em_skip_cond():
+            saved_params= self.params
+            self.params = 'g'
+
 
         # The ``np.where`` calls guard against updating forbidden states
         # or transitions in e.g. a left-right HMM.
@@ -290,14 +315,18 @@ class GenHMM(_BaseHMM):
             self.pi = stats["mixture"]
 
             # In case we get a line of zeros in the stats
-            self.pi[self.pi.sum(1) == 0, :] = np.ones(self.n_prob_components) / self.n_prob_components
+            #self.pi[self.pi.sum(1) == 0, :] = np.ones(self.n_prob_components) / self.n_prob_components
             normalize(self.pi, axis=1)
 
         if 'g' in self.params:
             self.optimizer.step()
             self.optimizer.zero_grad()
-            print(stats['loss'])
+            print(self.monitor_.iter, stats['loss'])
             pass
+
+        if self.em_skip_cond():
+            self.params = saved_params
+
 
     def init_future(self):
         """
@@ -341,15 +370,12 @@ class GenHMM(_BaseHMM):
     def _compute_log_likelihood_per_state(self, x=None, s=None):
         """Input types must be torch.tensor."""
         # Compute llh per prob model component
-        loglh_sk = [self.networks[s, k].log_prob(x).reshape(1, -1) for k in range(self.pi[s].shape[0])]
+        loglh_sk = [self.networks[s, k].log_prob(x).reshape(1, -1)/x.numel() for k in range(self.pi[s].shape[0])]
+        #[self.networks[s, k].log_prob(x).reshape(1, -1) for k in range(self.pi[s].shape[0])]
+        #[self.networks[s, k].log_prob(x).reshape(1, -1) for k in range(self.pi[s].shape[0])]
 
         self.loss = torch.cat(loglh_sk, dim=0)
 
         self.loglh_sk[s] = self.loss
-        #self.loglh_sk_detached[s] = self.loss.detach().numpy()
-
-        # For each mixture component,
-        # for k in range(self.pi[s].shape[0]):
-        #    self.loss[k].backward()
 
         return self.var_nograd(self.logPIk_s[s].reshape(self.n_prob_components,1) + self.loss).detach().numpy().sum(0)
