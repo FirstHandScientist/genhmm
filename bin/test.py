@@ -86,7 +86,7 @@ if __name__ == "__main__":
 
     # Use a dataset of two phones for simplicity
     n_phn = 2
-    xtrain, ytrain, xtest, ytest, IPHN = prepare_data(data_folder=data_folder, \
+    xtrain, ytrain, xtest, ytest, IPHN = prepare_data(data_folder=data_folder,\
                                                 fname_dtest=fname_dtest, fname_dtrain=fname_dtrain,\
                                                 n_phn=n_phn, verbose=True)
 
@@ -94,14 +94,12 @@ if __name__ == "__main__":
     n_prob_components = 2
     hmm1 = GenHMM(n_components=n_components, n_prob_components=n_prob_components, hparams=hparams)
 
-
     # Get data for class 1
     data1 = xtrain[ytrain == IPHN[0]]
     length1 = np.array([data1[i].shape[0] for i in range(data1.shape[0])])
     data1 = np.concatenate(data1)
-
-    hmm1.fit(data1, length1)
-
+    limit = 10
+    hmm1.fit(data1[:np.cumsum(length1[:limit])[-1]], length1[:limit])
     llh = hmm1.llh(xtrain[:100])
 
 
