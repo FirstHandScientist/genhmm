@@ -8,6 +8,8 @@
 
 ## Experiments todo
 - [ ] GenHMM sanity check and testing running
+- [ ] Model saving and loading utilities
+- [ ] TensorboardX, training process logging and log-likelihood ploting
 - [ ] Permutation stratergy:
     - [ ] 1. random, 
     - [ ] 2. reverse, 
@@ -15,6 +17,7 @@
 - [ ] Comparions experiments design. Please refer to [ranking on TIMIT](https://paperswithcode.com/sota/speech-recognition-on-timit)
     - [ ] Baseline comparion with GMM/HMM
     - [ ] DNN/HMM, LSTM, RNN state art comparion. Please refer project [Pytorch-Kaldi Project](https://github.com/mravanelli/pytorch-kaldi)
+ -[ ] Last concern: do we need extra dataset for experiments?
  
  ## Long-term todo
  Potential application to voice translation, song-sing App on movible phones...
