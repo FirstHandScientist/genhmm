@@ -9,12 +9,12 @@
 ## Experiments todo
 - [ ] GenHMM sanity check and testing running
 - [ ] Permutation stratergy:
- - [ ] 1. random, 
- - [ ] 2. reverse, 
- - [ ] 3. 1X1 conv
+    - [ ] 1. random, 
+    - [ ] 2. reverse, 
+    - [ ] 3. 1X1 conv
 - [ ] Comparions experiments design. Please refer to [ranking on TIMIT](https://paperswithcode.com/sota/speech-recognition-on-timit)
- - [ ] Baseline comparion with GMM/HMM
- - [ ] DNN/HMM, LSTM, RNN state art comparion. Please refer project [Pytorch-Kaldi Project](https://github.com/mravanelli/pytorch-kaldi)
+    - [ ] Baseline comparion with GMM/HMM
+    - [ ] DNN/HMM, LSTM, RNN state art comparion. Please refer project [Pytorch-Kaldi Project](https://github.com/mravanelli/pytorch-kaldi)
  
  ## Long-term todo
  Potential application to voice translation, song-sing App on movible phones...
