@@ -1,4 +1,7 @@
 # file test.py
+import sys
+sys.path.append('/home/dong/Documents/phd_research/my_papers/gm-hmm')
+
 import pickle as pkl
 import sys
 import os
