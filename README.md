@@ -12,6 +12,7 @@ Priority work:
 - [ ] Adapt Model running on GPU
 - [ ] GenHMM sanity check and testing running
 - [x] TensorboardX, training process logging and log-likelihood ploting
+
 Import work:
 - [ ] Permutation stratergy:
     - [ ] 1. random, 
