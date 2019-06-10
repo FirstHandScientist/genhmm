@@ -18,6 +18,16 @@ from torch import nn, distributions
 from torch.autograd import Variable
 
 
+class GenHMMclassifier(nn.Module):
+    def __init__(self, options, inp_dim):
+        super(GenHMMclassifier, self).__init__()
+        self.nclasses = options["nclasses"]
+        self.hmms = [GenHMM(**options) for _ in range(self.nclasses)]
+
+    def forward(self, x):
+        return [classHMM.llh(x) for classHMM in self.hmms]
+
+
 class GenHMM(_BaseHMM):
     def __init__(self, n_components=None, n_prob_components=None,
             algorithm="viterbi", random_state=None, n_iter=100, em_skip=10, tol=1e-2, verbose=False,
