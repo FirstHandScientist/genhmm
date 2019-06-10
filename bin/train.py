@@ -141,15 +141,15 @@ if __name__ == "__main__":
     data_normalizer = data_normalizer()
     data_normalizer.get_range(indata=xtrain)
 
-    limit = 20
+    limit = 500
     #################### train one genHMM per phone ####################
     for phn_idx in range(n_phn):
         print("[Begin to train Model for Phone {}]".format(IPHN[phn_idx]))
         models["phn{}".format(IPHN[phn_idx])]["phone"] = IPHN[phn_idx]
         models["phn{}".format(IPHN[phn_idx])]["model"] = GenHMM(n_components=n_components,
                                                           n_prob_components=n_prob_components,
-                                                          n_iter=50,
-                                                          em_skip=10, tol=0,
+                                                          n_iter=500,
+                                                          em_skip=50, tol=0,
                                                           log_dir="results/genHMM/phn{}".format(IPHN[phn_idx]) )
 
 
@@ -173,7 +173,7 @@ if __name__ == "__main__":
     ############ load the models here, waiting for model saving and loading methods fixed #######
     
     # test the trained models
-    limit = 20
+    limit = -1
     xtest_n = data_normalizer.normalize(xtest)
     length_test = np.array([xtest[i].shape[0] for i in range(xtest.shape[0])])
     preded_scores = []
