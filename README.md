@@ -7,9 +7,13 @@
 - [ ] Planning application design of HMM powered by Generative Models.
 
 ## Experiments todo
+Priority work:
+- [ ] Utility for trained model saving and loading
+- [ ] Adapt Model running on GPU
 - [ ] GenHMM sanity check and testing running
-- [ ] Model saving and loading utilities
-- [ ] TensorboardX, training process logging and log-likelihood ploting
+- [x] TensorboardX, training process logging and log-likelihood ploting
+
+Import work:
 - [ ] Permutation stratergy:
     - [ ] 1. random, 
     - [ ] 2. reverse, 

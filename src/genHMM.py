@@ -1,22 +1,66 @@
 # file genHMM.py
 
+import os
+from tqdm import tqdm
 import numpy as np
 from scipy.special import logsumexp as lsexp
+from sklearn.utils import check_array, check_random_state
+from sklearn.utils.validation import check_is_fitted
 
-from hmmlearn.utils import normalize, log_mask_zero
+from hmmlearn.utils import normalize, log_mask_zero, iter_from_X_lengths
 from src.glow.models import Glow, FlowNet
 from src.glow.config import JsonConfig
 from src.realnvp import RealNVP
 
 from hmmlearn.base import _BaseHMM
+from hmmlearn.base import ConvergenceMonitor as BaseConvergenceMonitor
 from hmmlearn.base import _hmmc
 from hmmlearn.hmm import GMMHMM
 from functools import partial
+
+from tensorboardX import SummaryWriter
 
 import torch
 from torch import nn, distributions
 from torch.autograd import Variable
 
+class ConvergenceMonitor(BaseConvergenceMonitor):
+    """Revise the base convergenceMonitor class such continuous monitor function is added:
+    1. loglikelyhood value for each iteration.. done
+    2. neural network loss during training... done
+    3. ToDo task: the original convergence monitor is not applicable to our neural net based hmm, the convergence should be based on two em_skip's log_prob values.
+    """
+    def __init__(self, tol, n_iter, verbose, log_dir):
+        super(ConvergenceMonitor, self).__init__(tol, n_iter, verbose)
+        # define the tensorboard writer with log_dir
+        self.writer = SummaryWriter(log_dir)
+
+    def _reset(self):
+        """Reset the monitor's state."""
+        self.iter = 0
+        self.history.clear()
+    
+    def report(self, logprob, net_loss):
+        """Report the logprob and loss into both convergenceMonitor and tensorBoard
+        Parameters
+        ----------
+        logprob : float
+            The log probability of the data as computed by EM algorithm
+            in the current iteration.
+        """
+        if self.verbose:
+            delta = logprob - self.history[-1] if self.history else np.nan
+            message = self._template.format(
+                iter=self.iter + 1, logprob=logprob, delta=delta)
+            print(message, file=sys.stderr)
+
+        self.history.append(logprob)
+        
+        self.writer.add_scalar("neg-logprob", -logprob, self.iter)
+        self.writer.add_scalar("NNloss", net_loss, self.iter)
+
+        
+        self.iter += 1
 
 class GenHMMclassifier(nn.Module):
     def __init__(self, options, inp_dim):
@@ -31,10 +75,10 @@ class GenHMMclassifier(nn.Module):
 class GenHMM(_BaseHMM):
     def __init__(self, n_components=None, n_prob_components=None,
             algorithm="viterbi", random_state=None, n_iter=100, em_skip=10, tol=1e-2, verbose=False,
-                 params="stmg", init_params="stmg", dtype=torch.FloatTensor):
+                 params="stmg", init_params="stmg", dtype=torch.FloatTensor, log_dir="results"):
 
 
-        _BaseHMM.__init__(self, n_components, algorithm=algorithm, random_state=random_state, n_iter=n_iter,
+        super(GenHMM, self).__init__(self, n_components, algorithm=algorithm, random_state=random_state, n_iter=n_iter,
                           tol=tol, params=params, verbose=verbose, init_params=init_params)
 
         self.n_components = n_components
@@ -44,17 +88,25 @@ class GenHMM(_BaseHMM):
         self.n_prob_components = n_prob_components
         self.params = params
         self.init_params = init_params
-        self.em_skip = em_skip
-        self.em_skip_cond = lambda: self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0 # or self.monitor_.iter == 0:
-
         self.model_params = ["transmat_", "startprob_", "networks", "pi"]
 
         self.init_transmat()
         self.init_startprob()
 
         self.init_gen()
+        
+        # training log directory and logger
+        self.log_dir = log_dir
+        if not os.path.exists(self.log_dir):
+            os.makedirs(self.log_dir)
+        self.monitor_ = ConvergenceMonitor(self.tol, self.n_iter, self.verbose, self.log_dir)
         #self.init_future()
-
+        self.em_skip = em_skip
+        
+        # self.em_skip_cond = lambda: self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0 # or self.monitor_.iter == 0:
+    
+    def em_skip_cond(self):
+        return self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0
 
     def init_startprob(self):
         """
@@ -85,6 +137,11 @@ class GenHMM(_BaseHMM):
         nets = lambda: nn.Sequential(nn.Linear(D, H), nn.LeakyReLU(), nn.Linear(H, H), nn.LeakyReLU(), nn.Linear(H, D),
                                      nn.Tanh())
         nett = lambda: nn.Sequential(nn.Linear(D, H), nn.LeakyReLU(), nn.Linear(H, H), nn.LeakyReLU(), nn.Linear(H, D))
+
+        # def nets():
+        #     return nn.Sequential(nn.Linear(D, H), nn.LeakyReLU(), nn.Linear(H, H), nn.LeakyReLU(), nn.Linear(H, D), nn.Tanh())
+        # def nett():
+        #    return nn.Sequential(nn.Linear(D, H), nn.LeakyReLU(), nn.Linear(H, H), nn.LeakyReLU(), nn.Linear(H, D))
 
         masks = torch.from_numpy(np.array([[0]*d + [1]*(D-d), [1]*d + [0]*(D-d)] * nchain).astype(np.float32))
 
@@ -226,6 +283,7 @@ class GenHMM(_BaseHMM):
         stats['nframes'] += X.shape[0]
 
         if self.em_skip_cond():
+        # if em_skip_cond(self.monitor_.iter, self.em_skip):
             saved_params= self.params
             self.params = 'g'
 
@@ -289,6 +347,7 @@ class GenHMM(_BaseHMM):
             stats['loss'] += float(loss.detach().numpy())
 
         if self.em_skip_cond():
+        # if em_skip_cond(self.monitor_.iter, self.em_skip):
             self.params = saved_params
 
 
@@ -303,6 +362,7 @@ class GenHMM(_BaseHMM):
         """
 
         if self.em_skip_cond():
+        # if em_skip_cond(self.monitor_.iter, self.em_skip):
             saved_params= self.params
             self.params = 'g'
 
@@ -331,12 +391,88 @@ class GenHMM(_BaseHMM):
         if 'g' in self.params:
             self.optimizer.step()
             self.optimizer.zero_grad()
-            print(self.monitor_.iter, stats['loss'])
+            # print(self.monitor_.iter, stats['loss'])
             pass
 
         if self.em_skip_cond():
+        # if em_skip_cond(self.monitor_.iter, self.em_skip):
             self.params = saved_params
 
+    def pred_score(self, X, lengths=None):
+        """ Update the base score method, such that the scores of sequences are returned
+        score: the log probability under the model.
+        Parameters
+        ----------
+        X : array-like, shape (n_samples, n_features)
+            Feature matrix of individual samples.
+        lengths : array-like of integers, shape (n_sequences, ), optional
+            Lengths of the individual sequences in ``X``. The sum of
+            these should be ``n_samples``.
+        Returns
+        -------
+        logprob : list of floats, [logprob1, logprob2, ... ]
+            Log likelihood of ``X``.
+        """
+        check_is_fitted(self, "startprob_")
+        self._check()
+
+        X = check_array(X)
+        # XXX we can unroll forward pass for speed and memory efficiency.
+        logprob = []
+        for i, j in iter_from_X_lengths(X, lengths):
+            framelogprob = self._compute_log_likelihood(X[i:j])
+            logprobij, _fwdlattice = self._do_forward_pass(framelogprob)
+            logprob.append(logprobij)
+        return np.array(logprob)
+
+    def fit(self, X, lengths=None):
+        """Estimate model parameters.
+
+        An initialization step is performed before entering the
+        EM algorithm. If you want to avoid this step for a subset of
+        the parameters, pass proper ``init_params`` keyword argument
+        to estimator's constructor.
+        Parameters
+        ----------
+        X : array-like, shape (n_samples, n_features)
+            Feature matrix of individual samples.
+        lengths : array-like of integers, shape (n_sequences, )
+            Lengths of the individual sequences in ``X``. The sum of
+            these should be ``n_samples``.
+        Returns
+        -------
+        self : object
+            Returns self.
+        """
+
+        X = check_array(X)
+        self._init(X, lengths=lengths)
+        self._check()
+
+        self.monitor_._reset()
+        progress = tqdm(range(self.n_iter))
+        for iter in progress:
+            stats = self._initialize_sufficient_statistics()
+            curr_logprob = 0
+            for i, j in iter_from_X_lengths(X, lengths):
+                framelogprob = self._compute_log_likelihood(X[i:j])
+                logprob, fwdlattice = self._do_forward_pass(framelogprob)
+                curr_logprob += logprob
+                bwdlattice = self._do_backward_pass(framelogprob)
+                posteriors = self._compute_posteriors(fwdlattice, bwdlattice)
+                self._accumulate_sufficient_statistics(
+                    stats, X[i:j], framelogprob, posteriors, fwdlattice,
+                    bwdlattice)
+
+            # XXX must be before convergence check, because otherwise
+            #     there won't be any updates for the case ``n_iter=1``.
+            self._do_mstep(stats)
+            progress.set_description("NLL:{}, NetLoss:{}".format(-curr_logprob, stats['loss']))
+            self.monitor_.report(curr_logprob, stats['loss'])
+            if self.monitor_.converged:
+                break
+
+        return self
 
     def init_future(self):
         """
