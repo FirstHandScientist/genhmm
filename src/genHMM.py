@@ -1,6 +1,8 @@
 # file genHMM.py
 
 import os
+import sys
+
 from tqdm import tqdm
 import numpy as np
 from scipy.special import logsumexp as lsexp
@@ -24,6 +26,7 @@ import torch
 from torch import nn, distributions
 from torch.autograd import Variable
 
+
 class ConvergenceMonitor(BaseConvergenceMonitor):
     """Revise the base convergenceMonitor class such continuous monitor function is added:
     1. loglikelyhood value for each iteration.. done
@@ -39,7 +42,8 @@ class ConvergenceMonitor(BaseConvergenceMonitor):
         """Reset the monitor's state."""
         self.iter = 0
         self.history.clear()
-    
+
+
     def report(self, logprob, net_loss):
         """Report the logprob and loss into both convergenceMonitor and tensorBoard
         Parameters

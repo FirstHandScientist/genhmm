@@ -44,6 +44,9 @@ def to_phoneme_level(DATA):
         # Save an instance of labels
         targets_train[i] = x[change_locations[:-1], 0]
 
+        # Delete label from data
+        x[:, 0] = 0
+
         # For each phoneme found in the sentence, get the sequence of MFCCs and the label
 
         for j in range(seq_train[i].shape[0]):
@@ -138,8 +141,8 @@ if __name__ == "__main__":
     xtrain, ytrain, xtest, ytest, IPHN = prepare_data(data_folder=data_folder,\
                                                 fname_dtest=fname_dtest, fname_dtrain=fname_dtrain,\
                                                 n_phn=n_phn, verbose=True)
-    data_normalizer = data_normalizer()
-    data_normalizer.get_range(indata=xtrain)
+    data_norm = data_normalizer()
+    data_norm.get_range(indata=xtrain)
 
     limit = 500
     #################### train one genHMM per phone ####################
@@ -152,17 +155,15 @@ if __name__ == "__main__":
                                                           em_skip=50, tol=0,
                                                           log_dir="results/genHMM/phn{}".format(IPHN[phn_idx]) )
 
-
-
-        # Get data for class phn_idx
+        #  Get data for class phn_idx
         sub_xtrain = xtrain[ytrain == IPHN[phn_idx]]
         sub_length = np.array([sub_xtrain[i].shape[0] for i in range(sub_xtrain.shape[0])])
-        sub_xtrain_n = data_normalizer.normalize(sub_xtrain)
+        sub_xtrain_n = data_norm.normalize(sub_xtrain)
     
         
         models["phn{}".format(IPHN[phn_idx])]["model"].fit(sub_xtrain_n[:np.cumsum(sub_length[:limit])[-1]], sub_length[:limit])
 
-        #### save model is now disabled due to the error of TypeError: can't pickle _thread.lock objects##################
+    ####  save model is now disabled due to the error of TypeError: can't pickle _thread.lock objects##################
     #     save_model(file_dir="results/genHMM/phn{}".format(phn_idx),
     #                tfile=models["phn{}".format(phn_idx)])
 
@@ -178,6 +179,7 @@ if __name__ == "__main__":
     length_test = np.array([xtest[i].shape[0] for i in range(xtest.shape[0])])
     preded_scores = []
     key_list = []
+
     for key, method in models.items():
         print("[Predicting samples under model, Idx:{}, Phone:{}]".format(key, method["phone"]))
         key_list.append(key)
@@ -188,7 +190,7 @@ if __name__ == "__main__":
     y_pred = []
     for idx in idx_y_predition:
         y_pred.append( models[key_list[idx]]["phone"] )
-        
+     
     y_pred = np.array(y_pred)
     total_pred_error = np.sum(y_pred != ytest[:limit]) / ytest[:limit].shape[0]
     print("[The prediction err: {}, Phones: {}]".format(total_pred_error, IPHN))
