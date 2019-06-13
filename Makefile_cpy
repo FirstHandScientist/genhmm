@@ -1,0 +1,39 @@
+# GenerativeModel-HMM implementation
+#
+#
+SHELL=/bin/bash
+PYTHON=python
+
+SRC=src
+BIN=bin
+DATA=data
+MODELS=models
+nepochs=
+nclasses=
+MODELS_INTERM=$(shell echo $(MODELS)/epoch{0..$(nepochs)}.mdl)
+training_data=$(DATA)/train13.pkl
+testing_data=$(DATA)/test13.pkl
+
+all: 
+	echo $(MODELS_INTERM)
+
+prepare_data: $(training_data) $(testing_data)
+	echo	$(BIN)/$(PYTHON) prepare_data.py $(nclasses) $^
+
+train: $(MODELS)/final.mdl
+	for i in $(MODELS_INTERM); do \
+		$(MAKE) -f Makefile_run -s $$i; \
+		sleep 1;\
+	done
+	echo "Done" > $^
+
+
+$(MODELS)/%.mdl: 
+	echo $(PYTHON) $(BIN)/aggregate_models.py $@
+	echo $(PYTHON) $(BIN)/compute_error.py $@ $(training_data) $(testing_data)
+
+
+$(MODELS)/%.mdlc:
+	echo $(PYTHON) $(BIN)/train_class.py $(training_data) $@
+
+.SECONDARY: $(MODELS)/%.mdlc
