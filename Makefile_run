@@ -8,9 +8,9 @@ SRC=src
 BIN=bin
 DATA=data
 MODELS=models
-nepochs=3
+nepochs=2
 nclasses=2
-MODELS_INTERM=$(shell echo $(MODELS)/epoch{0..$(nepochs)}.mdl)
+MODELS_INTERM=$(shell echo $(MODELS)/epoch{1..$(nepochs)}.mdl)
 training_data=$(DATA)/train13.pkl
 testing_data=$(DATA)/test13.pkl
 
@@ -18,7 +18,7 @@ all:
 	echo $(MODELS_INTERM)
 
 prepare_data: $(training_data) $(testing_data)
-	echo	$(PYTHON) prepare_data.py $(nclasses) $^
+	echo	$(BIN)/$(PYTHON) prepare_data.py $(nclasses) $^
 
 train: $(MODELS)/final.mdl
 	for i in $(MODELS_INTERM); do \

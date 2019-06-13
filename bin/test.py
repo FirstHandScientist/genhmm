@@ -117,7 +117,6 @@ if __name__ == "__main__":
 
     llh = hmm1.llh(xtrain)
 
-
     # hmm1.fit(xtrain[ytrain == IPHN[0]])
 
     print("")

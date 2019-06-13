@@ -91,6 +91,7 @@ if __name__ == "__main__":
             # At least one of the files is missing
             pkl.dump(xtrain[ytrain == ic], open(train_outfiles[i], "wb"))
             pkl.dump(xtest[ytest == ic], open(test_outfiles[i], "wb"))
+
         else:
             print("(skip) class data exist:", train_outfiles[i], test_outfiles[i], file=sys.stderr)
 

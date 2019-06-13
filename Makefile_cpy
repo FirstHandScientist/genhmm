@@ -10,7 +10,7 @@ DATA=data
 MODELS=models
 nepochs=
 nclasses=
-MODELS_INTERM=$(shell echo $(MODELS)/epoch{0..$(nepochs)}.mdl)
+MODELS_INTERM=$(shell echo $(MODELS)/epoch{1..$(nepochs)}.mdl)
 training_data=$(DATA)/train13.pkl
 testing_data=$(DATA)/test13.pkl
 

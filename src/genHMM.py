@@ -15,65 +15,71 @@ from src.glow.config import JsonConfig
 from src.realnvp import RealNVP
 
 from hmmlearn.base import _BaseHMM
-from hmmlearn.base import ConvergenceMonitor as BaseConvergenceMonitor
+from hmmlearn.base import ConvergenceMonitor# as BaseConvergenceMonitor
 from hmmlearn.base import _hmmc
 from hmmlearn.hmm import GMMHMM
 from functools import partial
 
-from tensorboardX import SummaryWriter
+#from tensorboardX import SummaryWriter
 
 import torch
 from torch import nn, distributions
 from torch.autograd import Variable
 
 
-class ConvergenceMonitor(BaseConvergenceMonitor):
-    """Revise the base convergenceMonitor class such continuous monitor function is added:
-    1. loglikelyhood value for each iteration.. done
-    2. neural network loss during training... done
-    3. ToDo task: the original convergence monitor is not applicable to our neural net based hmm, the convergence should be based on two em_skip's log_prob values.
-    """
-    def __init__(self, tol, n_iter, verbose, log_dir):
-        super(ConvergenceMonitor, self).__init__(tol, n_iter, verbose)
-        # define the tensorboard writer with log_dir
-        self.writer = SummaryWriter(log_dir)
+#class ConvergenceMonitor(BaseConvergenceMonitor):
+    # """Revise the base convergenceMonitor class such continuous monitor function is added:
+    # 1. loglikelyhood value for each iteration.. done
+    # 2. neural network loss during training... done
+    # 3. ToDo task: the original convergence monitor is not applicable to our neural net based hmm, the convergence should be based on two em_skip's log_prob values.
+    # """
+    # def __init__(self, tol, n_iter, verbose, log_dir):
+    #     super(ConvergenceMonitor, self).__init__(tol, n_iter, verbose)
+    #     # define the tensorboard writer with log_dir
+    #     self.writer = SummaryWriter(log_dir)
+    #
+    # def _reset(self):
+    #     """Reset the monitor's state."""
+    #     self.iter = 0
+    #     self.history.clear()
+    #
+    #
+    # def report(self, logprob, net_loss):
+    #     """Report the logprob and loss into both convergenceMonitor and tensorBoard
+    #     Parameters
+    #     ----------
+    #     logprob : float
+    #         The log probability of the data as computed by EM algorithm
+    #         in the current iteration.
+    #     """
+    #     if self.verbose:
+    #         delta = logprob - self.history[-1] if self.history else np.nan
+    #         message = self._template.format(
+    #             iter=self.iter + 1, logprob=logprob, delta=delta)
+    #         print(message, file=sys.stderr)
+    #
+    #     self.history.append(logprob)
+    #
+    #     self.writer.add_scalar("neg-logprob", -logprob, self.iter)
+    #     self.writer.add_scalar("NNloss", net_loss, self.iter)
+    #     self.iter += 1
 
-    def _reset(self):
-        """Reset the monitor's state."""
-        self.iter = 0
-        self.history.clear()
-
-
-    def report(self, logprob, net_loss):
-        """Report the logprob and loss into both convergenceMonitor and tensorBoard
-        Parameters
-        ----------
-        logprob : float
-            The log probability of the data as computed by EM algorithm
-            in the current iteration.
-        """
-        if self.verbose:
-            delta = logprob - self.history[-1] if self.history else np.nan
-            message = self._template.format(
-                iter=self.iter + 1, logprob=logprob, delta=delta)
-            print(message, file=sys.stderr)
-
-        self.history.append(logprob)
-        
-        self.writer.add_scalar("neg-logprob", -logprob, self.iter)
-        self.writer.add_scalar("NNloss", net_loss, self.iter)
-
-        
-        self.iter += 1
 
 class GenHMMclassifier(nn.Module):
-    def __init__(self, options, inp_dim):
+    def __init__(self, inp_dim, nclasses, **options):
         super(GenHMMclassifier, self).__init__()
-        self.nclasses = options["nclasses"]
+        self.nclasses = nclasses
         self.hmms = [GenHMM(**options) for _ in range(self.nclasses)]
 
-    def forward(self, x):
-        return [classHMM.llh(x) for classHMM in self.hmms]
+    def forward(self, x, lengths=None):
+        if lengths is None:
+            # Assume we passed only one sequence.
+            l = [x.shape[0]]
+
+        else:
+            l = lengths
+
+        return [classHMM.pred_score(x, lengths=l) for classHMM in self.hmms]
 
 
 class GenHMM(_BaseHMM):
@@ -110,6 +116,7 @@ class GenHMM(_BaseHMM):
         # self.em_skip_cond = lambda: self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0 # or self.monitor_.iter == 0:
     
     def em_skip_cond(self):
+        "True for the first iteration or when the iteration number is a mulitple of em_skip."
         return self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0
 
     def init_startprob(self):
@@ -322,7 +329,7 @@ class GenHMM(_BaseHMM):
                         for m in range(self.n_prob_components):
                             gamma_[i, m, t] = self.pi[i, m] * self.var_nograd(self.loglh_sk - max_loglh[i])[i, m, t].exp()
 
-                        gamma_[i, :, t] /= (gamma_[i,:,t].sum() + 1e-6)   #.reshape(self.n_states,1,n_samples)
+                        gamma_[i, :, t] /= (gamma_[i, :, t].sum() + 1e-6)   #.reshape(self.n_states,1,n_samples)
                         gamma_[i, :, t] *= posteriors[t, i]
 
             stats["mixture"] += gamma_.sum(2)
@@ -366,10 +373,15 @@ class GenHMM(_BaseHMM):
         """
 
         if self.em_skip_cond():
+
         # if em_skip_cond(self.monitor_.iter, self.em_skip):
-            saved_params= self.params
+            saved_params = self.params
+            self.em_happened = False
+        # Skip the HMM update
             self.params = 'g'
 
+        else:
+            self.em_happened = True
 
         # The ``np.where`` calls guard against updating forbidden states
         # or transitions in e.g. a left-right HMM.
@@ -399,7 +411,7 @@ class GenHMM(_BaseHMM):
             pass
 
         if self.em_skip_cond():
-        # if em_skip_cond(self.monitor_.iter, self.em_skip):
+            # Put the initial parameters back
             self.params = saved_params
 
     def pred_score(self, X, lengths=None):
@@ -455,7 +467,7 @@ class GenHMM(_BaseHMM):
 
         self.monitor_._reset()
         progress = tqdm(range(self.n_iter))
-        for iter in progress:
+        for _ in progress:
             stats = self._initialize_sufficient_statistics()
             curr_logprob = 0
             for i, j in iter_from_X_lengths(X, lengths):
@@ -473,10 +485,14 @@ class GenHMM(_BaseHMM):
             self._do_mstep(stats)
             progress.set_description("NLL:{}, NetLoss:{}".format(-curr_logprob, stats['loss']))
             self.monitor_.report(curr_logprob, stats['loss'])
+
+            if self.em_happened:
+                # go home
+                break
             if self.monitor_.converged:
                 break
-
         return self
+
 
     def init_future(self):
         """
@@ -528,4 +544,4 @@ class GenHMM(_BaseHMM):
 
         self.loglh_sk[s] = self.loss
 
-        return self.var_nograd(self.logPIk_s[s].reshape(self.n_prob_components,1) + self.loss).detach().numpy().sum(0)
+        return self.var_nograd(self.logPIk_s[s].reshape(self.n_prob_components, 1) + self.loss).detach().numpy().sum(0)
