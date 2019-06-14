@@ -66,10 +66,15 @@ from torch.autograd import Variable
 
 
 class GenHMMclassifier(nn.Module):
-    def __init__(self, inp_dim, nclasses, **options):
+    def __init__(self, mdlc_files=None, **options):
         super(GenHMMclassifier, self).__init__()
-        self.nclasses = nclasses
-        self.hmms = [GenHMM(**options) for _ in range(self.nclasses)]
+
+        if mdlc_files == None:
+            self.nclasses = options["nclasses"]
+            self.hmms = [GenHMM(**options) for _ in range(self.nclasses)]
+        else:
+            self.hmms = [load_model(fname) for fname in mdlc_files]
+
 
     def forward(self, x, lengths=None):
         if lengths is None:
@@ -79,7 +84,7 @@ class GenHMMclassifier(nn.Module):
         else:
             l = lengths
 
-        return [classHMM.pred_score(x, lengths=l) for classHMM in self.hmms]
+        return [classHMM.pred_score(x, lengths=l)[0] for classHMM in self.hmms]
 
 
 class GenHMM(_BaseHMM):
@@ -109,7 +114,7 @@ class GenHMM(_BaseHMM):
         self.log_dir = log_dir
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
-        self.monitor_ = ConvergenceMonitor(self.tol, self.n_iter, self.verbose, self.log_dir)
+        #self.monitor_ = ConvergenceMonitor(self.tol, self.n_iter, self.verbose, self.log_dir)
         #self.init_future()
         self.em_skip = em_skip
         
@@ -465,7 +470,7 @@ class GenHMM(_BaseHMM):
         self._init(X, lengths=lengths)
         self._check()
 
-        self.monitor_._reset()
+        self.monitor_ = ConvergenceMonitor(self.tol, self.n_iter, self.verbose)
         progress = tqdm(range(self.n_iter))
         for _ in progress:
             stats = self._initialize_sufficient_statistics()
@@ -484,7 +489,7 @@ class GenHMM(_BaseHMM):
             #     there won't be any updates for the case ``n_iter=1``.
             self._do_mstep(stats)
             progress.set_description("NLL:{}, NetLoss:{}".format(-curr_logprob, stats['loss']))
-            self.monitor_.report(curr_logprob, stats['loss'])
+            self.monitor_.report(curr_logprob)
 
             if self.em_happened:
                 # go home
@@ -545,3 +550,22 @@ class GenHMM(_BaseHMM):
         self.loglh_sk[s] = self.loss
 
         return self.var_nograd(self.logPIk_s[s].reshape(self.n_prob_components, 1) + self.loss).detach().numpy().sum(0)
+
+
+
+
+
+class wrapper(torch.nn.Module):
+    def __init__(self, mdl):
+        super(wrapper, self).__init__()
+        self.userdata = mdl
+
+
+def save_model(mdl, fname=None):
+    torch.save(wrapper(mdl), fname)
+    return 0
+
+def load_model(fname):
+    savable = torch.load(fname)
+    return savable.userdata
+

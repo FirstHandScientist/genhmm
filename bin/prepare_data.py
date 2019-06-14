@@ -68,17 +68,17 @@ def prepare_data(fname_dtest=None, fname_dtrain=None, n_phn=None, verbose=False)
 
 
 if __name__ == "__main__":
-    usage = "Usage: python prepare_data.py 2 data/train13.pkl data/test13.pkl"
+    usage = "Usage: python bin/prepare_data.py [nclasses] [training data] [testing data]"
 
-    if len(sys.argv) != 4:
+    if len(sys.argv) != 4 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
         print(usage)
         sys.exit(1)
 
     nclasses = int(sys.argv[1])
     train_inputfile = sys.argv[2]
     test_inputfile = sys.argv[3]
-    train_outfiles = [train_inputfile.replace(".pkl", "_" + str(i) + ".pkl") for i in range(nclasses)]
-    test_outfiles = [test_inputfile.replace(".pkl", "_" + str(i) + ".pkl") for i in range(nclasses)]
+    train_outfiles = [train_inputfile.replace(".pkl", "_" + str(i+1) + ".pkl") for i in range(nclasses)]
+    test_outfiles = [test_inputfile.replace(".pkl", "_" + str(i+1) + ".pkl") for i in range(nclasses)]
 
 
     ########## data preparation ##########

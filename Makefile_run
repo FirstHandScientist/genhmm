@@ -18,7 +18,7 @@ all:
 	echo $(MODELS_INTERM)
 
 prepare_data: $(training_data) $(testing_data)
-	echo	$(BIN)/$(PYTHON) prepare_data.py $(nclasses) $^
+	$(PYTHON) $(BIN)/prepare_data.py $(nclasses) $^
 
 train: $(MODELS)/final.mdl
 	for i in $(MODELS_INTERM); do \
@@ -29,11 +29,19 @@ train: $(MODELS)/final.mdl
 
 
 $(MODELS)/%.mdl: $(MODELS)/%_class1.mdlc $(MODELS)/%_class2.mdlc 
-	echo $(PYTHON) $(BIN)/aggregate_models.py $@
-	echo $(PYTHON) $(BIN)/compute_error.py $@ $(training_data) $(testing_data)
+	$(PYTHON) $(BIN)/aggregate_models.py $@
+	$(PYTHON) $(BIN)/compute_error.py $@ $(training_data) $(testing_data)
 
 
 $(MODELS)/%.mdlc:
 	echo $(PYTHON) $(BIN)/train_class.py $(training_data) $@
+
+clean:
+	rm -rf $(DATA)/train*_*.pkl
+	rm -rf $(DATA)/test*_*.pkl
+	rm -rf $(MODELS)/epoch*.mdl
+	rm -rf $(MODELS)/epoch*_class_*.mdlc
+
+
 
 .SECONDARY: $(MODELS)/%.mdlc

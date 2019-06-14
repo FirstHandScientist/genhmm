@@ -20,3 +20,7 @@ all:
 
 	$(MAKE) -f Makefile_run -s prepare_data
 	$(MAKE) -f Makefile_run -s train
+
+clean:
+	$(MAKE) -f Makefile_run -s $@
+

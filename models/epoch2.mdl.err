@@ -1,0 +1,1 @@
+python bin/compute_error.py models/epoch2.mdl data/train13.pkl models/epoch2.mdl
