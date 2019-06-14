@@ -20,21 +20,21 @@ all:
 prepare_data: $(training_data) $(testing_data)
 	$(PYTHON) $(BIN)/prepare_data.py $(nclasses) $^
 
-train: $(MODELS)/final.mdl
+train: 
 	for i in $(MODELS_INTERM); do \
 		$(MAKE) -f Makefile_run -s $$i; \
 		sleep 1;\
 	done
-	echo "Done" > $^
+#	echo "Done" > $^
 
 
 $(MODELS)/%.mdl: 
 	$(PYTHON) $(BIN)/aggregate_models.py $@
-	$(PYTHON) $(BIN)/compute_error.py $@ $(training_data) $(testing_data)
+	$(PYTHON) $(BIN)/compute_accuracy.py $@ $(training_data) $(testing_data)
 
 
 $(MODELS)/%.mdlc:
-	echo $(PYTHON) $(BIN)/train_class.py $(training_data) $@
+	$(PYTHON) $(BIN)/train_class.py $(training_data) $@
 
 clean:
 	rm -f $(DATA)/train*_*.pkl
@@ -42,4 +42,5 @@ clean:
 	rm -f $(MODELS)/epoch*.mdl
 	rm -f $(MODELS)/epoch*_class_*.mdlc
 
-.SECONDARY: $(MODELS)/%.mdlc
+.SECONDARY: %.mdlc
+
