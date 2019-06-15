@@ -1,5 +1,7 @@
 import os
 import sys
+sys.path.append("..")
+
 from parse import parse
 import pickle as pkl
 from src.genHMM import GenHMM, save_model, load_model
@@ -22,7 +24,7 @@ if __name__ == "__main__":
 
     #  Load data
     xtrain = pkl.load(open(train_class_inputfile, "rb"))
-    xtrain = xtrain[:100]
+    #xtrain = xtrain#[:100]
 
     # Reshape data
     l = [x.shape[0] for x in xtrain]
@@ -33,7 +35,7 @@ if __name__ == "__main__":
         #  Create model
         options = dict(n_components=2, n_prob_components=2,
                        n_iter=3000,
-                       em_skip=300, tol=0)
+                       em_skip=30, tol=0)
 
         mdl = GenHMM(**options)
 

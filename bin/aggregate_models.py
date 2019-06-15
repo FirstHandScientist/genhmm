@@ -1,4 +1,6 @@
 import sys
+sys.path.append("..")
+
 import os
 import glob
 from src.genHMM import GenHMMclassifier, save_model

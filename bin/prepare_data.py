@@ -1,7 +1,11 @@
 import sys
+sys.path.append("..")
+
 import numpy as np
 import pickle as pkl
 import os
+from functools import partial
+
 
 def getsubset(data, label, iphn):
     # concat data
@@ -37,7 +41,6 @@ def to_phoneme_level(DATA):
         x[:, 0] = 0
 
         # For each phoneme found in the sentence, get the sequence of MFCCs and the label
-
         for j in range(seq_train[i].shape[0]):
             data_tr += [x[seq_train[i][j][0]:seq_train[i][j][1]]]
             labels_tr += [targets_train[i][j]]
@@ -67,6 +70,24 @@ def prepare_data(fname_dtest=None, fname_dtrain=None, n_phn=None, verbose=False)
     return xtrain, ytrain, xtest, ytest, iphn
 
 
+def norm_minmax(x, min_=None, max_=None):
+    return ( (x - min_.reshape(1, -1)) / (max_.reshape(1, -1) - min_.reshape(1, -1)))
+
+
+def normalize(xtrain, xtest):
+    f_min = np.vectorize(lambda x : np.min(x, axis=0), signature="()->(k)")
+    f_max = np.vectorize(lambda x : np.max(x, axis=0), signature="()->(k)")
+    min_tr = np.min(f_min(xtrain), axis=0)
+    max_tr = np.max(f_max(xtrain), axis=0)
+
+    # The first component is zeros and can create division by 0
+    min_tr[0] = 0
+    max_tr[0] = 1
+    f_perform_normalize = np.vectorize(partial(norm_minmax, min_=min_tr, max_=max_tr), signature="()->()",otypes=[np.ndarray])
+    return f_perform_normalize(xtrain), f_perform_normalize(xtest)
+
+
+
 if __name__ == "__main__":
     usage = "Usage: python bin/prepare_data.py [nclasses] [training data] [testing data]"
 
@@ -89,8 +110,13 @@ if __name__ == "__main__":
     for i, ic in enumerate(classes):
         if not (os.path.exists(train_outfiles[i]) & os.path.exists(test_outfiles[i]) ):
             # At least one of the files is missing
-            pkl.dump(xtrain[ytrain == ic], open(train_outfiles[i], "wb"))
-            pkl.dump(xtest[ytest == ic], open(test_outfiles[i], "wb"))
+            xtrain_c = xtrain[ytrain == ic]
+            xtest_c = xtest[ytest == ic]
+
+            xtrain_cn, xtest_cn = normalize(xtrain_c, xtest_c)
+
+            pkl.dump(xtrain_cn, open(train_outfiles[i], "wb"))
+            pkl.dump(xtest_cn, open(test_outfiles[i], "wb"))
 
         else:
             print("(skip) class data exist:", train_outfiles[i], test_outfiles[i], file=sys.stderr)
