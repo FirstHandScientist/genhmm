@@ -74,9 +74,10 @@ $ make nclasses=2 nepochs=10 train
 ```
 
 You can follow the training in `stdout`.
-Note 1: make automatically creates as many jobs as the number of classes.
-Note 2: epochs are here Expectation Maximization steps.
-Note 3: make uses the file `Makefile` to modifiy the file 'Makefile_cpy` to create and call `Makefile_run`.
+
+- Note 1: make automatically creates as many jobs as the number of classes.
+- Note 2: epochs are here Expectation Maximization steps.
+- Note 3: make uses the file `Makefile` to modifiy the file 'Makefile_cpy` to create and call `Makefile_run`.
 
 
 
