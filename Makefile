@@ -18,8 +18,9 @@ all:
 	       	sed -r 's/nclasses=/nclasses=$(nclasses)/g'  >   Makefile_run
 
 	$(MAKE) -f Makefile_run -s prepare_data
-	$(MAKE) -f Makefile_run -s train
-
+	$(MAKE) -f Makefile_run -j $(nclasses) -s train
+init:
+	$(MAKE) -f Makefile_run -s -k $@
 clean:
 	$(MAKE) -f Makefile_run -s -k $@
 

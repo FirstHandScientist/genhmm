@@ -14,8 +14,11 @@ MODELS_INTERM=$(shell echo $(MODELS)/epoch{1..$(nepochs)}.mdl)
 training_data=$(DATA)/train13.pkl
 testing_data=$(DATA)/test13.pkl
 
-all: 
-	echo $(MODELS_INTERM)
+all: train
+
+init:
+	mkdir $(MODELS) 
+
 
 prepare_data: $(training_data) $(testing_data)
 	$(PYTHON) $(BIN)/prepare_data.py $(nclasses) $^
@@ -38,9 +41,12 @@ $(MODELS)/%.mdlc:
 
 clean:
 	rm -f $(DATA)/train*_*.pkl
-	rm -f $(DATA)/test*_*.pkl
-	rm -f $(MODELS)/epoch*.mdl
-	rm -f $(MODELS)/epoch*_class_*.mdlc
+	rm -f $(DATA)/test*_*.pkl 
+	rm -f $(MODELS)/epoch*.mdl 
+	rm -f $(MODELS)/epoch*_class*.mdlc 
+	rm -f Makefile_run
 
-.SECONDARY: %.mdlc
 
+.SECONDARY: 
+
+.PRECIOUS:
