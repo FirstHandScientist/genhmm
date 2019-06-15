@@ -1,6 +1,9 @@
 # Other sub git repo
 /code/hmmlearn/.git*
 
+# Runable makefile
+Makefile_run
+
 # Pycharm cache
 .idea/
 # Python cache
@@ -13,6 +16,7 @@ data/timit/*
 *.lbl
 *.ark
 *.pkl
+*.work-laptop
 .data
 data/34e2b78745138186976cbc27939b1b34d18bd5b3.torrent
 # Intermediate models
