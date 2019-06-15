@@ -44,6 +44,35 @@ $ python setup.py install
 ```
 Go to https://github.com/hmmlearn/hmmlearn for details.
 
+Create a conda environment from the `.yml` file:
+```
+$ conda env create -f environment.yml
+$ conda activate pyasr
+```
+
+Run the code from this README.md location and start by creating the necessary folders with:
+```
+$ make init
+```
+
+To run the training of genHMM on 2 classes and during 10 epochs, run:
+```
+$ make nclasses=2 nepochs=10 train
+```
+
+You can follow the training in `stdout`.
+Note 1: make automatically creates as many jobs as the number of classes.
+Note 2: epochs are here Expectation Maximization steps.
+Note 3: make uses the file `Makefile` to modifiy the file 'Makefile_cpy` to create and call `Makefile_run`.
+
+
+
+## Getting Started
+The training is distributed over the number of classes on different processes.
+The parallelization is managed via a Makefile.
+Data and models are pushed to available devices in the `GenHMM.fit()` method.
+
+
 ### TIMIT dataset
 Read `src/timit-preprocessor/README` for information on how to process the raw timit dataset.
 The processed and labeled time series are anyways available in a compressed form `data/test13.gz` and `data/train13.gz`.
