@@ -9,7 +9,9 @@
 ## Experiments todo
 Priority work:
 - [ ] Utility for trained model saving and loading
-- [ ] Adapt Model running on GPU
+- [ ] Improvement for optimization adn training efficiency
+    - [ ] Adapt Model running on GPU
+    - [ ] The mini-batch compositin of PyTorch-Kaldi can be used by us for batch-size stochastica gradient decent. 
 - [ ] GenHMM sanity check and testing running
 - [x] TensorboardX, training process logging and log-likelihood ploting
 
@@ -18,6 +20,8 @@ Import work:
     - [ ] 1. random, 
     - [ ] 2. reverse, 
     - [ ] 3. 1X1 conv
+- [ ] 1. Maximum likelihood decesion is not optimal if risk/panelty is not same for all errors. 2. likelihool of each class may differ too much due to random initialization of neural networks: work around: one linear layer after maximum likelihood
+
 - [ ] Comparions experiments design. Please refer to [ranking on TIMIT](https://paperswithcode.com/sota/speech-recognition-on-timit)
     - [ ] Baseline comparion with GMM/HMM
     - [ ] DNN/HMM, LSTM, RNN state art comparion. Please refer project [Pytorch-Kaldi Project](https://github.com/mravanelli/pytorch-kaldi)
