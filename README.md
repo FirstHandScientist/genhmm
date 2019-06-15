@@ -62,6 +62,7 @@ GNU Make 4.1
 Built for x86_64-pc-linux-gnu
 ...
 ```
+## Getting Started
 
 Start by creating the necessary folders with:
 ```
@@ -72,6 +73,8 @@ To run the training of genHMM on 2 classes and during 10 epochs, run:
 ```
 $ make nclasses=2 nepochs=10 train
 ```
+The training is distributed over the number of classes on different processes.
+The parallelization is managed via a Makefile.
 
 You can follow the training in `stdout`.
 
@@ -80,11 +83,6 @@ You can follow the training in `stdout`.
 - Note 3: make uses the file `Makefile` to modifiy the file 'Makefile_cpy` to create and call `Makefile_run`.
 
 
-
-## Getting Started
-The training is distributed over the number of classes on different processes.
-The parallelization is managed via a Makefile.
-Data and models are pushed to available devices in the `GenHMM.fit()` method.
 
 
 ### TIMIT dataset
