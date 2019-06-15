@@ -2,6 +2,7 @@
 
 import os
 import sys
+sys.path.append("..")
 
 from tqdm import tqdm
 import numpy as np
@@ -469,6 +470,8 @@ class GenHMM(_BaseHMM):
         X = check_array(X)
         self._init(X, lengths=lengths)
         self._check()
+
+        # Send the data and NNs to gpu
 
         self.monitor_ = ConvergenceMonitor(self.tol, self.n_iter, self.verbose)
         progress = tqdm(range(self.n_iter))
