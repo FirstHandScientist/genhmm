@@ -54,7 +54,16 @@ $ conda env create -f environment.yml
 $ conda activate pyasr
 ```
 
-Run the code from this README.md location and start by creating the necessary folders with:
+You must install `GNU make`, on Ubuntu:
+```
+$ sudo apt install build-essential
+$ make -v
+GNU Make 4.1
+Built for x86_64-pc-linux-gnu
+...
+```
+
+Start by creating the necessary folders with:
 ```
 $ make init
 ```
