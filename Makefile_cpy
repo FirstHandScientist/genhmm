@@ -17,7 +17,7 @@ testing_data=$(DATA)/test13.pkl
 all: train
 
 init:
-	mkdir $(MODELS) 
+	mkdir -p $(MODELS) 
 
 
 prepare_data: $(training_data) $(testing_data)
