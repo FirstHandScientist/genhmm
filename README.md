@@ -71,7 +71,7 @@ $ make init
 
 To run the training of genHMM on 2 classes and during 10 epochs, run:
 ```
-$ make nclasses=2 nepochs=10 train
+$ make nclasses=2 nepochs=10 
 ```
 The training is distributed over the number of classes on different processes.
 The parallelization is managed via a Makefile.

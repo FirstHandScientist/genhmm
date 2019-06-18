@@ -14,7 +14,7 @@ dep=$(shell echo "\$$""\(MODELS\)""\/%"_class{1..$(nclasses)}.mdlc)
 
 all: runfile
 	$(MAKE) -f Makefile_run -s prepare_data
-	$(MAKE) -f Makefile_run -j $(nclasses) -s train
+	$(MAKE) -f Makefile_run -s train
 
 runfile:
 	cat Makefile_cpy | sed -r 's/\(MODELS\)\/\%.mdl:/\(MODELS\)\/\%.mdl: $(dep)/g' |\
