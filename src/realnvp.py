@@ -30,8 +30,11 @@ class RealNVP(torch.nn.Module):
         return z, log_det_J
 
     def log_prob(self, x):
+        """ The prior log_prob may need be implemented such it adapts cuda computation"""
         z, logp = self.f(x)
         return self.prior.log_prob(z) + logp
+        
+
 
     def sample(self, batchSize):
         z = self.prior.sample((batchSize, 1))

@@ -8,11 +8,11 @@
 
 ## Experiments todo
 Priority work:
-- [ ] Utility for trained model saving and loading
+- [x] Utility for trained model saving and loading
 - [ ] Improvement for optimization adn training efficiency
-    - [ ] Adapt Model running on GPU
+    - [x] Adapt Model running on GPU
     - [ ] The mini-batch compositin of PyTorch-Kaldi can be used by us for batch-size stochastica gradient decent. 
-- [ ] GenHMM sanity check and testing running
+- [x] GenHMM sanity check and testing running
 - [x] TensorboardX, training process logging and log-likelihood ploting
 
 Import work:

@@ -76,7 +76,7 @@ class GenHMMclassifier(nn.Module):
         else:
             self.hmms = [load_model(fname) for fname in mdlc_files]
 
-
+        
     def forward(self, x, lengths=None):
         if lengths is None:
             # Assume we passed only one sequence.
@@ -91,7 +91,7 @@ class GenHMMclassifier(nn.Module):
 class GenHMM(_BaseHMM):
     def __init__(self, n_components=None, n_prob_components=None,
             algorithm="viterbi", random_state=None, n_iter=100, em_skip=10, tol=1e-2, verbose=False,
-                 params="stmg", init_params="stmg", dtype=torch.FloatTensor, log_dir="results"):
+                 params="stmg", init_params="stmg", dtype=torch.cuda.FloatTensor, log_dir="results"):
 
 
         super(GenHMM, self).__init__(self, n_components, algorithm=algorithm, random_state=random_state, n_iter=n_iter,
@@ -108,7 +108,7 @@ class GenHMM(_BaseHMM):
 
         self.init_transmat()
         self.init_startprob()
-
+        self.device = torch.device('cuda:0')
         self.init_gen()
         
         # training log directory and logger
@@ -164,8 +164,10 @@ class GenHMM(_BaseHMM):
         #    return nn.Sequential(nn.Linear(D, H), nn.LeakyReLU(), nn.Linear(H, H), nn.LeakyReLU(), nn.Linear(H, D))
 
         masks = torch.from_numpy(np.array([[0]*d + [1]*(D-d), [1]*d + [0]*(D-d)] * nchain).astype(np.float32))
-
-        prior = distributions.MultivariateNormal(torch.zeros(D), torch.eye(D))
+        ### torch MultivariateNormal logprob gets error when input is cuda tensor
+        ### thus changing it to implementation
+        prior = distributions.MultivariateNormal(torch.zeros(D).to(self.device), torch.eye(D).to(self.device))
+        # prior = lambda x: GaussianDiag.logp(torch.zeros(D), torch.zeros(D), x)
         self.flow = RealNVP(nets, nett, masks, prior)
 
 
@@ -355,7 +357,7 @@ class GenHMM(_BaseHMM):
 
             # Compute log-p(chi | s, X) = log-P(X|s,chi) + log-P(chi|s) - log\sum_{chi} exp ( log-P(X|s,chi) + log-P(chi|s) )
             log_num = self.loglh_sk.detach() + logPIk_s_ext
-            log_denom = self.var_nograd(lsexp(self.loglh_sk.detach() + logPIk_s_ext, axis=1))
+            log_denom = self.var_nograd(torch.logsumexp(self.loglh_sk.detach() + logPIk_s_ext, dim=1))
 
             logpk_sX = log_num - log_denom.reshape(self.n_states, 1, n_samples)
 
@@ -364,7 +366,7 @@ class GenHMM(_BaseHMM):
             #  The .sum(1) call sums on the components and .sum() sums on all states and samples
             loss = -(post * (torch.exp(logpk_sX) * brackets).sum(1)).sum()/stats['nobs']
             loss.backward()
-            stats['loss'] += float(loss.detach().numpy())
+            stats['loss'] += float(loss.detach().cpu().numpy())
 
         if self.em_skip_cond():
         # if em_skip_cond(self.monitor_.iter, self.em_skip):
@@ -537,6 +539,10 @@ class GenHMM(_BaseHMM):
     @staticmethod
     def to_numpy(x):
         return x.detach().numpy()
+    @staticmethod
+    def to_device(x):
+        return x.cuda(self.device)
+        
 
     def var_nograd(self, x):
         return Variable(self.dtype(x), requires_grad=False)
@@ -555,7 +561,7 @@ class GenHMM(_BaseHMM):
 
         self.loglh_sk[s] = self.loss
 
-        return self.var_nograd(self.logPIk_s[s].reshape(self.n_prob_components, 1) + self.loss).detach().numpy().sum(0)
+        return self.var_nograd(self.logPIk_s[s].reshape(self.n_prob_components, 1) + self.loss).detach().cpu().numpy().sum(0)
 
 
 
