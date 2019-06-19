@@ -28,6 +28,7 @@ if __name__ == "__main__":
 
     # Reshape data
     l = [x.shape[0] for x in xtrain]
+
     X = np.concatenate(xtrain)
 
     #  Load or create model
@@ -42,6 +43,12 @@ if __name__ == "__main__":
     else:
         # Load previous model
         mdl = load_model(out_mdl.replace("epoch" + epoch_str, "epoch" + str(int(epoch_str)-1)))
+
+
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+        X = torch.DoubleTensor(X).to(device)
+        mdl.push2gpu(device)
 
     mdl.fit(X, lengths=l)
     save_model(mdl, fname=out_mdl)

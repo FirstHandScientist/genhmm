@@ -118,22 +118,12 @@ class GenHMM(_BaseHMM):
         #self.monitor_ = ConvergenceMonitor(self.tol, self.n_iter, self.verbose, self.log_dir)
         #self.init_future()
         self.em_skip = em_skip
-
-        # move network to device
-        if torch.cuda.is_available():
-            self.move_network_to_gpu()
-            
-    
-    def move_network_to_gpu(self):
-        """Current implementation move networks to a default gpu device.
-        Todo Future work: if mulitple gpu available, this method should be able to different class's data to different gpu
-        """
-        for state_network in self.networks:
-            for component_state_network in state_network:
-                component_state_network = component_state_network.cuda(device=self.device)
-
         # self.em_skip_cond = lambda: self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0 # or self.monitor_.iter == 0:
-    
+
+    def push2gpu(self, device):
+        for net in self.networks:
+            net.to(device)
+
     def em_skip_cond(self):
         "True for the first iteration or when the iteration number is a mulitple of em_skip."
         return self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0
