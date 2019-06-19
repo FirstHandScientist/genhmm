@@ -121,8 +121,8 @@ class GenHMM(_BaseHMM):
         # self.em_skip_cond = lambda: self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0 # or self.monitor_.iter == 0:
 
     def push2gpu(self, device):
-        for net in self.networks:
-            net.to(device)
+        for nets in self.networks:
+            [nnet.to(device) for nnet in nets]
 
     def em_skip_cond(self):
         "True for the first iteration or when the iteration number is a mulitple of em_skip."
