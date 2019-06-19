@@ -91,7 +91,7 @@ class GenHMMclassifier(nn.Module):
 class GenHMM(_BaseHMM):
     def __init__(self, n_components=None, n_prob_components=None,
             algorithm="viterbi", random_state=None, n_iter=100, em_skip=10, tol=1e-2, verbose=False,
-                 params="stmg", init_params="stmg", dtype=torch.cuda.FloatTensor, log_dir="results"):
+                 params="stmg", init_params="stmg", dtype=torch.FloatTensor, log_dir="results", device='cpu'):
 
 
         super(GenHMM, self).__init__(self, n_components, algorithm=algorithm, random_state=random_state, n_iter=n_iter,
@@ -108,7 +108,7 @@ class GenHMM(_BaseHMM):
 
         self.init_transmat()
         self.init_startprob()
-        self.device = torch.device('cuda:0')
+        self.device = device
         self.init_gen()
         
         # training log directory and logger
@@ -211,7 +211,8 @@ class GenHMM(_BaseHMM):
         self.loglh_sk = self.var_nograd(np.zeros((self.n_states, self.n_prob_components, n_samples)))
         self.logPIk_s = self.var_nograd(self.pi).log()
 
-        X_ = self.dtype(X)
+        # Send data to GPU
+        X_ = self.dtype(X).cuda(self.device)
 
         # One likelihood function per state
         f_s = [partial(self._compute_log_likelihood_per_state, x=X_, s=s)
@@ -539,10 +540,6 @@ class GenHMM(_BaseHMM):
     @staticmethod
     def to_numpy(x):
         return x.detach().numpy()
-    @staticmethod
-    def to_device(x):
-        return x.cuda(self.device)
-        
 
     def var_nograd(self, x):
         return Variable(self.dtype(x), requires_grad=False)
