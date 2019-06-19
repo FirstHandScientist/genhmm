@@ -46,10 +46,10 @@ if __name__ == "__main__":
 
 
     if torch.cuda.is_available():
-        device = torch.device('cuda')
-        X = torch.DoubleTensor(X).to(device)
-        mdl.push2gpu(device)
+        device = torch.device('cuda:0')
         mdl.device=device
+        mdl.push2gpu(device, lengths=l)
+    
     mdl.fit(X, lengths=l)
     save_model(mdl, fname=out_mdl)
     sys.exit(0)

@@ -120,9 +120,22 @@ class GenHMM(_BaseHMM):
         self.em_skip = em_skip
         # self.em_skip_cond = lambda: self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0 # or self.monitor_.iter == 0:
 
-    def push2gpu(self, device):
-        for nets in self.networks:
-            [nnet.to(device) for nnet in nets]
+    def push2gpu(self, device, lengths=None):
+        for i,nets in enumerate(self.networks.tolist()):
+            for j,nnet in enumerate(nets):
+                self.networks[i,j] = self.networks[i,j].to(device)
+                p = self.networks[i,j].prior
+                self.networks[i,j].prior = distributions.MultivariateNormal(p.loc.to(device),p.covariance_matrix.to(device))
+        self.init_optimizer()
+        
+        # Push current model weights
+        self.logPIk_s = self.var_nograd(self.pi).log().to(self.device)
+
+        # Allocate mem on GPU for llh compute. Since all sequences have a different length, we allocate enough for the longest. 
+        self.max_seq_len = max(lengths)
+        self.llh_data = self.var_nograd(torch.FloatTensor(np.zeros((self.max_seq_len, self.n_states)))).to(self.device)
+        self.loglh_sk = self.var_grad(np.zeros((self.n_states, self.n_prob_components, self.max_seq_len))).to(self.device)
+        self.post_data = self.var_nograd(np.zeros((self.n_states, self.max_seq_len))).to(self.device)
 
     def em_skip_cond(self):
         "True for the first iteration or when the iteration number is a mulitple of em_skip."
@@ -164,9 +177,10 @@ class GenHMM(_BaseHMM):
         #    return nn.Sequential(nn.Linear(D, H), nn.LeakyReLU(), nn.Linear(H, H), nn.LeakyReLU(), nn.Linear(H, D))
 
         masks = torch.from_numpy(np.array([[0]*d + [1]*(D-d), [1]*d + [0]*(D-d)] * nchain).astype(np.float32))
+
         ### torch MultivariateNormal logprob gets error when input is cuda tensor
         ### thus changing it to implementation
-        prior = distributions.MultivariateNormal(torch.zeros(D).to(self.device), torch.eye(D).to(self.device))
+        prior = distributions.MultivariateNormal(torch.zeros(D), torch.eye(D))
         # prior = lambda x: GaussianDiag.logp(torch.zeros(D), torch.zeros(D), x)
         self.flow = RealNVP(nets, nett, masks, prior)
 
@@ -181,10 +195,17 @@ class GenHMM(_BaseHMM):
         # Optimizer
         self.optimizer = torch.optim.Adam(sum([[p for p in flow.parameters() if p.requires_grad == True]\
                                             for flow in self.networks], []), lr=1e-4)
+        self.init_optimizer()
 
         # Reshape in a n_states x n_prob_components array
         self.networks = np.array(self.networks).reshape(self.n_states, self.n_prob_components)
         return self
+    
+    def init_optimizer(self, lr=1e-4):
+        nets = self.networks if isinstance(self.networks,list) else self.networks.reshape(-1).tolist()
+        self.optimizer = torch.optim.Adam(sum([[p for p in flow.parameters() if p.requires_grad == True]\
+                                            for flow in nets], []), lr=lr)
+
 
 
     def llh(self, X):
@@ -206,22 +227,21 @@ class GenHMM(_BaseHMM):
         """
 
         n_samples = X.shape[0]
-        llh = np.zeros((n_samples, self.n_states))
 
-        self.loglh_sk = self.var_nograd(np.zeros((self.n_states, self.n_prob_components, n_samples)))
-        self.logPIk_s = self.var_nograd(self.pi).log()
-
-        # Send data to GPU
-        X_ = self.dtype(X).cuda(self.device)
+        if self.device != 'cpu':
+            # Kinda useless ?
+            self.llh_data[:] = 0
+            self.loglh_sk[:,:,:] = self.var_grad(np.zeros((self.n_states, self.n_prob_components, self.max_seq_len)))
 
         # One likelihood function per state
-        f_s = [partial(self._compute_log_likelihood_per_state, x=X_, s=s)
+        f_s = [partial(self._compute_log_likelihood_per_state, x=X, s=s)
                for s in range(self.n_states)]
 
         # For each state
         for i, llh_fun in enumerate(f_s):
-            llh[:, i] = llh_fun()
-        return llh
+            self.llh_data[:n_samples, i] = llh_fun()
+
+        return self.llh_data[:n_samples, :].detach().cpu().numpy().astype(np.float)
 
 
     def _generate_sample_from_state(self, state, random_state=None):
@@ -275,7 +295,8 @@ class GenHMM(_BaseHMM):
                  'mixture': np.zeros((self.n_states, self.n_prob_components)),
                  'loss': self.var_nograd(np.array([0]))
                  }
-
+        if self.device != 'cpu':
+            stats['loss'] = self.var_nograd(np.array([0])).to(self.device)
         return stats
 
     def _accumulate_sufficient_statistics(self, stats, X, framelogprob,
@@ -351,23 +372,27 @@ class GenHMM(_BaseHMM):
             # stats["loss"] += self.loss
 
             # Resize P(chi | S) for broadcasting
-            logPIk_s_ext = self.var_nograd(self.logPIk_s.reshape(self.n_states, self.n_prob_components, 1))
-
+            
+            with torch.no_grad():
+                logPIk_s_ext = self.logPIk_s.reshape(self.n_states, self.n_prob_components, 1)
+            
             # Brackets = log-P(X | chi, S) + log-P(chi | s)
-            brackets = self.loglh_sk + logPIk_s_ext
+            brackets = self.loglh_sk[:,:,:n_samples] + logPIk_s_ext
 
             # Compute log-p(chi | s, X) = log-P(X|s,chi) + log-P(chi|s) - log\sum_{chi} exp ( log-P(X|s,chi) + log-P(chi|s) )
-            log_num = self.loglh_sk.detach() + logPIk_s_ext
-            log_denom = self.var_nograd(torch.logsumexp(self.loglh_sk.detach() + logPIk_s_ext, dim=1))
-
+            log_num = self.loglh_sk[:,:,:n_samples].detach() + logPIk_s_ext
+            log_denom = torch.logsumexp(self.loglh_sk[:,:,:n_samples].detach() + logPIk_s_ext, dim=1)
+            
             logpk_sX = log_num - log_denom.reshape(self.n_states, 1, n_samples)
-
-            post = self.var_nograd(posteriors.swapaxes(0, 1))  # Transform into n_states x n_samples
+            
+            with torch.no_grad(): 
+                self.post_data[:,:n_samples] = torch.FloatTensor(posteriors.swapaxes(0, 1))  # Transform into n_states x n_samples
 
             #  The .sum(1) call sums on the components and .sum() sums on all states and samples
-            loss = -(post * (torch.exp(logpk_sX) * brackets).sum(1)).sum()/stats['nobs']
+            loss = -(self.post_data[:,:n_samples] * (torch.exp(logpk_sX) * brackets).sum(1)).sum()/stats['nobs']
             loss.backward()
-            stats['loss'] += float(loss.detach().cpu().numpy())
+            
+            stats['loss'] += loss
 
         if self.em_skip_cond():
         # if em_skip_cond(self.monitor_.iter, self.em_skip):
@@ -472,20 +497,21 @@ class GenHMM(_BaseHMM):
         self : object
             Returns self.
         """
-
+        
         X = check_array(X)
         self._init(X, lengths=lengths)
         self._check()
 
         # Send the data and NNs to gpu
-
+        X_ = torch.FloatTensor(X).to(self.device)
+        
         self.monitor_ = ConvergenceMonitor(self.tol, self.n_iter, self.verbose)
         progress = tqdm(range(self.n_iter))
         for _ in progress:
             stats = self._initialize_sufficient_statistics()
             curr_logprob = 0
             for i, j in iter_from_X_lengths(X, lengths):
-                framelogprob = self._compute_log_likelihood(X[i:j])
+                framelogprob = self._compute_log_likelihood(X_[i:j])
                 logprob, fwdlattice = self._do_forward_pass(framelogprob)
                 curr_logprob += logprob
                 bwdlattice = self._do_backward_pass(framelogprob)
@@ -553,13 +579,14 @@ class GenHMM(_BaseHMM):
         loglh_sk = [self.networks[s, k].log_prob(x).reshape(1, -1)/x.numel() for k in range(self.pi[s].shape[0])]
         #[self.networks[s, k].log_prob(x).reshape(1, -1) for k in range(self.pi[s].shape[0])]
         #[self.networks[s, k].log_prob(x).reshape(1, -1) for k in range(self.pi[s].shape[0])]
-
         self.loss = torch.cat(loglh_sk, dim=0)
 
-        self.loglh_sk[s] = self.loss
-
-        return self.var_nograd(self.logPIk_s[s].reshape(self.n_prob_components, 1) + self.loss).detach().cpu().numpy().sum(0)
-
+        self.loglh_sk[s,:,:x.shape[0]] = self.loss
+        
+        with torch.no_grad():
+            out = (self.logPIk_s[s].reshape(self.n_prob_components, 1) + self.loss).sum(0)
+        
+        return out
 
 
 
