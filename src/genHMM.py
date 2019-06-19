@@ -118,9 +118,12 @@ class GenHMM(_BaseHMM):
         #self.monitor_ = ConvergenceMonitor(self.tol, self.n_iter, self.verbose, self.log_dir)
         #self.init_future()
         self.em_skip = em_skip
-        
         # self.em_skip_cond = lambda: self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0 # or self.monitor_.iter == 0:
-    
+
+    def push2gpu(self, device):
+        for net in self.networks:
+            net.to(device)
+
     def em_skip_cond(self):
         "True for the first iteration or when the iteration number is a mulitple of em_skip."
         return self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0
