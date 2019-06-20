@@ -118,15 +118,19 @@ class GenHMM(_BaseHMM):
         #self.init_future()
         self.em_skip = em_skip
         # self.em_skip_cond = lambda: self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0 # or self.monitor_.iter == 0:
+        self.push2gpu(device=self.device)
 
     def push2gpu(self, device):
         for nets in self.networks:
             [nnet.to(device) for nnet in nets]
+        self.startprob_ = self.var_nograd(self.startprob_).to(device)
+        self.transmat_ = self.var_nograd(self.transmat_).to(device)
+        
 
     def em_skip_cond(self):
         "True for the first iteration or when the iteration number is a mulitple of em_skip."
-        # return self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0
-        return False
+        return self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0
+        
 
     def init_startprob(self):
         """
@@ -206,15 +210,14 @@ class GenHMM(_BaseHMM):
         """
 
         n_samples = X.shape[0]
-        llh = np.zeros((n_samples, self.n_states))
+        llh = torch.zeros(n_samples, self.n_states).to(self.device)
 
-        self.loglh_sk = self.var_nograd(np.zeros((self.n_states, self.n_prob_components, n_samples)))
-        self.logPIk_s = self.var_nograd(self.pi).log()
+        self.loglh_sk = self.var_nograd(np.zeros((self.n_states, self.n_prob_components, n_samples))).to(self.device)
+        self.logPIk_s = self.var_nograd(self.pi).log().to(self.device)
 
-        X_ = self.dtype(X)
-
+        
         # One likelihood function per state
-        f_s = [partial(self._compute_log_likelihood_per_state, x=X_, s=s)
+        f_s = [partial(self._compute_log_likelihood_per_state, x=X, s=s)
                for s in range(self.n_states)]
 
         # For each state
@@ -269,13 +272,25 @@ class GenHMM(_BaseHMM):
 
         stats = {'nobs': 0,
                  'nframes':0,
-                 'start': np.zeros(self.n_states),
-                 'trans': np.zeros((self.n_states, self.n_states)),
-                 'mixture': np.zeros((self.n_states, self.n_prob_components)),
-                 'loss': self.var_nograd(np.array([0]))
+                 'start': torch.zeros(self.n_states).to(self.device),
+                 'trans': torch.zeros(self.n_states, self.n_states).to(self.device),
+                 'mixture': torch.zeros(self.n_states, self.n_prob_components).to(self.device),
+                 'loss': self.var_nograd(np.array([0])).to(self.device)
                  }
 
         return stats
+
+    def _check(self):
+        """Validates model parameters prior to fitting.
+        Raises
+        ------
+        ValueError
+            If any of the parameters are invalid, e.g. if :attr:`startprob_`
+            don't sum to 1.
+        """
+        ## ToDo: need to implement torch tensor self check
+        pass
+        
 
     def _accumulate_sufficient_statistics(self, stats, X, framelogprob,
                                           posteriors, fwdlattice, bwdlattice):
@@ -322,27 +337,27 @@ class GenHMM(_BaseHMM):
                 return
             
 
+            EPS = 1e-12
             
-            log_xi_sum = np.full((n_components, n_components), -np.inf)
-            _hmmc._compute_log_xi_sum(n_samples, n_components, fwdlattice,
-                                      log_mask_zero(self.transmat_),
-                                      bwdlattice, framelogprob,
-                                      log_xi_sum)
-            d_log_xi_sum = _compute_log_xi_sum(n_samples, n_components,\
-                                               self.dtype(fwdlattice).to(self.device),\
-                                               self.dtype(log_mask_zero(self.transmat_)).to(self.device),\
-                                               self.dtype(bwdlattice).to(self.device), \
-                                               self.dtype(framelogprob).to(self.device),\
-                                               self.dtype(np.full((n_components, n_components), -np.inf)).to(self.device))
+            log_xi_sum = _compute_log_xi_sum(n_samples, n_components, fwdlattice,
+                                             torch.log(self.transmat_ + EPS),
+                                             bwdlattice, framelogprob,
+                                             torch.ones(n_components, n_components, device=self.device)*float('-inf'))
+            # _log_xi_sum = _compute_log_xi_sum(n_samples, n_components,\
+            #                                    self.dtype(fwdlattice).to(self.device),\
+            #                                    self.dtype(log_mask_zero(self.transmat_)).to(self.device),\
+            #                                    self.dtype(bwdlattice).to(self.device), \
+            #                                    self.dtype(framelogprob).to(self.device),\
+            #                                    self.dtype(np.full((n_components, n_components), -np.inf)).to(self.device))
 
-            with np.errstate(under="ignore"):
-                stats['trans'] += np.exp(log_xi_sum)
+            
+            stats['trans'] += torch.exp(log_xi_sum)
 
         if 'm' in self.params:
 
             max_loglh = torch.max(torch.max(self.var_nograd(self.loglh_sk), dim=2)[0], dim=1)[0]
             #max_loglh = 0
-            gamma_ = np.zeros((self.n_states, self.n_prob_components, n_samples))
+            gamma_ = torch.zeros(self.n_states, self.n_prob_components, n_samples, device=self.device)
 
             for i in range(self.n_states):
                     for t in range(n_samples):
@@ -370,18 +385,20 @@ class GenHMM(_BaseHMM):
 
             logpk_sX = log_num - log_denom.reshape(self.n_states, 1, n_samples)
 
-            post = self.var_nograd(posteriors.swapaxes(0, 1))  # Transform into n_states x n_samples
+            ##### does the original swapaxes meas transpose????? please confirm
+            #post = self.var_nograd(posteriors.swapaxes(0, 1))  # Transform into n_states x n_samples
+            post = posteriors.transpose(0,1)
 
             #  The .sum(1) call sums on the components and .sum() sums on all states and samples
-            loss = -(post * (torch.exp(logpk_sX) * brackets).sum(1)).sum()/stats['nobs']
+            loss = -(post * (torch.exp(logpk_sX) * brackets).sum(1)).sum()/(n_samples)
             loss.backward()
-            stats['loss'] += float(loss.detach().cpu().numpy())
+            stats['loss'] += loss.detach()
 
         if self.em_skip_cond():
         # if em_skip_cond(self.monitor_.iter, self.em_skip):
             self.params = saved_params
 
-    def d_do_forward_pass(self, framelogprob):
+    def _do_forward_pass(self, framelogprob):
         n_samples, n_components = framelogprob.shape
         # in case log computation encounter log(0), do log(x + EPS)
         EPS = 1e-12
@@ -393,7 +410,7 @@ class GenHMM(_BaseHMM):
         return _forward(n_samples, n_components, log_startprob,\
                         log_transmat, framelogprob)
         
-    def d_do_backward_pass(self, framelogprob):
+    def _do_backward_pass(self, framelogprob):
         n_samples, n_components = framelogprob.shape
         EPS = 1e-12
         ### To Do: matain hmm parameters as torch tensors
@@ -402,7 +419,7 @@ class GenHMM(_BaseHMM):
         return _backward(n_samples, n_components, log_startprob,\
                          log_transmat, framelogprob)
         
-    def d_compute_posteriors(self, fwdlattice, bwdlattice):
+    def _compute_posteriors(self, fwdlattice, bwdlattice):
         # gamma is guaranteed to be correctly normalized by logprob at
         # all frames, unless we do approximate inference using pruning.
         # So, we will normalize each frame explicitly in case we
@@ -513,7 +530,8 @@ class GenHMM(_BaseHMM):
         """
         
         X = check_array(X.cpu().numpy())
-        self._init(X, lengths=lengths)
+        X = self.dtype(X).to(self.device)
+        # self._init(X, lengths=lengths)
         self._check()
 
         # Send the data and NNs to gpu
@@ -526,12 +544,9 @@ class GenHMM(_BaseHMM):
             for i, j in iter_from_X_lengths(X, lengths):
                 framelogprob = self._compute_log_likelihood(X[i:j])
                 logprob, fwdlattice = self._do_forward_pass(framelogprob)
-                dlogprob, dfwdlattice = self.d_do_forward_pass(self.dtype(framelogprob).to(self.device))
                 curr_logprob += logprob
                 bwdlattice = self._do_backward_pass(framelogprob)
-                dbwdlattice = self.d_do_backward_pass(self.dtype(framelogprob).to(self.device))         
                 posteriors = self._compute_posteriors(fwdlattice, bwdlattice)
-                dposteriors = self.d_compute_posteriors(dfwdlattice, dbwdlattice)
                 self._accumulate_sufficient_statistics(
                     stats, X[i:j], framelogprob, posteriors, fwdlattice,
                     bwdlattice)
@@ -539,7 +554,7 @@ class GenHMM(_BaseHMM):
             # XXX must be before convergence check, because otherwise
             #     there won't be any updates for the case ``n_iter=1``.
             self._do_mstep(stats)
-            progress.set_description("NLL:{}, NetLoss:{}".format(-curr_logprob, stats['loss']))
+            progress.set_description("NLL:{}, NetLoss:{}".format(-curr_logprob, stats['loss']/len(lengths)))
             self.monitor_.report(curr_logprob)
 
             if self.em_happened:
@@ -604,7 +619,7 @@ class GenHMM(_BaseHMM):
 
         self.loglh_sk[s] = self.loss
 
-        return self.var_nograd(self.logPIk_s[s].reshape(self.n_prob_components, 1) + self.loss).detach().cpu().numpy().sum(0)
+        return self.var_nograd(self.logPIk_s[s].reshape(self.n_prob_components, 1) + self.loss).detach().sum(0)
 
 
 
