@@ -372,7 +372,52 @@ class GenHMM(_BaseHMM):
         # if em_skip_cond(self.monitor_.iter, self.em_skip):
             self.params = saved_params
 
+    def d_do_forward_pass(self, framelogprob):
+        n_samples, n_components = framelogprob.shape
+        fwdlattice = torch.zeros_like(framelogprob)
+        # in case log computation encounter log(0), do log(x + EPS)
+        EPS = 1e-12
+        ### To Do: matain hmm parameters as torch tensors
+        log_startprob = torch.log(self.dtype(self.startprob_).to(self.device) + EPS)
+        log_transmat = torch.log(self.dtype(self.transmat_).to(self.device) + EPS)
+        
+        # begin of forward method
+        fwdlattice[0, :] = log_startprob + framelogprob[0, :]
+        for t in range(1, n_samples):
+            for j in range(n_components):
+                work_buffer = fwdlattice[t-1, :] + log_transmat[:, j]
+                
+                fwdlattice[t, j] = torch.logsumexp(work_buffer, dim=-1) + framelogprob[t, j]
 
+        #with np.errstate(under="ignore"):
+        return torch.logsumexp(fwdlattice[-1], dim=-1), fwdlattice
+
+    def d_do_backward_pass(self, framelogprob):
+        n_samples, n_components = framelogprob.shape
+        EPS = 1e-12
+        ### To Do: matain hmm parameters as torch tensors
+        log_startprob = torch.log(self.dtype(self.startprob_).to(self.device) + EPS)
+        log_transmat = torch.log(self.dtype(self.transmat_).to(self.device) + EPS)
+        
+        bwdlattice = torch.zeros_like(framelogprob)
+        # last row is already zeros, so omit the zero setting step
+        for t in range(n_samples - 2, -1, -1):
+            for i in range(n_components):
+                work_buffer = log_transmat[i,:] + framelogprob[t + 1, :] + bwdlattice[t+1, :]
+                bwdlattice[t, i] = torch.logsumexp(work_buffer, dim=-1)
+        return bwdlattice
+
+    def d_compute_posteriors(self, fwdlattice, bwdlattice):
+        # gamma is guaranteed to be correctly normalized by logprob at
+        # all frames, unless we do approximate inference using pruning.
+        # So, we will normalize each frame explicitly in case we
+        # pruned too aggressively.
+        log_gamma = fwdlattice + bwdlattice
+        # Normalizes the input array so that the exponent of the sum is 1
+        lse_gamma = torch.logsumexp(log_gamma, dim=1)
+        log_gamma -= lse_gamma[:, None]
+        
+        return torch.exp(log_gamma)
 
     def _do_mstep(self, stats):
         """Performs the M-step of EM algorithm.
@@ -486,9 +531,12 @@ class GenHMM(_BaseHMM):
             for i, j in iter_from_X_lengths(X, lengths):
                 framelogprob = self._compute_log_likelihood(X[i:j])
                 logprob, fwdlattice = self._do_forward_pass(framelogprob)
+                dlogprob, dfwdlattice = self.d_do_forward_pass(self.dtype(framelogprob).to(self.device))
                 curr_logprob += logprob
                 bwdlattice = self._do_backward_pass(framelogprob)
+                dbwdlattice = self.d_do_backward_pass(self.dtype(framelogprob).to(self.device))         
                 posteriors = self._compute_posteriors(fwdlattice, bwdlattice)
+                dposteriors = self.d_compute_posteriors(dfwdlattice, dbwdlattice)
                 self._accumulate_sufficient_statistics(
                     stats, X[i:j], framelogprob, posteriors, fwdlattice,
                     bwdlattice)
