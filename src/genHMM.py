@@ -26,7 +26,7 @@ from functools import partial
 import torch
 from torch import nn, distributions
 from torch.autograd import Variable
-from src._torch_hmmc import _compute_log_xi_sum
+from src._torch_hmmc import _compute_log_xi_sum, _forward, _backward
 
 #class ConvergenceMonitor(BaseConvergenceMonitor):
     # """Revise the base convergenceMonitor class such continuous monitor function is added:
@@ -52,8 +52,7 @@ from src._torch_hmmc import _compute_log_xi_sum
     #     logprob : float
     #         The log probability of the data as computed by EM algorithm
     #         in the current iteration.
-    #     """
-    #     if self.verbose:
+    #     """    #     if self.verbose:
     #         delta = logprob - self.history[-1] if self.history else np.nan
     #         message = self._template.format(
     #             iter=self.iter + 1, logprob=logprob, delta=delta)
@@ -384,39 +383,25 @@ class GenHMM(_BaseHMM):
 
     def d_do_forward_pass(self, framelogprob):
         n_samples, n_components = framelogprob.shape
-        fwdlattice = torch.zeros_like(framelogprob)
         # in case log computation encounter log(0), do log(x + EPS)
         EPS = 1e-12
+
         ### To Do: matain hmm parameters as torch tensors
         log_startprob = torch.log(self.dtype(self.startprob_).to(self.device) + EPS)
         log_transmat = torch.log(self.dtype(self.transmat_).to(self.device) + EPS)
         
-        # begin of forward method
-        fwdlattice[0, :] = log_startprob + framelogprob[0, :]
-        for t in range(1, n_samples):
-            for j in range(n_components):
-                work_buffer = fwdlattice[t-1, :] + log_transmat[:, j]
-                
-                fwdlattice[t, j] = torch.logsumexp(work_buffer, dim=-1) + framelogprob[t, j]
-
-        #with np.errstate(under="ignore"):
-        return torch.logsumexp(fwdlattice[-1], dim=-1), fwdlattice
-
+        return _forward(n_samples, n_components, log_startprob,\
+                        log_transmat, framelogprob)
+        
     def d_do_backward_pass(self, framelogprob):
         n_samples, n_components = framelogprob.shape
         EPS = 1e-12
         ### To Do: matain hmm parameters as torch tensors
         log_startprob = torch.log(self.dtype(self.startprob_).to(self.device) + EPS)
         log_transmat = torch.log(self.dtype(self.transmat_).to(self.device) + EPS)
+        return _backward(n_samples, n_components, log_startprob,\
+                         log_transmat, framelogprob)
         
-        bwdlattice = torch.zeros_like(framelogprob)
-        # last row is already zeros, so omit the zero setting step
-        for t in range(n_samples - 2, -1, -1):
-            for i in range(n_components):
-                work_buffer = log_transmat[i,:] + framelogprob[t + 1, :] + bwdlattice[t+1, :]
-                bwdlattice[t, i] = torch.logsumexp(work_buffer, dim=-1)
-        return bwdlattice
-
     def d_compute_posteriors(self, fwdlattice, bwdlattice):
         # gamma is guaranteed to be correctly normalized by logprob at
         # all frames, unless we do approximate inference using pruning.
