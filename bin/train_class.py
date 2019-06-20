@@ -34,11 +34,12 @@ if __name__ == "__main__":
     #  Load or create model
     if epoch_str == '1':
         #  Create model
-        options = dict(n_components=2, n_prob_components=2,
+        options = dict(n_components=5, n_prob_components=3,
                        n_iter=3000,
                        em_skip=30, tol=0)
 
         mdl = GenHMM(**options)
+        
 
     else:
         # Load previous model

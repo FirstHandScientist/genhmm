@@ -26,7 +26,7 @@ from functools import partial
 import torch
 from torch import nn, distributions
 from torch.autograd import Variable
-
+from src._torch_hmmc import _compute_log_xi_sum
 
 #class ConvergenceMonitor(BaseConvergenceMonitor):
     # """Revise the base convergenceMonitor class such continuous monitor function is added:
@@ -126,7 +126,8 @@ class GenHMM(_BaseHMM):
 
     def em_skip_cond(self):
         "True for the first iteration or when the iteration number is a mulitple of em_skip."
-        return self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0
+        # return self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0
+        return False
 
     def init_startprob(self):
         """
@@ -320,12 +321,21 @@ class GenHMM(_BaseHMM):
             # so there is no reason to update our trans. matrix estimate
             if n_samples <= 1:
                 return
+            
 
+            
             log_xi_sum = np.full((n_components, n_components), -np.inf)
             _hmmc._compute_log_xi_sum(n_samples, n_components, fwdlattice,
                                       log_mask_zero(self.transmat_),
                                       bwdlattice, framelogprob,
                                       log_xi_sum)
+            d_log_xi_sum = _compute_log_xi_sum(n_samples, n_components,\
+                                               self.dtype(fwdlattice).to(self.device),\
+                                               self.dtype(log_mask_zero(self.transmat_)).to(self.device),\
+                                               self.dtype(bwdlattice).to(self.device), \
+                                               self.dtype(framelogprob).to(self.device),\
+                                               self.dtype(np.full((n_components, n_components), -np.inf)).to(self.device))
+
             with np.errstate(under="ignore"):
                 stats['trans'] += np.exp(log_xi_sum)
 
@@ -516,8 +526,8 @@ class GenHMM(_BaseHMM):
         self : object
             Returns self.
         """
-
-        X = check_array(X)
+        
+        X = check_array(X.cpu().numpy())
         self._init(X, lengths=lengths)
         self._check()
 
