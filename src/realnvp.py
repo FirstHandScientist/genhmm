@@ -20,13 +20,13 @@ class RealNVP(torch.nn.Module):
         return x
 
     def f(self, x):
-        log_det_J, z = x.new_zeros(x.shape[0]), x
+        log_det_J, z = x.new_zeros((x.shape[0],x.shape[1])), x
         for i in reversed(range(len(self.t))):
             z_ = self.mask[i] * z
             s = self.s[i](z_) * (1 - self.mask[i])
             t = self.t[i](z_) * (1 - self.mask[i])
             z = (1 - self.mask[i]) * (z - t) * torch.exp(-s) + z_
-            log_det_J -= s.sum(dim=1)
+            log_det_J -= s.sum(dim=2)
         return z, log_det_J
 
     def log_prob(self, x):

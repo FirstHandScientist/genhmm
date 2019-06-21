@@ -1,4 +1,5 @@
 import torch
+import sys
 
 
 def _logaddexp(a, b):
@@ -26,16 +27,20 @@ def _compute_log_xi_sum(n_samples, n_components,
                         framelogprob,
                         log_xi_sum):
     """compute the gamma, in order to update transition matrix of hmm"""
+    batch_size=framelogprob.shape[0]
     work_buffer = torch.zeros_like(log_transmat)
-    logprob = torch.logsumexp(fwdlattice[n_samples - 1], dim=-1)
+    log_transmat = log_transmat.reshape(1,n_components,n_components).repeat(batch_size,1,1)
     
+    
+    logprob = torch.logsumexp(fwdlattice[:, n_samples - 1, :], dim=-1)
+#     print("{}+{}+{}+{}-{}".format(fwdlattice[:,0,0].shape,log_transmat[:,0,:].shape,  framelogprob[:,1,:].shape, bwdlattice[:,1,:].shape, logprob.shape))    
     for t in range(n_samples - 1):
         for i in range(n_components):
-            work_buffer[i,:] = fwdlattice[t, i] + \
-                               log_transmat[i, :] + \
-                               framelogprob[t+1, :] + \
-                               bwdlattice[t+1, :] \
-                               - logprob
+            work_buffer[i,:] = (fwdlattice[:, t, i].reshape(-1,1) + \
+                                log_transmat[:, i, :] + \
+                               framelogprob[:, t+1, :] + \
+                               bwdlattice[:, t+1, :] \
+                               - logprob.reshape(-1,1)).sum(0)
 
         log_xi_sum = _logaddexp(log_xi_sum, work_buffer)
 
@@ -44,28 +49,28 @@ def _compute_log_xi_sum(n_samples, n_components,
 
 def _forward(n_samples, n_components, log_startprob,
              log_transmat, framelogprob):
-    """Backward method"""
+    """Forward method"""
     fwdlattice = torch.zeros_like(framelogprob)
-        
-    fwdlattice[0, :] = log_startprob + framelogprob[0, :]
+            
+    fwdlattice[:, 0, :] = log_startprob + framelogprob[:,0, :]
     for t in range(1, n_samples):
         for j in range(n_components):
-            work_buffer = fwdlattice[t-1, :] + log_transmat[:, j]
+            work_buffer = fwdlattice[:, t-1, :] + log_transmat[:, j]
 
-            fwdlattice[t, j] = torch.logsumexp(work_buffer, dim=-1) + framelogprob[t, j]
-
+            fwdlattice[:,t, j] = torch.logsumexp(work_buffer, dim=-1) + framelogprob[:,t, j]
+    
     #with np.errstate(under="ignore"):
-    return torch.logsumexp(fwdlattice[-1], dim=-1), fwdlattice
+    return torch.logsumexp(fwdlattice[:, -1, :], dim=-1), fwdlattice
 
 def _backward(n_samples, n_components, log_startprob,
               log_transmat, framelogprob):
-    """Forward method"""
+    """Backward method"""
     
     bwdlattice = torch.zeros_like(framelogprob)
     # last row is already zeros, so omit the zero setting step
     for t in range(n_samples - 2, -1, -1):
         for i in range(n_components):
-            work_buffer = log_transmat[i,:] + framelogprob[t + 1, :] + bwdlattice[t+1, :]
-            bwdlattice[t, i] = torch.logsumexp(work_buffer, dim=-1)
+            work_buffer = log_transmat[i,:] + framelogprob[:,t + 1, :] + bwdlattice[:,t+1, :]
+            bwdlattice[:, t, i] = torch.logsumexp(work_buffer, dim=-1)
     return bwdlattice
 
