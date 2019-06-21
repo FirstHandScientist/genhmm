@@ -508,7 +508,7 @@ class GenHMM(_BaseHMM):
             logprobij, _fwdlattice = self._do_forward_pass(framelogprob)
             logprob.append(logprobij)
         return np.array(logprob)
-
+    
     def fit(self, X, lengths=None):
         """Estimate model parameters.
 
@@ -529,11 +529,11 @@ class GenHMM(_BaseHMM):
             Returns self.
         """
         
-        X = check_array(X.cpu().numpy())
-        X = self.dtype(X).to(self.device)
+        #X = check_array(X.cpu().numpy())
+        #X = self.dtype(X).to(self.device)
         # self._init(X, lengths=lengths)
-        self._check()
-
+        #self._check()
+        
         # Send the data and NNs to gpu
 
         self.monitor_ = ConvergenceMonitor(self.tol, self.n_iter, self.verbose)
