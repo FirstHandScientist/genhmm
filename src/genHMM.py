@@ -65,26 +65,6 @@ from src._torch_hmmc import _compute_log_xi_sum, _forward, _backward
     #     self.iter += 1
 
 
-class GenHMMclassifier(nn.Module):
-    def __init__(self, mdlc_files=None, **options):
-        super(GenHMMclassifier, self).__init__()
-
-        if mdlc_files == None:
-            self.nclasses = options["nclasses"]
-            self.hmms = [GenHMM(**options) for _ in range(self.nclasses)]
-        else:
-            self.hmms = [load_model(fname) for fname in mdlc_files]
-
-        
-    def forward(self, x, lengths=None):
-        if lengths is None:
-            # Assume we passed only one sequence.
-            l = [x.shape[0]]
-
-        else:
-            l = lengths
-
-        return [classHMM.pred_score(x, lengths=l)[0] for classHMM in self.hmms]
 
 
 class GenHMM(_BaseHMM):
@@ -469,11 +449,14 @@ class GenHMM(_BaseHMM):
         check_is_fitted(self, "startprob_")
         self._check()
 
-        X = check_array(X)
+        # X = check_array([X])
         # XXX we can unroll forward pass for speed and memory efficiency.
         logprob = []
         for i, j in iter_from_X_lengths(X, lengths):
-            framelogprob = self._compute_log_likelihood(X[i:j])
+            X = X[None,:]
+            X = X.to(self.device)
+        
+            framelogprob = self._compute_log_likelihood(X)
             logprobij, _fwdlattice = self._do_forward_pass(framelogprob)
             logprob.append(logprobij)
         return np.array(logprob)
@@ -594,18 +577,4 @@ class GenHMM(_BaseHMM):
 
 
 
-
-class wrapper(torch.nn.Module):
-    def __init__(self, mdl):
-        super(wrapper, self).__init__()
-        self.userdata = mdl
-
-
-def save_model(mdl, fname=None):
-    torch.save(wrapper(mdl), fname)
-    return 0
-
-def load_model(fname):
-    savable = torch.load(fname)
-    return savable.userdata
 
