@@ -117,8 +117,6 @@ class GenHMM(torch.nn.Module):
         #  Init mixture
         self.pi = self.dtype( np.random.rand(self.n_states, self.n_prob_components) )
         normalize(self.pi, axis=1)
-        with torch.no_grad():
-            self.logPIk_s = self.pi.log().to(self.device)
 
         # Init networks
         self.networks = [RealNVP(nets, nett, masks, prior) for _ in range(self.n_prob_components*self.n_states)]

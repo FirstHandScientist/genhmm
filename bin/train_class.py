@@ -14,7 +14,7 @@ from datetime import datetime as dt
 
 class TheDataset(Dataset):
     """Silly wrapper for DataLoader input."""
-    def __init__(self, xtrain):
+    def __init__(self, xtrain, device='cpu'):
         self.data = [torch.FloatTensor(x).to(device) for x in xtrain]
         self.len=len(self.data)
 
@@ -58,27 +58,25 @@ if __name__ == "__main__":
 
     #  Load or create model
     if epoch_str == '1':
+
         #  Create model, to
         options = dict(n_states=5, n_prob_components=3,
                        em_skip=30, device='cpu', lr=1e-4, log_dir="results")
 
         mdl = GenHMM(**options)
 
-
     else:
         # Load previous model
-        mdl = load_model(out_mdl.replace("epoch" + epoch_str, "epoch" + str(int(epoch_str)-1)))
 
+    mdl = load_model(out_mdl.replace("epoch" + epoch_str, "epoch" + str(int(epoch_str)-1)))
+
+    
     mdl.device = 'cpu'
     if torch.cuda.is_available():
         device = torch.device('cuda')
         mdl.device = device
     
-    print("Start")
-    
-    start_ = dt.now()
-    
-    # Push all nets to GPU
+    print("Push model to {}...".format(mdl.device), file=sys.stderr)
     for s in range(mdl.n_states):
         for k in range(mdl.n_prob_components):
             mdl.networks[s,k] = mdl.networks[s,k].to(mdl.device)
@@ -86,27 +84,31 @@ if __name__ == "__main__":
             mdl.networks[s,k].prior.loc = p.loc.to(mdl.device)#,p.covariance_matrix.to(mdl.device)).to(mdl.device)
             mdl.networks[s,k].prior.covariance_matrix = p.covariance_matrix.to(mdl.device)
 
-
-    #model = getllh(networks=mdl.networks,n_states=mdl.n_states,n_prob_components=mdl.n_prob_components, device=mdl.device, mdl=mdl).to(mdl.device)  
+    mdl.startprob_ = mdl.startprob_.to(mdl.device)
+    mdl.transmat_ = mdl.transmat_.to(mdl.device)
+    mdl.logPIk_s = mdl.log().to(self.device)
     
-    mdl.lr = 1e-4
    
-   
-    # Prepare data
+    
+    # Push data to GPU
+    # zero pad data for batch training
     max_len_ = max([x.shape[0] for x in xtrain])
     xtrain_padded = pad_data(xtrain, max_len_)
-    traindata = DataLoader(dataset=TheDataset(xtrain_padded), batch_size=64, shuffle=True)
+    traindata = DataLoader(dataset=TheDataset(xtrain_padded, device=mdl.device), batch_size=64, shuffle=True)
     
+
     # niter counts the number of em steps before saving a model checkpoint
     niter = 300
-
-    # em_skip determines the number of back-props before a EM step is performed
-    em_skip = 20
     
+    # em_skip determines the number of back-props before an EM step is performed
+    mdl.em_skip = 20
+    
+    # TODO: pass lr as a param
+    mdl.lr = 1e-4
 
     for iiter in range(niter):
         mdl.fit(traindata)
-
+        
     save_model(mdl, fname=out_mdl)
     sys.exit(0)
 
