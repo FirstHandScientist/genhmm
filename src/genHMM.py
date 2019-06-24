@@ -10,15 +10,10 @@ from scipy.special import logsumexp as lsexp
 from sklearn.utils import check_array, check_random_state
 from sklearn.utils.validation import check_is_fitted
 
-from hmmlearn.utils import normalize, log_mask_zero, iter_from_X_lengths
 from src.glow.models import Glow, FlowNet
 from src.glow.config import JsonConfig
 from src.realnvp import RealNVP
 
-from hmmlearn.base import _BaseHMM
-from hmmlearn.base import ConvergenceMonitor# as BaseConvergenceMonitor
-from hmmlearn.base import _hmmc
-from hmmlearn.hmm import GMMHMM
 from functools import partial
 
 #from tensorboardX import SummaryWriter
@@ -27,42 +22,6 @@ import torch
 from torch import nn, distributions
 from torch.autograd import Variable
 from src._torch_hmmc import _compute_log_xi_sum, _forward, _backward
-
-#class ConvergenceMonitor(BaseConvergenceMonitor):
-    # """Revise the base convergenceMonitor class such continuous monitor function is added:
-    # 1. loglikelyhood value for each iteration.. done
-    # 2. neural network loss during training... done
-    # 3. ToDo task: the original convergence monitor is not applicable to our neural net based hmm, the convergence should be based on two em_skip's log_prob values.
-    # """
-    # def __init__(self, tol, n_iter, verbose, log_dir):
-    #     super(ConvergenceMonitor, self).__init__(tol, n_iter, verbose)
-    #     # define the tensorboard writer with log_dir
-    #     self.writer = SummaryWriter(log_dir)
-    #
-    # def _reset(self):
-    #     """Reset the monitor's state."""
-    #     self.iter = 0
-    #     self.history.clear()
-    #
-    #
-    # def report(self, logprob, net_loss):
-    #     """Report the logprob and loss into both convergenceMonitor and tensorBoard
-    #     Parameters
-    #     ----------
-    #     logprob : float
-    #         The log probability of the data as computed by EM algorithm
-    #         in the current iteration.
-    #     """    #     if self.verbose:
-    #         delta = logprob - self.history[-1] if self.history else np.nan
-    #         message = self._template.format(
-    #             iter=self.iter + 1, logprob=logprob, delta=delta)
-    #         print(message, file=sys.stderr)
-    #
-    #     self.history.append(logprob)
-    #
-    #     self.writer.add_scalar("neg-logprob", -logprob, self.iter)
-    #     self.writer.add_scalar("NNloss", net_loss, self.iter)
-    #     self.iter += 1
 
 
 class GenHMMclassifier(nn.Module):
@@ -87,51 +46,35 @@ class GenHMMclassifier(nn.Module):
         return [classHMM.pred_score(x, lengths=l)[0] for classHMM in self.hmms]
 
 
-class GenHMM(_BaseHMM):
-    def __init__(self, n_components=None, n_prob_components=None,
-            algorithm="viterbi", random_state=None, n_iter=100, em_skip=10, tol=1e-2, verbose=False,
-                 params="stmg", init_params="stmg", dtype=torch.cuda.FloatTensor, log_dir="results"):
 
+class GenHMM(torch.nn.Module):
+    def __init__(self, n_states=None, n_prob_components=None, device='cpu', dtype=torch.FloatTensor, \
+            EPS=1e-12, lr=None, em_skip=None, log_dir=None):
+        super(getllh, self).__init__()
 
-        super(GenHMM, self).__init__(self, n_components, algorithm=algorithm, random_state=random_state, n_iter=n_iter,
-                          tol=tol, params=params, verbose=verbose, init_params=init_params)
-
-        self.n_components = n_components
-        # Handy renaming
-        self.n_states = self.n_components
+        self.n_states = n_states
         self.dtype = dtype
         self.n_prob_components = n_prob_components
-        self.params = params
-        self.init_params = init_params
-        self.model_params = ["transmat_", "startprob_", "networks", "pi"]
+ 
+        self.device=device
+        self.dtype=dtype
+        self.EPS = EPS
+        self.lr = lr
+        self.em_skip = em_skip
+        self.log_dir = log_dir
 
+        # Initialize HMM parameters
         self.init_transmat()
         self.init_startprob()
-        self.device = torch.device('cuda:0')
+        
+        # Initialize generative model networks
         self.init_gen()
         
         # training log directory and logger
         self.log_dir = log_dir
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
-        #self.monitor_ = ConvergenceMonitor(self.tol, self.n_iter, self.verbose, self.log_dir)
-        #self.init_future()
-        self.em_skip = em_skip
-        # self.em_skip_cond = lambda: self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0 # or self.monitor_.iter == 0:
-        self.push2gpu(device=self.device)
-
-    def push2gpu(self, device):
-        for nets in self.networks:
-            [nnet.to(device) for nnet in nets]
-        self.startprob_ = self.var_nograd(self.startprob_).to(device)
-        self.transmat_ = self.var_nograd(self.transmat_).to(device)
-        
-
-    def em_skip_cond(self):
-        "True for the first iteration or when the iteration number is a mulitple of em_skip."
-        return self.monitor_.iter % self.em_skip != 0 or self.monitor_.iter == 0
-        
-
+    
     def init_startprob(self):
         """
         Initialize HMM initial coefficients.
@@ -144,12 +87,13 @@ class GenHMM(_BaseHMM):
         """
         Initialize HMM transition matrix.
         """
-        init = 1/self.n_components
+        init = 1/self.n_states
         self.transmat_ = np.full((self.n_states, self.n_states),
                                  init)
         return self
 
     def init_gen(self):
+
         """
         Initialize HMM probabilistic model.
         """
@@ -161,12 +105,7 @@ class GenHMM(_BaseHMM):
         nets = lambda: nn.Sequential(nn.Linear(D, H), nn.LeakyReLU(), nn.Linear(H, H), nn.LeakyReLU(), nn.Linear(H, D),
                                      nn.Tanh())
         nett = lambda: nn.Sequential(nn.Linear(D, H), nn.LeakyReLU(), nn.Linear(H, H), nn.LeakyReLU(), nn.Linear(H, D))
-
-        # def nets():
-        #     return nn.Sequential(nn.Linear(D, H), nn.LeakyReLU(), nn.Linear(H, H), nn.LeakyReLU(), nn.Linear(H, D), nn.Tanh())
-        # def nett():
-        #    return nn.Sequential(nn.Linear(D, H), nn.LeakyReLU(), nn.Linear(H, H), nn.LeakyReLU(), nn.Linear(H, D))
-
+        
         masks = torch.from_numpy(np.array([[0]*d + [1]*(D-d), [1]*d + [0]*(D-d)] * nchain).astype(np.float32))
         ### torch MultivariateNormal logprob gets error when input is cuda tensor
         ### thus changing it to implementation
@@ -176,77 +115,18 @@ class GenHMM(_BaseHMM):
 
 
         #  Init mixture
-        self.pi = np.random.rand(self.n_states, self.n_prob_components)
+        self.pi = self.dtype( np.random.rand(self.n_states, self.n_prob_components) )
         normalize(self.pi, axis=1)
+        with torch.no_grad():
+            self.logPIk_s = self.pi.log().to(self.device)
 
         # Init networks
         self.networks = [RealNVP(nets, nett, masks, prior) for _ in range(self.n_prob_components*self.n_states)]
 
-        # Optimizer
-        self.optimizer = torch.optim.Adam(sum([[p for p in flow.parameters() if p.requires_grad == True]\
-                                            for flow in self.networks], []), lr=1e-4)
-
         # Reshape in a n_states x n_prob_components array
         self.networks = np.array(self.networks).reshape(self.n_states, self.n_prob_components)
         return self
-
-
-    def llh(self, X):
-        return self._compute_log_likelihood(X)
-
-    def _compute_log_likelihood(self, X):
-        """Computes per-component log probability under the model.
-
-        Parameters
-        ----------
-        X : array-like, shape (n_samples, n_features)
-            Feature matrix of individual samples.
-
-        Returns
-        -------
-        logprob : array, shape (n_samples, n_components)
-            Log probability of each sample in ``X`` for each of the
-            model states.
-        """
-
-        n_samples = X.shape[0]
-        llh = torch.zeros(n_samples, self.n_states).to(self.device)
-
-        self.loglh_sk = self.var_nograd(np.zeros((self.n_states, self.n_prob_components, n_samples))).to(self.device)
-        self.logPIk_s = self.var_nograd(self.pi).log().to(self.device)
-
-        
-        # One likelihood function per state
-        f_s = [partial(self._compute_log_likelihood_per_state, x=X, s=s)
-               for s in range(self.n_states)]
-
-        # For each state
-        for i, llh_fun in enumerate(f_s):
-            llh[:, i] = llh_fun()
-        return llh
-
-
-    def _generate_sample_from_state(self, state, random_state=None):
-        """Generates a random sample from a given component.
-
-        Parameters
-        ----------
-        state : int
-            Index of the component to condition on.
-
-        random_state: RandomState or an int seed
-            A random number generator instance. If ``None``, the object's
-            ``random_state`` is used.
-
-        Returns
-        -------
-        X : array, shape (n_features, )
-            A random sample from the emission distribution corresponding
-            to a given component.
-        """
-        return self.to_numpy(self.networks[state].sample(1))
-
-
+     
     def _initialize_sufficient_statistics(self):
         """Initializes sufficient statistics required for M-step.
 
@@ -280,19 +160,8 @@ class GenHMM(_BaseHMM):
 
         self.stats = stats
 
-    def _check(self):
-        """Validates model parameters prior to fitting.
-        Raises
-        ------
-        ValueError
-            If any of the parameters are invalid, e.g. if :attr:`startprob_`
-            don't sum to 1.
-        """
-        ## ToDo: need to implement torch tensor self check
-        pass
-        
-
-    def _accumulate_sufficient_statistics(self, X, framelogprob,
+   
+    def _accumulate_sufficient_statistics(self, framelogprob,
                                           posteriors, fwdlattice, bwdlattice, loglh_sk):
         """Updates sufficient statistics from a given sample.
 
@@ -301,9 +170,6 @@ class GenHMM(_BaseHMM):
         stats : dict
             Sufficient statistics as returned by
             :meth:`~base._BaseHMM._initialize_sufficient_statistics`.
-
-        X : array, shape (n_samples, n_features)
-            Sample sequence.
 
         framelogprob : array, shape (batch_size, n_samples, n_components)
             Log-probabilities of each sample under each of the model states.
@@ -320,18 +186,16 @@ class GenHMM(_BaseHMM):
         """
 
 
-        batch_size, n_samples, n_components = framelogprob.shape
-        _, _, n_states = framelogprob.shape
+        batch_size, n_samples, _ = framelogprob.shape
 
         self.stats['nframes'] += n_samples * batch_size
         self.stats['nobs'] += batch_size
-        
         self.stats['start'] += posteriors[:,0].sum(0)
 
-        EPS = 1e-12
+        
         
         log_xi_sum = _compute_log_xi_sum(n_samples, n_components, fwdlattice,
-                                         torch.log(self.transmat_ + EPS),
+                                         torch.log(self.transmat_ + self.EPS),
                                          bwdlattice, framelogprob,
                                          torch.ones(n_components, n_components, device=self.device)*float('-inf'))
             # _log_xi_sum = _compute_log_xi_sum(n_samples, n_components,\
@@ -345,7 +209,7 @@ class GenHMM(_BaseHMM):
         self.stats['trans'] += torch.exp(log_xi_sum)
 
  #       print(loglh_sk.shape, self.n_states, self.n_prob_components)
-        max_loglh = torch.max(torch.max(loglh_sk, dim=1)[0],dim=1)[0]
+        # max_loglh = torch.max(torch.max(loglh_sk, dim=1)[0],dim=1)[0]
         max_loglh = torch.max(torch.max(loglh_sk, dim=3)[0], dim=2)[0]
 #        print(max_loglh.shape)
 
@@ -370,21 +234,21 @@ class GenHMM(_BaseHMM):
 
     def _do_forward_pass(self, framelogprob):
         batch_size, n_samples, n_components = framelogprob.shape
-        # in case log computation encounter log(0), do log(x + EPS)
-        EPS = 1e-12
+        # in case log computation encounter log(0), do log(x + self.EPS)
+        
         
         ### To Do: matain hmm parameters as torch tensors
-        log_startprob = torch.log(self.dtype(self.startprob_).to(self.device) + EPS)
-        log_transmat = torch.log(self.dtype(self.transmat_).to(self.device) + EPS)
+        log_startprob = torch.log(self.dtype(self.startprob_).to(self.device) + self.EPS)
+        log_transmat = torch.log(self.dtype(self.transmat_).to(self.device) + self.EPS)
 
         return _forward(n_samples, n_components, log_startprob, log_transmat, framelogprob) 
 
     def _do_backward_pass(self, framelogprob):
         batch_size, n_samples, n_components = framelogprob.shape
-        EPS = 1e-12
+        
         ### To Do: matain hmm parameters as torch tensors
-        log_startprob = torch.log(self.dtype(self.startprob_).to(self.device) + EPS)
-        log_transmat = torch.log(self.dtype(self.transmat_).to(self.device) + EPS)
+        log_startprob = torch.log(self.dtype(self.startprob_).to(self.device) + self.EPS)
+        log_transmat = torch.log(self.dtype(self.transmat_).to(self.device) + self.EPS)
         return _backward(n_samples, n_components, log_startprob,\
                          log_transmat, framelogprob)
         
@@ -399,57 +263,6 @@ class GenHMM(_BaseHMM):
         log_gamma -= lse_gamma[:,:, None]
         
         return torch.exp(log_gamma)
-
-    def _do_mstep(self, stats):
-        """Performs the M-step of EM algorithm.
-
-        Parameters
-        ----------
-        stats : dict
-            Sufficient statistics updated from all available samples.
-        """
-
-        if self.em_skip_cond():
-
-        # if em_skip_cond(self.monitor_.iter, self.em_skip):
-            saved_params = self.params
-            self.em_happened = False
-        # Skip the HMM update
-            self.params = 'g'
-
-        else:
-            self.em_happened = True
-
-        # The ``np.where`` calls guard against updating forbidden states
-        # or transitions in e.g. a left-right HMM.
-        if 's' in self.params:
-            startprob_ = self.startprob_prior - 1.0 + stats['start']
-            self.startprob_ = np.where(self.startprob_ == 0.0,
-                                       self.startprob_, startprob_)
-            normalize(self.startprob_)
-
-        if 't' in self.params:
-            transmat_ = self.transmat_prior - 1.0 + stats['trans']
-            self.transmat_ = np.where(self.transmat_ == 0.0,
-                                      self.transmat_, transmat_)
-            normalize(self.transmat_, axis=1)
-
-        if 'm' in self.params:
-            self.pi = stats["mixture"]
-
-            # In case we get a line of zeros in the stats
-            #self.pi[self.pi.sum(1) == 0, :] = np.ones(self.n_prob_components) / self.n_prob_components
-            normalize(self.pi, axis=1)
-
-        if 'g' in self.params:
-            self.optimizer.step()
-            self.optimizer.zero_grad()
-            # print(self.monitor_.iter, stats['loss'])
-            pass
-
-        if self.em_skip_cond():
-            # Put the initial parameters back
-            self.params = saved_params
 
     def pred_score(self, X, lengths=None):
         """ Update the base score method, such that the scores of sequences are returned
@@ -466,133 +279,101 @@ class GenHMM(_BaseHMM):
         logprob : list of floats, [logprob1, logprob2, ... ]
             Log likelihood of ``X``.
         """
-        check_is_fitted(self, "startprob_")
-        self._check()
 
-        X = check_array(X)
-        # XXX we can unroll forward pass for speed and memory efficiency.
-        logprob = []
-        for i, j in iter_from_X_lengths(X, lengths):
-            framelogprob = self._compute_log_likelihood(X[i:j])
-            logprobij, _fwdlattice = self._do_forward_pass(framelogprob)
-            logprob.append(logprobij)
-        return np.array(logprob)
+        logprob = self.forward(X, testing=True)
+        return logprob
+
+
+    def forward(self, x, testing=False):
+        """PYTORCH FORWARD, NOT HMM forward algorithm. This function is called for each batch.
+        Input: batch of sequences, array size, (batch_size, n_samples, n_dimensions)
+        Output: Loss, scaler
+        """
+        if self.update_HMM:
+            self._initialize_sufficient_statistics()
+
+        batch_size = x.shape[0]
+        n_samples = x.shape[1]
+
+        llh = torch.zeros(batch_size, n_samples, mdl.n_states).to(mdl.device)
+        self.loglh_sk = torch.zeros((batch_size, self.n_states, self.n_prob_components, n_samples)).to(self.device)
+
+        for s in range(mdl.n_states):
+            loglh_sk = [self.networks[s, k].log_prob(x).reshape(batch_size, 1, -1)/x.numel() for k in range(self.n_prob_components)]
+            ll = torch.cat(loglh_sk, dim=1)
+            self.loglh_sk[:,s,:,:] = ll
+            llh[:,:,s] = (self.logPIk_s[s].reshape(1,self.n_prob_components, 1) + ll).detach().sum(1)
+        
+        logprob, fwdlattice = self._do_forward_pass(llh)
+        if testing:
+            return logprob
+
+
+        bwdlattice = self._do_backward_pass(llh)
+        posteriors = self._compute_posteriors(fwdlattice, bwdlattice)
+        
+        if self.update_HMM:
+            self._accumulate_sufficient_statistics(x, llh, posteriors, fwdlattice, bwdlattice, self.loglh_sk)
+
+        # Compute loss associated with sequence
+        logPIk_s_ext = self.logPIk_s.reshape(1, mdl.n_states, mdl.n_prob_components, 1)
+        
+        # Brackets = log-P(X | chi, S) + log-P(chi | s)
+        brackets = self.loglh_sk + logPIk_s_ext
+
+        # Compute log-p(chi | s, X) = log-P(X|s,chi) + log-P(chi|s) - log\sum_{chi} exp ( log-P(X|s,chi) + log-P(chi|s) )
+        log_num = self.loglh_sk.detach() + logPIk_s_ext
+        log_denom = torch.logsumexp(self.loglh_sk.detach() + logPIk_s_ext, dim=2)
+
+        logpk_sX = log_num - log_denom.reshape(batch_size, self.n_states, 1, n_samples)
+
+        post = posteriors.transpose(1,2)
+        #  The .sum(2) call sums on the components and .sum(1).sum(1) sums on all states and samples
+        loss = -(post * (torch.exp(logpk_sX) * brackets).sum(2)).sum(1).sum(1)/(n_samples*batch_size)
+        return loss.sum()
+
+
+    def fit(self, traindata):
+        """Performs one EM step and `em_skip` backprops before returning. The optimizer is re-initialized after each EM step.
+            Follow the loss in stderr
+            Input : traindata : torch.data.DataLoader object wrapping the batches.
+            Output : None
+        """
+
+        optimizer = torch.optim.Adam(
+            sum([[p for p in flow.parameters() if p.requires_grad == True] for flow in self.networks.reshape(-1).tolist()], []), lr=self.lr)
+        
+
+        for i in range(self.em_skip):
+            optimizer.zero_grad()
+            for b, data in enumerate(traindata):
+                # start = dt.now()
+                loss = self.forward(data, testing=False)
+                loss.backward()
+
+            print("i:{}\tb:{}\tLoss:{}".format(i, b, loss.data), file=sys.stderr)
+            optimizer.step()
     
-    def fit(self, X, lengths=None):
-        """Estimate model parameters.
-
-        An initialization step is performed before entering the
-        EM algorithm. If you want to avoid this step for a subset of
-        the parameters, pass proper ``init_params`` keyword argument
-        to estimator's constructor.
-        Parameters
-        ----------
-        X : array-like, shape (n_samples, n_features)
-            Feature matrix of individual samples.
-        lengths : array-like of integers, shape (n_sequences, )
-            Lengths of the individual sequences in ``X``. The sum of
-            these should be ``n_samples``.
-        Returns
-        -------
-        self : object
-            Returns self.
-        """
+        # Perform EM step
+        # Update initial proba
+        startprob_ = self.startprob_prior - 1.0 + self.stats['start']
+        self.startprob_ = torch.where(self.startprob_ == 0.0,
+                                   self.startprob_, startprob_)
+        normalize(self.startprob_, axis=0)
         
-        #X = check_array(X.cpu().numpy())
-        #X = self.dtype(X).to(self.device)
-        # self._init(X, lengths=lengths)
-        #self._check()
+        # Update transition
+        transmat_ = self.transmat_prior - 1.0 + self.stats['trans']
+        self.transmat_ = torch.where(self.transmat_ == 0.0,
+                                  self.transmat_, transmat_)
+        normalize(self.transmat_, axis=1)
         
-        # Send the data and NNs to gpu
+        # Update prior
+        self.pi = self.stats["mixture"]
 
-        self.monitor_ = ConvergenceMonitor(self.tol, self.n_iter, self.verbose)
-        progress = tqdm(range(self.n_iter))
-        for _ in progress:
-            stats = self._initialize_sufficient_statistics()
-            curr_logprob = 0
-            for i, j in iter_from_X_lengths(X, lengths):
-                framelogprob = self._compute_log_likelihood(X[i:j])
-                logprob, fwdlattice = self._do_forward_pass(framelogprob)
-                curr_logprob += logprob
-                bwdlattice = self._do_backward_pass(framelogprob)
-                posteriors = self._compute_posteriors(fwdlattice, bwdlattice)
-                self._accumulate_sufficient_statistics(
-                    stats, X[i:j], framelogprob, posteriors, fwdlattice,
-                    bwdlattice)
-
-            # XXX must be before convergence check, because otherwise
-            #     there won't be any updates for the case ``n_iter=1``.
-            self._do_mstep(stats)
-            progress.set_description("NLL:{}, NetLoss:{}".format(-curr_logprob, stats['loss']/len(lengths)))
-            self.monitor_.report(curr_logprob)
-
-            if self.em_happened:
-                # go home
-                break
-            if self.monitor_.converged:
-                break
-        return self
-
-
-    def init_future(self):
-        """
-        Initialize dictionary which will store the updates during training.
-        """
-        self.future = dict([(k, self.__getattribute__(k)) for k in self.model_params])
-        return self
-
-    def apply_future(self):
-        """
-        Apply parameters calculated during a training iteration to the HMM object.
-        """
-        for attr, value in self.future.items():
-            self.__setattr__(attr, value)
-        return self
-
-    def _draw_component(self, s):
-        """
-        Draw component for a given state, based on probability pi[s]
-
-        Parameters
-        ----------
-        s: int, index of HMM state
-
-        Returns
-        -------
-        k: int, index of component in state s
-        """
-        return np.random.choice(np.arange(self.n_states), 1, p=self.pi[s])[0]
-
-    @staticmethod
-    def to_numpy(x):
-        return x.detach().numpy()
-    @staticmethod
-    def to_device(x):
-        return x.cuda(self.device)
-        
-
-    def var_nograd(self, x):
-        return Variable(self.dtype(x), requires_grad=False)
-
-    def var_grad(self, x):
-        return Variable(self.dtype(x), requires_grad=True)
-
-
-    def _compute_log_likelihood_per_state(self, x=None, s=None):
-        """Input types must be torch.tensor."""
-        # Compute llh per prob model component
-        loglh_sk = [self.networks[s, k].log_prob(x).reshape(1, -1)/x.numel() for k in range(self.pi[s].shape[0])]
-        #[self.networks[s, k].log_prob(x).reshape(1, -1) for k in range(self.pi[s].shape[0])]
-        #[self.networks[s, k].log_prob(x).reshape(1, -1) for k in range(self.pi[s].shape[0])]
-
-        self.loss = torch.cat(loglh_sk, dim=0)
-
-        self.loglh_sk[s] = self.loss
-
-        return self.var_nograd(self.logPIk_s[s].reshape(self.n_prob_components, 1) + self.loss).detach().sum(0)
-
-
-
+        # In case we get a line of zeros in the stats
+        #self.pi[self.pi.sum(1) == 0, :] = np.ones(self.n_prob_components) / self.n_prob_components
+        normalize(self.pi, axis=1)
+    
 
 
 class wrapper(torch.nn.Module):
@@ -608,4 +389,25 @@ def save_model(mdl, fname=None):
 def load_model(fname):
     savable = torch.load(fname)
     return savable.userdata
+
+
+def normalize(a, axis=None):
+    """Normalizes the input array so that it sums to 1.
+
+    Parameters
+    ----------
+    a : array
+        Non-normalized input data.
+
+    axis : int
+        Dimension along which normalization is performed.
+
+    Notes
+    -----
+    Modifies the input **inplace**.
+    """
+    a_sum = a.sum(axis, keepdim=True)
+    a_sum[a_sum==0] = 1
+    a /= a_sum
+
 
