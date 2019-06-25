@@ -50,7 +50,7 @@ class GenHMMclassifier(nn.Module):
 class GenHMM(torch.nn.Module):
     def __init__(self, n_states=None, n_prob_components=None, device='cpu', dtype=torch.FloatTensor, \
             EPS=1e-12, lr=None, em_skip=None, log_dir=None):
-        super(getllh, self).__init__()
+        super(GenHMM, self).__init__()
 
         self.n_states = n_states
         self.dtype = dtype
