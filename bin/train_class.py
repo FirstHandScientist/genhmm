@@ -68,7 +68,7 @@ if __name__ == "__main__":
     else:
         # Load previous model
 
-    mdl = load_model(out_mdl.replace("epoch" + epoch_str, "epoch" + str(int(epoch_str)-1)))
+        mdl = load_model(out_mdl.replace("epoch" + epoch_str, "epoch" + str(int(epoch_str)-1)))
 
     
     mdl.device = 'cpu'
@@ -88,9 +88,7 @@ if __name__ == "__main__":
     mdl.transmat_ = mdl.transmat_.to(mdl.device)
     mdl.logPIk_s = mdl.log().to(self.device)
     
-   
     
-    # Push data to GPU
     # zero pad data for batch training
     max_len_ = max([x.shape[0] for x in xtrain])
     xtrain_padded = pad_data(xtrain, max_len_)
