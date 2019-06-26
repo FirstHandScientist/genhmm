@@ -86,7 +86,7 @@ if __name__ == "__main__":
 
     mdl.startprob_ = mdl.startprob_.to(mdl.device)
     mdl.transmat_ = mdl.transmat_.to(mdl.device)
-    mdl.logPIk_s = mdl.log().to(self.device)
+    mdl.logPIk_s = mdl.pi.log().to(mdl.device)
     
     
     # zero pad data for batch training

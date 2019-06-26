@@ -80,7 +80,7 @@ class GenHMM(torch.nn.Module):
         Initialize HMM initial coefficients.
         """
         init = 1. / self.n_states
-        self.startprob_ = np.full(self.n_states, init)
+        self.startprob_ = torch.ones(self.n_states) * init
         return self
 
     def init_transmat(self):
@@ -88,8 +88,7 @@ class GenHMM(torch.nn.Module):
         Initialize HMM transition matrix.
         """
         init = 1/self.n_states
-        self.transmat_ = np.full((self.n_states, self.n_states),
-                                 init)
+        self.transmat_ = torch.ones(self.n_states, self.n_states) * init
         return self
 
     def init_gen(self):
@@ -293,10 +292,10 @@ class GenHMM(torch.nn.Module):
         batch_size = x.shape[0]
         n_samples = x.shape[1]
 
-        llh = torch.zeros(batch_size, n_samples, mdl.n_states).to(mdl.device)
+        llh = torch.zeros(batch_size, n_samples, self.n_states).to(self.device)
         self.loglh_sk = torch.zeros((batch_size, self.n_states, self.n_prob_components, n_samples)).to(self.device)
 
-        for s in range(mdl.n_states):
+        for s in range(self.n_states):
             loglh_sk = [self.networks[s, k].log_prob(x).reshape(batch_size, 1, -1)/x.numel() for k in range(self.n_prob_components)]
             ll = torch.cat(loglh_sk, dim=1)
             self.loglh_sk[:,s,:,:] = ll
@@ -314,7 +313,7 @@ class GenHMM(torch.nn.Module):
             self._accumulate_sufficient_statistics(x, llh, posteriors, fwdlattice, bwdlattice, self.loglh_sk)
 
         # Compute loss associated with sequence
-        logPIk_s_ext = self.logPIk_s.reshape(1, mdl.n_states, mdl.n_prob_components, 1)
+        logPIk_s_ext = self.logPIk_s.reshape(1, self.n_states, self.n_prob_components, 1)
         
         # Brackets = log-P(X | chi, S) + log-P(chi | s)
         brackets = self.loglh_sk + logPIk_s_ext
@@ -343,6 +342,12 @@ class GenHMM(torch.nn.Module):
         
 
         for i in range(self.em_skip):
+            # if i is the index of last loop, set update_HMM as true
+            if i == self.em_skip-1:
+                self.update_HMM = True
+            else:
+                self.update_HMM = False
+
             optimizer.zero_grad()
             for b, data in enumerate(traindata):
                 # start = dt.now()
