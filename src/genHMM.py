@@ -338,10 +338,12 @@ class GenHMM(torch.nn.Module):
         log_denom = torch.logsumexp(log_num, dim=3)
 
         logpk_sX = log_num - log_denom.reshape(batch_size, n_samples, self.n_states, 1)
+        logpk_sX[~x_mask] = 0
 
         post = posteriors
         #  The .sum(3) call sums on the components and .sum(2).sum(1) sums on all states and samples
-        loss = -(post * (torch.exp(logpk_sX) * brackets).sum(3)).sum(2).sum(1).sum()/float(x_mask.sum())
+        # loss = -(post * (torch.exp(logpk_sX) * brackets).sum(3)).sum(2).sum(1).sum()/float(x_mask.sum())
+        loss = -(post[x_mask] * (torch.exp(logpk_sX) * brackets)[x_mask].sum(2)).sum()/float(x_mask.sum())
         return loss, logprob.mean()
 
 
