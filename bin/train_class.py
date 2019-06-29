@@ -14,12 +14,17 @@ from datetime import datetime as dt
 
 class TheDataset(Dataset):
     """Silly wrapper for DataLoader input."""
-    def __init__(self, xtrain, device='cpu'):
+    def __init__(self, xtrain, lengths, device='cpu'):
         self.data = [torch.FloatTensor(x).to(device) for x in xtrain]
+        self.lengths = lengths
         self.len=len(self.data)
+        
 
     def __getitem__(self, index):
-        return self.data[index]
+        mask = torch.cat( (torch.ones(self.lengths[index], dtype=torch.uint8), \
+                           torch.zeros(self.data[index].shape[0] \
+                                       - self.lengths[index], dtype=torch.uint8)) )
+        return (self.data[index], mask)
 
     def __len__(self):
         return self.len
@@ -92,17 +97,17 @@ if __name__ == "__main__":
     # zero pad data for batch training
     max_len_ = max([x.shape[0] for x in xtrain])
     xtrain_padded = pad_data(xtrain, max_len_)
-    traindata = DataLoader(dataset=TheDataset(xtrain_padded, device=mdl.device), batch_size=64, shuffle=True)
+    traindata = DataLoader(dataset=TheDataset(xtrain_padded, lengths=l, device=mdl.device), batch_size=256, shuffle=True)
     
 
     # niter counts the number of em steps before saving a model checkpoint
     niter = 300
     
     # em_skip determines the number of back-props before an EM step is performed
-    mdl.em_skip = 20
+    mdl.em_skip = 5
     
     # TODO: pass lr as a param
-    mdl.lr = 1e-4
+    mdl.lr = 1e-3
 
     for iiter in range(niter):
         mdl.fit(traindata)

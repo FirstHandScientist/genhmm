@@ -29,10 +29,13 @@ class RealNVP(torch.nn.Module):
             log_det_J -= s.sum(dim=2)
         return z, log_det_J
 
-    def log_prob(self, x):
+    def log_prob(self, x, mask):
         """ The prior log_prob may need be implemented such it adapts cuda computation"""
         z, logp = self.f(x)
-        return self.prior.log_prob(z) + logp
+        px = self.prior.log_prob(z) + logp
+        # set the padded positions as zeros
+        px[~mask].zero_()
+        return px
         
 
 

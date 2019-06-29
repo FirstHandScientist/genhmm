@@ -158,8 +158,9 @@ class GenHMM(torch.nn.Module):
         self.stats = stats
 
    
-    def _accumulate_sufficient_statistics(self, framelogprob,
-                                          posteriors, fwdlattice, bwdlattice, loglh_sk):
+    def _accumulate_sufficient_statistics(self, framelogprob, mask,
+                                          posteriors, logprob, fwdlattice,
+                                          bwdlattice, loglh_sk):
         """Updates sufficient statistics from a given sample.
 
         Parameters
@@ -178,14 +179,14 @@ class GenHMM(torch.nn.Module):
         fwdlattice, bwdlattice : array, shape (batch_size, n_samples, n_components)
             Log-forward and log-backward probabilities.
 
-        loglh_sk : array, shape (batch_size, n_components, n_prob_components, n_samples)
+        loglh_sk : array, shape (batch_size, n_samples, n_components, n_prob_components)
             Log-probabilities of each batch sample under each components of each states.
         """
 
 
-        batch_size, n_samples, _ = framelogprob.shape
+        batch_size, n_samples, n_components = framelogprob.shape
 
-        self.stats['nframes'] += n_samples * batch_size
+        self.stats['nframes'] += mask.sum()
         self.stats['nobs'] += batch_size
         self.stats['start'] += posteriors[:,0].sum(0)
 
@@ -194,7 +195,11 @@ class GenHMM(torch.nn.Module):
         log_xi_sum = _compute_log_xi_sum(n_samples, n_components, fwdlattice,
                                          torch.log(self.transmat_ + self.EPS),
                                          bwdlattice, framelogprob,
-                                         torch.ones(n_components, n_components, device=self.device)*float('-inf'))
+                                         torch.ones(batch_size,
+                                                    n_components,
+                                                    n_components,
+                                                    device=self.device) * float('-inf'),
+                                         logprob, mask)
             # _log_xi_sum = _compute_log_xi_sum(n_samples, n_components,\
             #                                    self.dtype(fwdlattice).to(self.device),\
             #                                    self.dtype(log_mask_zero(self.transmat_)).to(self.device),\
@@ -203,11 +208,13 @@ class GenHMM(torch.nn.Module):
             #                                    self.dtype(np.full((n_components, n_components), -np.inf)).to(self.device))
 
             
-        self.stats['trans'] += torch.exp(log_xi_sum)
+        self.stats['trans'] += torch.exp(log_xi_sum).sum(0)
 
  #       print(loglh_sk.shape, self.n_states, self.n_prob_components)
         # max_loglh = torch.max(torch.max(loglh_sk, dim=1)[0],dim=1)[0]
-        max_loglh = torch.max(torch.max(loglh_sk, dim=3)[0], dim=2)[0]
+        ### dong: have not verify this computation
+        local_loglh_sk = loglh_sk.reshape(batch_size, self.n_states, self.n_prob_components, n_samples)
+        max_loglh = torch.max(torch.max(local_loglh_sk, dim=3)[0], dim=2)[0]
 #        print(max_loglh.shape)
 
         gamma_ = torch.zeros(batch_size, self.n_states, self.n_prob_components, n_samples, device=self.device)
@@ -215,7 +222,7 @@ class GenHMM(torch.nn.Module):
         for i in range(self.n_states):
             for t in range(n_samples):
                 for m in range(self.n_prob_components):
-                    gamma_[:,i, m, t] = self.pi[i, m] * (loglh_sk - max_loglh[:,i].reshape(-1,1,1,1))[:, i, m, t].exp()
+                    gamma_[:,i, m, t] = self.pi[i, m] * (local_loglh_sk - max_loglh[:,i].reshape(-1,1,1,1))[:, i, m, t].exp()
                 
  #               print(gamma_[:, i, :, t].shape,  gamma_[:,i, :, t].sum(1).shape) 
                 gamma_[:, i, :, t] /= (gamma_[:,i, :, t].sum(1).reshape(-1, 1) + 1e-6)   #.reshape(self.n_states,1,n_samples)
@@ -229,25 +236,26 @@ class GenHMM(torch.nn.Module):
 
 
 
-    def _do_forward_pass(self, framelogprob):
+    def _do_forward_pass(self, framelogprob, mask):
         batch_size, n_samples, n_components = framelogprob.shape
         # in case log computation encounter log(0), do log(x + self.EPS)
         
         
         ### To Do: matain hmm parameters as torch tensors
-        log_startprob = torch.log(self.dtype(self.startprob_).to(self.device) + self.EPS)
-        log_transmat = torch.log(self.dtype(self.transmat_).to(self.device) + self.EPS)
+        log_startprob = torch.log(self.startprob_ + self.EPS)
+        log_transmat = torch.log(self.transmat_ + self.EPS)
 
-        return _forward(n_samples, n_components, log_startprob, log_transmat, framelogprob) 
+        return _forward(n_samples, n_components, log_startprob, \
+                        log_transmat, framelogprob, mask) 
 
-    def _do_backward_pass(self, framelogprob):
+    def _do_backward_pass(self, framelogprob, mask):
         batch_size, n_samples, n_components = framelogprob.shape
         
         ### To Do: matain hmm parameters as torch tensors
-        log_startprob = torch.log(self.dtype(self.startprob_).to(self.device) + self.EPS)
-        log_transmat = torch.log(self.dtype(self.transmat_).to(self.device) + self.EPS)
+        log_startprob = torch.log(self.startprob_ + self.EPS)
+        log_transmat = torch.log(self.transmat_ + self.EPS)
         return _backward(n_samples, n_components, log_startprob,\
-                         log_transmat, framelogprob)
+                         log_transmat, framelogprob, mask)
         
     def _compute_posteriors(self, fwdlattice, bwdlattice):
         # gamma is guaranteed to be correctly normalized by logprob at
@@ -257,6 +265,7 @@ class GenHMM(torch.nn.Module):
         log_gamma = fwdlattice + bwdlattice
         # Normalizes the input array so that the exponent of the sum is 1
         lse_gamma = torch.logsumexp(log_gamma, dim=2)
+        
         log_gamma -= lse_gamma[:,:, None]
         
         return torch.exp(log_gamma)
@@ -281,53 +290,59 @@ class GenHMM(torch.nn.Module):
         return logprob
 
 
-    def forward(self, x, testing=False):
+    def forward(self, batch, testing=False):
         """PYTORCH FORWARD, NOT HMM forward algorithm. This function is called for each batch.
         Input: batch of sequences, array size, (batch_size, n_samples, n_dimensions)
         Output: Loss, scaler
         """
         if self.update_HMM:
             self._initialize_sufficient_statistics()
-
+        
+        x, x_mask = batch
         batch_size = x.shape[0]
         n_samples = x.shape[1]
 
         llh = torch.zeros(batch_size, n_samples, self.n_states).to(self.device)
-        self.loglh_sk = torch.zeros((batch_size, self.n_states, self.n_prob_components, n_samples)).to(self.device)
+        self.loglh_sk = torch.zeros((batch_size, n_samples, self.n_states, self.n_prob_components)).to(self.device)
 
         for s in range(self.n_states):
-            loglh_sk = [self.networks[s, k].log_prob(x).reshape(batch_size, 1, -1)/x.numel() for k in range(self.n_prob_components)]
+            loglh_sk = [self.networks[s, k].log_prob(x, x_mask).reshape(batch_size, 1, -1)/x.numel() for k in range(self.n_prob_components)]
             ll = torch.cat(loglh_sk, dim=1)
-            self.loglh_sk[:,s,:,:] = ll
+            self.loglh_sk[:,:,s,:] = ll.transpose(1,2)
             llh[:,:,s] = (self.logPIk_s[s].reshape(1,self.n_prob_components, 1) + ll).detach().sum(1)
-        
-        logprob, fwdlattice = self._do_forward_pass(llh)
+        llh[~x_mask] = 0
+        logprob, fwdlattice = self._do_forward_pass(llh, x_mask)
         if testing:
             return logprob
 
 
-        bwdlattice = self._do_backward_pass(llh)
+        bwdlattice = self._do_backward_pass(llh, x_mask)
         posteriors = self._compute_posteriors(fwdlattice, bwdlattice)
+        posteriors[~x_mask] = 0
         
         if self.update_HMM:
-            self._accumulate_sufficient_statistics(x, llh, posteriors, fwdlattice, bwdlattice, self.loglh_sk)
+            self._accumulate_sufficient_statistics(llh, x_mask, posteriors, logprob, fwdlattice, bwdlattice, self.loglh_sk)
 
         # Compute loss associated with sequence
         logPIk_s_ext = self.logPIk_s.reshape(1, self.n_states, self.n_prob_components, 1)
         
         # Brackets = log-P(X | chi, S) + log-P(chi | s)
-        brackets = self.loglh_sk + logPIk_s_ext
+        brackets = torch.zeros_like(self.loglh_sk)
+        
+        brackets[x_mask] = self.loglh_sk[x_mask] + self.logPIk_s.reshape(1, self.n_states, self.n_prob_components)
+        
 
         # Compute log-p(chi | s, X) = log-P(X|s,chi) + log-P(chi|s) - log\sum_{chi} exp ( log-P(X|s,chi) + log-P(chi|s) )
-        log_num = self.loglh_sk.detach() + logPIk_s_ext
-        log_denom = torch.logsumexp(self.loglh_sk.detach() + logPIk_s_ext, dim=2)
+        #log_num = self.loglh_sk.detach() + logPIk_s_ext
+        log_num = brackets.detach()
+        log_denom = torch.logsumexp(log_num, dim=3)
 
-        logpk_sX = log_num - log_denom.reshape(batch_size, self.n_states, 1, n_samples)
+        logpk_sX = log_num - log_denom.reshape(batch_size, n_samples, self.n_states, 1)
 
-        post = posteriors.transpose(1,2)
-        #  The .sum(2) call sums on the components and .sum(1).sum(1) sums on all states and samples
-        loss = -(post * (torch.exp(logpk_sX) * brackets).sum(2)).sum(1).sum(1)/(n_samples*batch_size)
-        return loss.sum()
+        post = posteriors
+        #  The .sum(3) call sums on the components and .sum(2).sum(1) sums on all states and samples
+        loss = -(post * (torch.exp(logpk_sX) * brackets).sum(3)).sum(2).sum(1).sum()/float(x_mask.sum())
+        return loss, logprob.mean()
 
 
     def fit(self, traindata):
@@ -343,29 +358,45 @@ class GenHMM(torch.nn.Module):
 
         for i in range(self.em_skip):
             # if i is the index of last loop, set update_HMM as true
+
             if i == self.em_skip-1:
                 self.update_HMM = True
             else:
                 self.update_HMM = False
 
-            optimizer.zero_grad()
+
+            optimizer.zero_grad()            
+            total_loss = 0
+            total_logprob = 0
             for b, data in enumerate(traindata):
                 # start = dt.now()
-                loss = self.forward(data, testing=False)
-                loss.backward()
 
-            print("i:{}\tb:{}\tLoss:{}".format(i, b, loss.data), file=sys.stderr)
+                loss, logprob_ = self.forward(data, testing=False)
+                loss.backward()
+            
+
+                total_loss += loss.detach().data
+                total_logprob += logprob_
+            
             optimizer.step()
+            print("Step:{}\tb:{}\tLoss:{}\tNLL:{}".format(i, b,
+                                               total_loss/(b+1),
+                                               -total_logprob/(b+1)),
+                  file=sys.stderr)
+            
+            
     
         # Perform EM step
         # Update initial proba
-        startprob_ = self.startprob_prior - 1.0 + self.stats['start']
+        # startprob_ = self.startprob_prior - 1.0 + self.stats['start']
+        startprob_ = self.stats['start']
         self.startprob_ = torch.where(self.startprob_ == 0.0,
                                    self.startprob_, startprob_)
         normalize(self.startprob_, axis=0)
         
         # Update transition
-        transmat_ = self.transmat_prior - 1.0 + self.stats['trans']
+        # transmat_ = self.transmat_prior - 1.0 + self.stats['trans']
+        transmat_ = self.stats['trans']
         self.transmat_ = torch.where(self.transmat_ == 0.0,
                                   self.transmat_, transmat_)
         normalize(self.transmat_, axis=1)
