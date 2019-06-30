@@ -69,7 +69,7 @@ class GenHMM(torch.nn.Module):
         
         # Initialize generative model networks
         self.init_gen()
-        
+        self._update_old_networks()
         # training log directory and logger
         self.log_dir = log_dir
         if not os.path.exists(self.log_dir):
@@ -122,6 +122,17 @@ class GenHMM(torch.nn.Module):
 
         # Reshape in a n_states x n_prob_components array
         self.networks = np.array(self.networks).reshape(self.n_states, self.n_prob_components)
+        
+        # initial an old networks for posterior computations with the same sturcture
+        self.old_networks = [RealNVP(nets, nett, masks, prior) for _ in range(self.n_prob_components*self.n_states)]
+        self.old_networks = np.array(self.old_networks).reshape(self.n_states, self.n_prob_components)
+        return self
+    
+    def _update_old_networks(self):
+        """load the parameters in self.networks (the one being optimized), into self.old_networks"""
+        for i in range(self.n_states):
+            for j in range(self.n_prob_components):
+                self.old_networks[i,j].load_state_dict( self.networks[i,j].state_dict() )
         return self
      
     def _initialize_sufficient_statistics(self):
@@ -288,7 +299,22 @@ class GenHMM(torch.nn.Module):
 
         logprob = self.forward(X, testing=True)
         return logprob
+    
+    def _getllh(self, networks, batch):
+        """Computing the llh and loglh_sk"""
+        x, x_mask = batch
+        batch_size = x.shape[0]
+        n_samples = x.shape[1]
 
+        llh = torch.zeros(batch_size, n_samples, self.n_states).to(self.device)
+        local_loglh_sk = torch.zeros((batch_size, n_samples, self.n_states, self.n_prob_components)).to(self.device)
+
+        for s in range(self.n_states):
+            loglh_sk = [networks[s, k].log_prob(x, x_mask).reshape(batch_size, 1, -1)/x.numel() for k in range(self.n_prob_components)]
+            ll = torch.cat(loglh_sk, dim=1)
+            local_loglh_sk[:,:,s,:] = ll.transpose(1,2)
+            llh[:,:,s] = (self.logPIk_s[s].reshape(1,self.n_prob_components, 1) + ll).detach().sum(1)
+        return llh, local_loglh_sk
 
     def forward(self, batch, testing=False):
         """PYTORCH FORWARD, NOT HMM forward algorithm. This function is called for each batch.
@@ -302,45 +328,50 @@ class GenHMM(torch.nn.Module):
         batch_size = x.shape[0]
         n_samples = x.shape[1]
 
-        llh = torch.zeros(batch_size, n_samples, self.n_states).to(self.device)
-        self.loglh_sk = torch.zeros((batch_size, n_samples, self.n_states, self.n_prob_components)).to(self.device)
+        # get the log-likelihood for posterior computation
+        with torch.no_grad():
+            ## Two posteriors to be computed here:
+            # 1. the hidden state posterior, post
+            old_llh, old_loglh_sk = self._getllh(self.old_networks, batch)
+            old_llh[~x_mask] = 0
+            old_logprob, old_fwdlattice = self._do_forward_pass(old_llh, x_mask)
 
-        for s in range(self.n_states):
-            loglh_sk = [self.networks[s, k].log_prob(x, x_mask).reshape(batch_size, 1, -1)/x.numel() for k in range(self.n_prob_components)]
-            ll = torch.cat(loglh_sk, dim=1)
-            self.loglh_sk[:,:,s,:] = ll.transpose(1,2)
-            llh[:,:,s] = (self.logPIk_s[s].reshape(1,self.n_prob_components, 1) + ll).detach().sum(1)
-        llh[~x_mask] = 0
-        logprob, fwdlattice = self._do_forward_pass(llh, x_mask)
+            old_bwdlattice = self._do_backward_pass(old_llh, x_mask)
+            posteriors = self._compute_posteriors(old_fwdlattice, old_bwdlattice)
+            posteriors[~x_mask] = 0
+            post = posteriors
+            # 2. the probability model components posterior, k condition on hidden state, observation and hmm model
+            # Compute log-p(chi | s, X) = log-P(X|s,chi) + log-P(chi|s) - log\sum_{chi} exp ( log-P(X|s,chi) + log-P(chi|s) )
+        
+            log_num = old_loglh_sk.detach() + self.logPIk_s.reshape(1, self.n_states, self.n_prob_components)
+            #log_num = brackets.detach()
+            log_denom = torch.logsumexp(log_num, dim=3)
+            
+            logpk_sX = log_num - log_denom.reshape(batch_size, n_samples, self.n_states, 1)
+            logpk_sX[~x_mask] = 0
+
         if testing:
             return logprob
-
-
-        bwdlattice = self._do_backward_pass(llh, x_mask)
-        posteriors = self._compute_posteriors(fwdlattice, bwdlattice)
-        posteriors[~x_mask] = 0
         
+        
+        # hmm parameters should be updated based on old model
         if self.update_HMM:
-            self._accumulate_sufficient_statistics(llh, x_mask, posteriors, logprob, fwdlattice, bwdlattice, self.loglh_sk)
+            self._accumulate_sufficient_statistics(old_llh, x_mask,
+                                                   posteriors, old_logprob,
+                                                   old_fwdlattice, old_bwdlattice, old_loglh_sk)
 
-        # Compute loss associated with sequence
-        logPIk_s_ext = self.logPIk_s.reshape(1, self.n_states, self.n_prob_components, 1)
-        
+        # get the log-likelihood to format cost such self.networks such it can be optimized
+        llh, self.loglh_sk = self._getllh(self.networks, batch)
+        # compute sequence log-likelihood in self.networks, just to monitor the self.networks performance
+        with torch.no_grad():
+            llh[~x_mask] = 0
+            logprob, _ = self._do_forward_pass(llh, x_mask)
+
         # Brackets = log-P(X | chi, S) + log-P(chi | s)
         brackets = torch.zeros_like(self.loglh_sk)
         
         brackets[x_mask] = self.loglh_sk[x_mask] + self.logPIk_s.reshape(1, self.n_states, self.n_prob_components)
         
-
-        # Compute log-p(chi | s, X) = log-P(X|s,chi) + log-P(chi|s) - log\sum_{chi} exp ( log-P(X|s,chi) + log-P(chi|s) )
-        #log_num = self.loglh_sk.detach() + logPIk_s_ext
-        log_num = brackets.detach()
-        log_denom = torch.logsumexp(log_num, dim=3)
-
-        logpk_sX = log_num - log_denom.reshape(batch_size, n_samples, self.n_states, 1)
-        logpk_sX[~x_mask] = 0
-
-        post = posteriors
         #  The .sum(3) call sums on the components and .sum(2).sum(1) sums on all states and samples
         # loss = -(post * (torch.exp(logpk_sX) * brackets).sum(3)).sum(2).sum(1).sum()/float(x_mask.sum())
         loss = -(post[x_mask] * (torch.exp(logpk_sX) * brackets)[x_mask].sum(2)).sum()/float(x_mask.sum())
@@ -367,20 +398,20 @@ class GenHMM(torch.nn.Module):
                 self.update_HMM = False
 
 
-            optimizer.zero_grad()            
+
             total_loss = 0
             total_logprob = 0
             for b, data in enumerate(traindata):
                 # start = dt.now()
-
+                optimizer.zero_grad()            
                 loss, logprob_ = self.forward(data, testing=False)
                 loss.backward()
             
-
+                optimizer.step()
                 total_loss += loss.detach().data
                 total_logprob += logprob_
             
-            optimizer.step()
+            
             print("Step:{}\tb:{}\tLoss:{}\tNLL:{}".format(i, b,
                                                total_loss/(b+1),
                                                -total_logprob/(b+1)),
@@ -409,6 +440,9 @@ class GenHMM(torch.nn.Module):
         # In case we get a line of zeros in the stats
         #self.pi[self.pi.sum(1) == 0, :] = np.ones(self.n_prob_components) / self.n_prob_components
         normalize(self.pi, axis=1)
+
+        # update output probabilistic model, networks here
+        self._update_old_networks()
     
 
 
