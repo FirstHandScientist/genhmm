@@ -296,8 +296,11 @@ class GenHMM(torch.nn.Module):
         logprob : list of floats, [logprob1, logprob2, ... ]
             Log likelihood of ``X``.
         """
-
-        logprob = self.forward(X, testing=True)
+        # now mask is used, need to pass mask as well
+        # will consider to do batch as well in testig
+        mask = torch.ones(1, lengths[0], dtype=torch.uint8)
+        X = self.dtype(X[None,:]).to(self.device)
+        logprob = self.forward((X, mask), testing=True)
         return logprob
     
     def _getllh(self, networks, batch):
@@ -351,7 +354,8 @@ class GenHMM(torch.nn.Module):
             logpk_sX[~x_mask] = 0
 
         if testing:
-            return logprob
+            # each EM step sync old_networks and networks, so it is ok to test on old_networks
+            return old_logprob
         
         
         # hmm parameters should be updated based on old model
@@ -411,7 +415,7 @@ class GenHMM(torch.nn.Module):
                 total_loss += loss.detach().data
                 total_logprob += logprob_
             
-            
+            # consider put a stop criteria here to 
             print("Step:{}\tb:{}\tLoss:{}\tNLL:{}".format(i, b,
                                                total_loss/(b+1),
                                                -total_logprob/(b+1)),

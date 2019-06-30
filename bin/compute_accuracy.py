@@ -7,10 +7,16 @@ from functools import partial
 import pickle as pkl
 import numpy as np
 from parse import parse
-
+from train_class import pad_data
 
 def accuracy_fun(data_file, mdl=None):
     X = pkl.load(open(data_file, "rb"))
+    # # Get the length of all the sequences
+    # l = [xx.shape[0] for xx in X]
+    # # zero pad data for batch training
+    # max_len_ = max([xx.shape[0] for xx in X])
+    # x_padded = pad_data(X, max_len_)
+    
     true_class = parse("{}_{}.pkl", os.path.basename(data_file))[1]
 
     out = np.array(list(map(mdl.forward, X)))
