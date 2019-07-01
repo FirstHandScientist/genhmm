@@ -380,7 +380,7 @@ class GenHMM(torch.nn.Module):
 
         # Brackets = log-P(X | chi, S) + log-P(chi | s)
         brackets = torch.zeros_like(self.loglh_sk)
-        
+        ## Todo: implement update pi_s_k
         brackets[x_mask] = self.loglh_sk[x_mask] + self.logPIk_s.reshape(1, self.n_states, self.n_prob_components)
         
         #  The .sum(3) call sums on the components and .sum(2).sum(1) sums on all states and samples

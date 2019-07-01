@@ -110,7 +110,7 @@ print("torch batch backward: \n{}".format(torch_bwdlattice))
 
 
 
-# 4. posterior comparison
+# 4. log_xi_sum
 
 ## 4.1 compute the log_xi_sum by hmmlearn implementation
 hmmlearn_log_xi_sum = []
@@ -138,3 +138,4 @@ torch_log_xi_sum = _compute_log_xi_sum(int(data.shape[1]), \
                                        torch_logprob, \
                                        torch.from_numpy(mask))
 print("torch log_xi_sum lattice: {}".format(torch_log_xi_sum))
+#Todo: assert hmmlearn_logprob == torch_log_xi_sum.numpy()
