@@ -36,7 +36,7 @@ class GenHMMclassifier(nn.Module):
 
     ### consider do linear training based on GenHMMs
         
-    def forward(self, x):
+    def forward(self, x, weigthed=True):
         """compute likelihood of data under each GenHMM
         INPUT:
         x: The torch batch data
@@ -45,8 +45,11 @@ class GenHMMclassifier(nn.Module):
         
         OUTPUT: tensor of likelihood, shape: data_size * ncl
         """
-        
-        batch_llh = [classHMM.pred_score(x) for classHMM in self.hmms]
+        if weigthed:
+            
+            batch_llh = [classHMM.pred_score(x) / classHMM.latestNLL for classHMM in self.hmms]
+        else:
+            batch_llh = [classHMM.pred_score(x) for classHMM in self.hmms]
         
         return torch.stack(batch_llh).numpy()
 
@@ -451,7 +454,10 @@ class GenHMM(torch.nn.Module):
 
         # update output probabilistic model, networks here
         self._update_old_networks()
-    
+        
+        # store the latest NLL of the updated GenHMM model
+        self.latestNLL = -torch.cat(list(map(self.pred_score, traindata))).mean()
+        print("Latest NLL:\t{}".format(self.latestNLL))
 
 
 class wrapper(torch.nn.Module):

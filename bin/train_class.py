@@ -77,9 +77,9 @@ if __name__ == "__main__":
 
     
     mdl.device = 'cpu'
-    if torch.cuda.is_available():
-        device = torch.device('cuda')
-        mdl.device = device
+    # if torch.cuda.is_available():
+    #     device = torch.device('cuda')
+    #     mdl.device = device
     
     print("Push model to {}...".format(mdl.device), file=sys.stderr)
     for s in range(mdl.n_states):
@@ -97,14 +97,14 @@ if __name__ == "__main__":
     # zero pad data for batch training
     max_len_ = max([x.shape[0] for x in xtrain])
     xtrain_padded = pad_data(xtrain, max_len_)
-    traindata = DataLoader(dataset=TheDataset(xtrain_padded, lengths=l, device=mdl.device), batch_size=256, shuffle=True)
+    traindata = DataLoader(dataset=TheDataset(xtrain_padded, lengths=l, device=mdl.device), batch_size=512, shuffle=True)
     
 
     # niter counts the number of em steps before saving a model checkpoint
     niter = 1
     
     # em_skip determines the number of back-props before an EM step is performed
-    mdl.em_skip = 5
+    mdl.em_skip = 4
     
     # TODO: pass lr as a param
     mdl.lr = 1e-3
