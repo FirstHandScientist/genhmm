@@ -7,20 +7,27 @@ from functools import partial
 import pickle as pkl
 import numpy as np
 from parse import parse
-from train_class import pad_data
+from train_class import pad_data, TheDataset
+from torch.utils.data import DataLoader
 
 def accuracy_fun(data_file, mdl=None):
     X = pkl.load(open(data_file, "rb"))
-    # # Get the length of all the sequences
-    # l = [xx.shape[0] for xx in X]
-    # # zero pad data for batch training
-    # max_len_ = max([xx.shape[0] for xx in X])
-    # x_padded = pad_data(X, max_len_)
+    # Get the length of all the sequences
+    l = [xx.shape[0] for xx in X]
+    # zero pad data for batch training
+    max_len_ = max([xx.shape[0] for xx in X])
+    x_padded = pad_data(X, max_len_)
+    batchdata = DataLoader(dataset=TheDataset(x_padded,
+                                              lengths=l,
+                                              device=mdl.hmms[0].device),
+                           batch_size=512, shuffle=True)
     
     true_class = parse("{}_{}.pkl", os.path.basename(data_file))[1]
+    
+    out = np.concatenate(list(map(mdl.forward, batchdata)), axis=1)
 
-    out = np.array(list(map(mdl.forward, X)))
-    class_hat = np.argmax(out, axis=1) + 1
+    # the out here should be the shape: data_size * nclasses
+    class_hat = np.argmax(out, axis=0) + 1
     istrue = class_hat == int(true_class)
     return "{}/{}".format(str(istrue.sum()), str(istrue.shape[0]))
 

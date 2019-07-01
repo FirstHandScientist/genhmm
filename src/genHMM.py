@@ -34,17 +34,21 @@ class GenHMMclassifier(nn.Module):
         else:
             self.hmms = [load_model(fname) for fname in mdlc_files]
 
+    ### consider do linear training based on GenHMMs
         
-    def forward(self, x, lengths=None):
-        if lengths is None:
-            # Assume we passed only one sequence.
-            l = [x.shape[0]]
-
-        else:
-            l = lengths
-
-        return [classHMM.pred_score(x, lengths=l)[0] for classHMM in self.hmms]
-
+    def forward(self, x):
+        """compute likelihood of data under each GenHMM
+        INPUT:
+        x: The torch batch data
+           or x should be tuple: (batch size * n_samples (padded length) * n_features, 
+                                  tensor mask of the batch data)
+        
+        OUTPUT: tensor of likelihood, shape: data_size * ncl
+        """
+        
+        batch_llh = [classHMM.pred_score(x) for classHMM in self.hmms]
+        
+        return torch.stack(batch_llh).numpy()
 
 
 class GenHMM(torch.nn.Module):
@@ -298,9 +302,9 @@ class GenHMM(torch.nn.Module):
         """
         # now mask is used, need to pass mask as well
         # will consider to do batch as well in testig
-        mask = torch.ones(1, lengths[0], dtype=torch.uint8)
-        X = self.dtype(X[None,:]).to(self.device)
-        logprob = self.forward((X, mask), testing=True)
+        # mask = torch.ones(1, lengths[0], dtype=torch.uint8)
+        # X = self.dtype(X[None,:]).to(self.device)
+        logprob = self.forward(X, testing=True)
         return logprob
     
     def _getllh(self, networks, batch):

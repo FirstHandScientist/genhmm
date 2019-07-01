@@ -101,10 +101,10 @@ if __name__ == "__main__":
     
 
     # niter counts the number of em steps before saving a model checkpoint
-    niter = 300
+    niter = 1
     
     # em_skip determines the number of back-props before an EM step is performed
-    mdl.em_skip = 3
+    mdl.em_skip = 5
     
     # TODO: pass lr as a param
     mdl.lr = 1e-3
