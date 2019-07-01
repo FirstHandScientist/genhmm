@@ -8,6 +8,7 @@ SRC=src
 BIN=bin
 DATA=data
 MODELS=models
+LOG=log
 nepochs=
 nclasses=
 MODELS_INTERM=$(shell echo $(MODELS)/epoch{1..$(nepochs)}.mdl)
@@ -17,7 +18,7 @@ testing_data=$(DATA)/test13.pkl
 all: train
 
 init:
-	mkdir -p $(MODELS) 
+	mkdir -p $(MODELS) $(LOG)
 
 
 prepare_data: $(training_data) $(testing_data)
@@ -37,13 +38,14 @@ $(MODELS)/%.mdl:
 
 
 $(MODELS)/%.mdlc:
-	$(PYTHON) $(BIN)/train_class.py $(training_data) $@
+	$(PYTHON) $(BIN)/train_class.py $(training_data) $@ 2>> $(LOG)/epoch*_class*.log
 
 clean:
 	rm -f $(DATA)/train*_*.pkl
 	rm -f $(DATA)/test*_*.pkl 
 	rm -f $(MODELS)/epoch*.mdl 
-	rm -f $(MODELS)/epoch*_class*.mdlc 
+	rm -f $(MODELS)/epoch*_class*.mdlc
+	rm -f $(LOG)/epoch*_class*.log
 	rm -f Makefile_run
 
 
