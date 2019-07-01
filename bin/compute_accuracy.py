@@ -46,19 +46,22 @@ def parse_(res_str):
     return res_int
 
 
-def print_results(mdl_file, results, data_files):
+def print_results(mdl_file, data_files, results):
+    epoch=parse("epoch{}.mdl",os.path.basename(mdl_file))
     # Print class by class accuracy
     for res, data_f in zip(results, data_files):
-        print(mdl_file, res[0], data_f[0].astype("<U"), divide(parse_(data_f[0].astype("<U"))), sep='\t', file=sys.stdout)
-        print(mdl_file, res[1], data_f[1].astype("<U"), divide(parse_(data_f[1].astype("<U"))), sep='\t', file=sys.stdout)
+        true_class = parse("{}_{}.pkl", os.path.basename(data_f[0]))[1]
+        
+        print("epoch:",epoch, "class:",true_class, mdl_file, data_f[0].astype("<U"), res[0], divide(parse_(res[0].astype("<U"))), sep='\t', file=sys.stderr)
+        print("epoch:",epoch, "class:",true_class, mdl_file, data_f[1].astype("<U"), res[1], divide(parse_(res[1].astype("<U"))), sep='\t', file=sys.stderr)
 
     # Print total accuracy
-    res = np.concatenate([np.array([parse_(r[0].astype("<U")), parse_(r[1].astype("<U"))]).T for r in data_files],axis=1)
+    res = np.concatenate([np.array([parse_(r[0].astype("<U")), parse_(r[1].astype("<U"))]).T for r in results],axis=1)
     tr_res = res[:, ::2]
     te_res = res[:, 1::2]
     tr_res_str = str(tr_res[0].sum()/tr_res[1].sum())
     te_res_str = str(te_res[0].sum()/te_res[1].sum())
-    print("Acc:", mdl_file, tr_res_str, te_res_str, sep='\t', file=sys.stdout)
+    print("epoch:", epoch, "Acc:", mdl_file, tr_res_str, te_res_str, sep='\t', file=sys.stderr)
 
 
 if __name__ == "__main__":

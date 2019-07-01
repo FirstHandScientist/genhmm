@@ -57,7 +57,7 @@ if __name__ == "__main__":
 
     #  Load data
     xtrain = pkl.load(open(train_class_inputfile, "rb"))
-
+    xtrain=xtrain[:100]
     # Get the length of all the sequences
     l = [x.shape[0] for x in xtrain]
 
@@ -74,14 +74,16 @@ if __name__ == "__main__":
         # Load previous model
 
         mdl = load_model(out_mdl.replace("epoch" + epoch_str, "epoch" + str(int(epoch_str)-1)))
-
+    
+    mdl.iepoch = epoch_str
+    mdl.iclass = iclass_str
     
     mdl.device = 'cpu'
     # if torch.cuda.is_available():
     #     device = torch.device('cuda')
     #     mdl.device = device
     
-    print("Push model to {}...".format(mdl.device), file=sys.stderr)
+    print("epoch:{}\tclass:{}\tPush model to {}...".format(epoch_str,iclass_str, mdl.device), file=sys.stderr)
     for s in range(mdl.n_states):
         for k in range(mdl.n_prob_components):
             mdl.networks[s,k] = mdl.networks[s,k].to(mdl.device)

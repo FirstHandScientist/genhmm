@@ -423,7 +423,7 @@ class GenHMM(torch.nn.Module):
                 total_logprob += logprob_
             
             # consider put a stop criteria here to 
-            print("Step:{}\tb:{}\tLoss:{}\tNLL:{}".format(i, b,
+            print("epoch:{}\tclass:{}\tStep:{}\tb:{}\tLoss:{}\tNLL:{}".format(self.iepoch,self.iclass,i, b,
                                                total_loss/(b+1),
                                                -total_logprob/(b+1)),
                   file=sys.stderr)

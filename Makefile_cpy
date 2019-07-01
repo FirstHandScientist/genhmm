@@ -32,20 +32,22 @@ train:
 #	echo "Done" > $^
 
 
-$(MODELS)/%.mdl: 
+$(MODELS)/%.mdl:
 	$(PYTHON) $(BIN)/aggregate_models.py $@
-	$(PYTHON) $(BIN)/compute_accuracy.py $@ $(training_data) $(testing_data)
+	$(PYTHON) $(BIN)/compute_accuracy.py $@ $(training_data) $(testing_data)  2>> $(LOG)/class_all.log
 
 
 $(MODELS)/%.mdlc:
-	$(PYTHON) $(BIN)/train_class.py $(training_data) $@ 2>> $(LOG)/epoch*_class*.log
-
+	$(eval logfile=$(LOG)/`basename $@ | sed -e 's/^.*\(class\)/\1/g' -e 's/.mdlc/.log'/g`)
+	echo `date` ":" $(PYTHON) $(BIN)/train_class.py $(training_data) $@ >> $(logfile)
+	$(PYTHON) $(BIN)/train_class.py $(training_data) $@ 2>> $(logfile)
+	
 clean:
 	rm -f $(DATA)/train*_*.pkl
 	rm -f $(DATA)/test*_*.pkl 
 	rm -f $(MODELS)/epoch*.mdl 
 	rm -f $(MODELS)/epoch*_class*.mdlc
-	rm -f $(LOG)/epoch*_class*.log
+	rm -f $(LOG)/class*.log
 	rm -f Makefile_run
 
 
