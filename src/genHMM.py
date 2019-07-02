@@ -36,7 +36,7 @@ class GenHMMclassifier(nn.Module):
 
     ### consider do linear training based on GenHMMs
         
-    def forward(self, x, weigthed=True):
+    def forward(self, x, weigthed=False):
         """compute likelihood of data under each GenHMM
         INPUT:
         x: The torch batch data
@@ -82,20 +82,30 @@ class GenHMM(torch.nn.Module):
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
     
-    def init_startprob(self):
+    def init_startprob(self, random=True):
         """
         Initialize HMM initial coefficients.
         """
-        init = 1. / self.n_states
-        self.startprob_ = torch.ones(self.n_states) * init
+        if random:
+            init = torch.abs(torch.randn(self.n_states))
+            init /= init.sum()
+            self.startprob_ = init
+        else:
+            init = 1. / self.n_states
+            self.startprob_ = torch.ones(self.n_states) * init
+            
         return self
 
-    def init_transmat(self):
+    def init_transmat(self, random=True):
         """
         Initialize HMM transition matrix.
         """
-        init = 1/self.n_states
-        self.transmat_ = torch.ones(self.n_states, self.n_states) * init
+        if random:
+            self.transmat_ = torch.randn(self.n_states, self.n_states).abs()
+            normalize(self.transmat_, axis=1)
+        else:
+            init = 1/self.n_states
+            self.transmat_ = torch.ones(self.n_states, self.n_states) * init
         return self
 
     def init_gen(self):
