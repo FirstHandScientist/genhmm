@@ -426,7 +426,7 @@ class GenHMM(torch.nn.Module):
             print("epoch:{}\tclass:{}\tStep:{}\tb:{}\tLoss:{}\tNLL:{}".format(self.iepoch,self.iclass,i, b,
                                                total_loss/(b+1),
                                                -total_logprob/(b+1)),
-                  file=sys.stderr)
+                  file=sys.stdout)
             
             
     
@@ -457,7 +457,7 @@ class GenHMM(torch.nn.Module):
         
         # store the latest NLL of the updated GenHMM model
         self.latestNLL = -torch.cat(list(map(self.pred_score, traindata))).mean()
-        print("Latest NLL:\t{}".format(self.latestNLL))
+        print("epoch:{}\tclass:{}\tLatest NLL:\t{}".format(self.iepoch,self.iclass,self.latestNLL),file=sys.stdout)
 
 
 class wrapper(torch.nn.Module):

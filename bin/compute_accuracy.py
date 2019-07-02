@@ -47,13 +47,13 @@ def parse_(res_str):
 
 
 def print_results(mdl_file, data_files, results):
-    epoch=parse("epoch{}.mdl",os.path.basename(mdl_file))
+    epoch=parse("epoch{}.mdl",os.path.basename(mdl_file))[0]
     # Print class by class accuracy
     for res, data_f in zip(results, data_files):
         true_class = parse("{}_{}.pkl", os.path.basename(data_f[0]))[1]
         
-        print("epoch:",epoch, "class:",true_class, mdl_file, data_f[0].astype("<U"), res[0], divide(parse_(res[0].astype("<U"))), sep='\t', file=sys.stderr)
-        print("epoch:",epoch, "class:",true_class, mdl_file, data_f[1].astype("<U"), res[1], divide(parse_(res[1].astype("<U"))), sep='\t', file=sys.stderr)
+        print("epoch:",epoch, "class:",true_class, mdl_file, data_f[0].astype("<U"), res[0], divide(parse_(res[0].astype("<U"))), sep='\t', file=sys.stdout)
+        print("epoch:",epoch, "class:",true_class, mdl_file, data_f[1].astype("<U"), res[1], divide(parse_(res[1].astype("<U"))), sep='\t', file=sys.stdout)
 
     # Print total accuracy
     res = np.concatenate([np.array([parse_(r[0].astype("<U")), parse_(r[1].astype("<U"))]).T for r in results],axis=1)
@@ -61,7 +61,7 @@ def print_results(mdl_file, data_files, results):
     te_res = res[:, 1::2]
     tr_res_str = str(tr_res[0].sum()/tr_res[1].sum())
     te_res_str = str(te_res[0].sum()/te_res[1].sum())
-    print("epoch:", epoch, "Acc:", mdl_file, tr_res_str, te_res_str, sep='\t', file=sys.stderr)
+    print("epoch:", epoch, "Acc:", mdl_file, tr_res_str, te_res_str, sep='\t', file=sys.stdout)
 
 
 if __name__ == "__main__":
@@ -69,7 +69,7 @@ if __name__ == "__main__":
             "Example: python bin/compute_accuracy.py models/epoch1.mdl data/train13.pkl data/test13.pkl" \
 
     if len(sys.argv) != 4 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
-        print(usage, file=sys.stderr)
+        print(usage, file=sys.stdout)
         sys.exit(1)
 
     mdl_file = sys.argv[1]

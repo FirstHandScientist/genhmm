@@ -83,7 +83,7 @@ if __name__ == "__main__":
     #     device = torch.device('cuda')
     #     mdl.device = device
     
-    print("epoch:{}\tclass:{}\tPush model to {}...".format(epoch_str,iclass_str, mdl.device), file=sys.stderr)
+    print("epoch:{}\tclass:{}\tPush model to {}...".format(epoch_str,iclass_str, mdl.device), file=sys.stdout)
     for s in range(mdl.n_states):
         for k in range(mdl.n_prob_components):
             mdl.networks[s,k] = mdl.networks[s,k].to(mdl.device)
