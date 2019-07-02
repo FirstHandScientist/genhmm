@@ -6,8 +6,10 @@ Makefile_run
 
 # Pycharm cache
 .idea/
+
 # Python cache
 __pycache__
+
 # Intermediate datafiles
 data/TIMIT.zip
 data/TIMIT/*
@@ -19,8 +21,11 @@ data/timit/*
 *.work-laptop
 .data
 data/34e2b78745138186976cbc27939b1b34d18bd5b3.torrent
+log/
+
 # Intermediate models
 *.mdl*
+
 # Latex intermediates
 *.pdf
 *.aux
