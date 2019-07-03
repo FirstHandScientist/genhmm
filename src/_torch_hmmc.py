@@ -63,7 +63,10 @@ def _compute_log_xi_sum(n_samples, n_components, fwdlattice, \
     """
 
     batch_size=batch_framelogprob.shape[0]
-    work_buffer = torch.zeros((batch_size, log_transmat.shape[0], log_transmat.shape[1]))
+    work_buffer = torch.zeros((batch_size, \
+                               log_transmat.shape[0], \
+                               log_transmat.shape[1]), \
+                              device=mask.device)
     log_transmat = log_transmat.reshape(1,n_components,n_components).repeat(batch_size,1,1)
     
     

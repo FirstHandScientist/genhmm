@@ -395,7 +395,7 @@ class GenHMM(torch.nn.Module):
         
         #  The .sum(3) call sums on the components and .sum(2).sum(1) sums on all states and samples
         # loss = -(post * (torch.exp(logpk_sX) * brackets).sum(3)).sum(2).sum(1).sum()/float(x_mask.sum())
-        loss = -(post[x_mask] * (torch.exp(logpk_sX) * brackets)[x_mask].sum(2)).sum()/float(x_mask.sum())
+        loss = -(post[x_mask] * (torch.exp(logpk_sX) * brackets)[x_mask].sum(2)).sum()/float(batch_size)
         return loss, logprob.mean()
 
 
@@ -419,7 +419,7 @@ class GenHMM(torch.nn.Module):
                 self.update_HMM = False
 
 
-
+           
             total_loss = 0
             total_logprob = 0
             for b, data in enumerate(traindata):

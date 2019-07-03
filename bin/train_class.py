@@ -17,14 +17,18 @@ class TheDataset(Dataset):
     def __init__(self, xtrain, lengths, device='cpu'):
         self.data = [torch.FloatTensor(x).to(device) for x in xtrain]
         self.lengths = lengths
+        max_len_ = self.data[0].shape[0]
+        self.mask = [torch.cat( (torch.ones(l, dtype=torch.uint8), \
+                                torch.zeros( max_len_ - l, dtype=torch.uint8))).to(device) \
+                     for l in self.lengths]
         self.len=len(self.data)
         
 
     def __getitem__(self, index):
-        mask = torch.cat( (torch.ones(self.lengths[index], dtype=torch.uint8), \
-                           torch.zeros(self.data[index].shape[0] \
-                                       - self.lengths[index], dtype=torch.uint8)) )
-        return (self.data[index], mask)
+        # mask = torch.cat( (torch.ones(self.lengths[index], dtype=torch.uint8), \
+        #                    torch.zeros(self.data[index].shape[0] \
+        #                                - self.lengths[index], dtype=torch.uint8)) )
+        return (self.data[index], self.mask[index])
 
     def __len__(self):
         return self.len
@@ -56,6 +60,7 @@ if __name__ == "__main__":
     train_class_inputfile = train_inputfile.replace(".pkl", "_{}.pkl".format(iclass_str))
 
     #  Load data
+    
     xtrain = pkl.load(open(train_class_inputfile, "rb"))
     xtrain=xtrain[:100]
     # Get the length of all the sequences
@@ -65,7 +70,7 @@ if __name__ == "__main__":
     if epoch_str == '1':
 
         #  Create model, to
-        options = dict(n_states=5, n_prob_components=3,
+        options = dict(n_states=3, n_prob_components=2,
                        em_skip=30, device='cpu', lr=1e-4, log_dir="results")
 
         mdl = GenHMM(**options)
@@ -79,34 +84,42 @@ if __name__ == "__main__":
     mdl.iclass = iclass_str
     
     mdl.device = 'cpu'
-    # if torch.cuda.is_available():
-    #     device = torch.device('cuda')
-    #     mdl.device = device
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+        mdl.device = device
     
     print("epoch:{}\tclass:{}\tPush model to {}...".format(epoch_str,iclass_str, mdl.device), file=sys.stdout)
     for s in range(mdl.n_states):
         for k in range(mdl.n_prob_components):
-            mdl.networks[s,k] = mdl.networks[s,k].to(mdl.device)
+            # push new networks to device
+            mdl.networks[s,k].to(mdl.device)
             p = mdl.networks[s,k].prior
-            mdl.networks[s,k].prior.loc = p.loc.to(mdl.device)#,p.covariance_matrix.to(mdl.device)).to(mdl.device)
-            mdl.networks[s,k].prior.covariance_matrix = p.covariance_matrix.to(mdl.device)
-
+            mdl.networks[s,k].prior = type(p)(p.loc.to(mdl.device),
+                                              p.covariance_matrix.to(mdl.device))
+            
+            # push the old networks to device
+            mdl.old_networks[s,k].to(mdl.device)
+            p = mdl.old_networks[s,k].prior
+            mdl.old_networks[s,k].prior = type(p)(p.loc.to(mdl.device),
+                                              p.covariance_matrix.to(mdl.device))
+            
     mdl.startprob_ = mdl.startprob_.to(mdl.device)
     mdl.transmat_ = mdl.transmat_.to(mdl.device)
     mdl.logPIk_s = mdl.pi.log().to(mdl.device)
     
     
+    
     # zero pad data for batch training
     max_len_ = max([x.shape[0] for x in xtrain])
     xtrain_padded = pad_data(xtrain, max_len_)
-    traindata = DataLoader(dataset=TheDataset(xtrain_padded, lengths=l, device=mdl.device), batch_size=512, shuffle=True)
+    traindata = DataLoader(dataset=TheDataset(xtrain_padded, lengths=l, device=mdl.device), batch_size=1024, shuffle=True)
     
 
     # niter counts the number of em steps before saving a model checkpoint
-    niter = 1
+    niter = 2
     
     # em_skip determines the number of back-props before an EM step is performed
-    mdl.em_skip = 4
+    mdl.em_skip = 5
     
     # TODO: pass lr as a param
     mdl.lr = 1e-3
