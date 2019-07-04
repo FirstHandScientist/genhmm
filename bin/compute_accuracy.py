@@ -7,8 +7,11 @@ from functools import partial
 import pickle as pkl
 import numpy as np
 from parse import parse
-from train_class import pad_data, TheDataset
+from src.utils import pad_data, TheDataset
+
+import torch
 from torch.utils.data import DataLoader
+
 
 def accuracy_fun(data_file, mdl=None):
     X = pkl.load(open(data_file, "rb"))
@@ -23,8 +26,8 @@ def accuracy_fun(data_file, mdl=None):
                            batch_size=512, shuffle=True)
     
     true_class = parse("{}_{}.pkl", os.path.basename(data_file))[1]
-    
-    out = np.concatenate(list(map(mdl.forward, batchdata)), axis=1)
+    out_list = [mdl.forward(x) for x in batchdata]
+    out = np.concatenate(out_list, axis=1)
 
     # the out here should be the shape: data_size * nclasses
     class_hat = np.argmax(out, axis=0) + 1
@@ -72,17 +75,35 @@ if __name__ == "__main__":
         print(usage, file=sys.stdout)
         sys.exit(1)
 
+    # Parse argument
     mdl_file = sys.argv[1]
     training_data_file = sys.argv[2]
     testing_data_file = sys.argv[3]
 
+    # Load Model
     mdl = load_model(mdl_file)
+
+    # Push to GPU if possible
+    device = 'cpu'
+
+    # if torch.cuda.is_available():
+    #    device = torch.device('cuda')
+
+    mdl.pushto(device)
+
+
+    # Prepare for computation of results
     nclasses = len(mdl.hmms)
 
+    # Builds an array of string containing the train and test data sets for each class
+    # size: nclass x 2 (train, test)
     data_files = np.array([[append_class(training_data_file, iclass+1), append_class(testing_data_file, iclass+1)]
                    for iclass in range(nclasses)])
 
+    # Define a function for this particular HMMclassifier model
     f = partial(accuracy_fun, mdl=mdl)
+
+    # todo: I think this will break on GPU because it uses numpy
     f_v = np.vectorize(f, otypes=["O"])
     results = f_v(data_files).astype('|S1024')
 
