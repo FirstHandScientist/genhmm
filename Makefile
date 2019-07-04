@@ -24,6 +24,11 @@ runfile:
 init: runfile
 	$(MAKE) -f Makefile_run -s -k $@
 
+watch:
+	$(MAKE) -f Makefile_run -s -k $@
+
 clean:
 	$(MAKE) -f Makefile_run -s -k $@
+
+
 
