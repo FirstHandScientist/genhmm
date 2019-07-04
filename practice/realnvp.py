@@ -36,7 +36,9 @@ if __name__ == "__main__":
 
     for t in range(niter):
         noisy_moons = datasets.make_moons(n_samples=n_samples_train, noise=.05)[0].astype(np.float32)
-        loss = -flow.log_prob(torch.from_numpy(noisy_moons)).mean()
+        x = torch.from_numpy(noisy_moons).reshape(n_samples_train, 1, d)
+        mask = torch.ones((x.shape[0], x.shape[1]), dtype=torch.uint8)
+        loss = -flow.log_prob(x, mask).mean()
 
         optimizer.zero_grad()
         loss.backward(retain_graph=True)
@@ -47,7 +49,10 @@ if __name__ == "__main__":
 
 
     noisy_moons = datasets.make_moons(n_samples=n_samples_test, noise=.05)[0].astype(np.float32)
-    z = flow.f(torch.from_numpy(noisy_moons))[0].detach().numpy()
+    xtest = torch.from_numpy(noisy_moons).reshape(n_samples_test, 1, d)
+    mask = torch.ones((xtest.shape[0], xtest.shape[1]), dtype=torch.uint8)
+
+    z = flow.f(xtest)[0].detach().numpy().squeeze()
     plt.subplot(221)
     plt.scatter(z[:, 0], z[:, 1])
     plt.title(r'$z = f(X)$')
