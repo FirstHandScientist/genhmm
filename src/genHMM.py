@@ -319,20 +319,17 @@ class GenHMM(torch.nn.Module):
         # Normalizes the input array so that the exponent of the sum is 1
         lse_gamma = torch.logsumexp(log_gamma, dim=2)
         
-        log_gamma -= lse_gamma[:,:, None]
+        log_gamma -= lse_gamma[:, :, None]
         
         return torch.exp(log_gamma)
 
-    def pred_score(self, X, lengths=None):
+    def pred_score(self, X):
         """ Update the base score method, such that the scores of sequences are returned
         score: the log probability under the model.
         Parameters
         ----------
         X : array-like, shape (n_samples, n_features)
             Feature matrix of individual samples.
-        lengths : array-like of integers, shape (n_sequences, ), optional
-            Lengths of the individual sequences in ``X``. The sum of
-            these should be ``n_samples``.
         Returns
         -------
         logprob : list of floats, [logprob1, logprob2, ... ]
@@ -352,21 +349,35 @@ class GenHMM(torch.nn.Module):
         n_samples = x.shape[1]
 
         llh = torch.zeros(batch_size, n_samples, self.n_states).to(self.device)
+
         local_loglh_sk = torch.zeros((batch_size, n_samples, self.n_states, self.n_prob_components)).to(self.device)
 
+        sequences_true_len = x_mask.type_as(llh).sum(1).reshape(-1, 1, 1)
+
+        # TODO: some parallelization here...
         for s in range(self.n_states):
-            loglh_sk = [networks[s, k].log_prob(x, x_mask).reshape(batch_size, 1, -1)/x.numel() for k in range(self.n_prob_components)]
+            loglh_sk = [0 for _ in range(self.n_prob_components)]
+
+            for k in range(self.n_prob_components):
+                loglh_sk[k] = networks[s, k].log_prob(x, x_mask).reshape(batch_size, 1, -1)
+                #assert((loglh_sk[k] <= 0).all())
+
+            loglh_sk = [llh_sk / sequences_true_len for llh_sk in loglh_sk ]
+
             ll = torch.cat(loglh_sk, dim=1)
-            local_loglh_sk[:,:,s,:] = ll.transpose(1,2)
-            llh[:,:,s] = (self.logPIk_s[s].reshape(1,self.n_prob_components, 1) + ll).detach().sum(1)
+            local_loglh_sk[:, :, s, :] = ll.transpose(1, 2)
+            llh[:, :, s] = (self.logPIk_s[s].reshape(1, self.n_prob_components, 1) + ll).detach().sum(1)
         return llh, local_loglh_sk
+
+
 
     def forward(self, batch, testing=False):
         """PYTORCH FORWARD, NOT HMM forward algorithm. This function is called for each batch.
         Input: batch of sequences, array size, (batch_size, n_samples, n_dimensions)
         Output: Loss, scaler
         """
-        if self.update_HMM:
+
+        if self.update_HMM and not testing:
             self._initialize_sufficient_statistics()
         
         x, x_mask = batch
@@ -375,16 +386,23 @@ class GenHMM(torch.nn.Module):
 
         # get the log-likelihood for posterior computation
         with torch.no_grad():
-            ## Two posteriors to be computed here:
+            # Two posteriors to be computed here:
             # 1. the hidden state posterior, post
             old_llh, old_loglh_sk = self._getllh(self.old_networks, batch)
             old_llh[~x_mask] = 0
             old_logprob, old_fwdlattice = self._do_forward_pass(old_llh, x_mask)
+            # assert ((old_logprob <= 0).all())
+
+            if testing:
+                # each EM step sync old_networks and networks, so it is ok to test on old_networks
+                return old_logprob
 
             old_bwdlattice = self._do_backward_pass(old_llh, x_mask)
             posteriors = self._compute_posteriors(old_fwdlattice, old_bwdlattice)
+
             posteriors[~x_mask] = 0
             post = posteriors
+
             # 2. the probability model components posterior, k condition on hidden state, observation and hmm model
             # Compute log-p(chi | s, X) = log-P(X|s,chi) + log-P(chi|s) - log\sum_{chi} exp ( log-P(X|s,chi) + log-P(chi|s) )
         
@@ -394,28 +412,24 @@ class GenHMM(torch.nn.Module):
             
             logpk_sX = log_num - log_denom.reshape(batch_size, n_samples, self.n_states, 1)
             logpk_sX[~x_mask] = 0
-
-        if testing:
-            # each EM step sync old_networks and networks, so it is ok to test on old_networks
-            return old_logprob
-        
         
         # hmm parameters should be updated based on old model
-        if self.update_HMM:
+        if self.update_HMM and not testing:
             self._accumulate_sufficient_statistics(old_llh, x_mask,
                                                    posteriors, old_logprob,
                                                    old_fwdlattice, old_bwdlattice, old_loglh_sk)
 
-        # get the log-likelihood to format cost such self.networks such it can be optimized
+        # Get the log-likelihood to format cost such self.networks such it can be optimized
         llh, self.loglh_sk = self._getllh(self.networks, batch)
+
         # compute sequence log-likelihood in self.networks, just to monitor the self.networks performance
         with torch.no_grad():
             llh[~x_mask] = 0
             logprob, _ = self._do_forward_pass(llh, x_mask)
-
+        # assert((logprob <= 0).all())
         # Brackets = log-P(X | chi, S) + log-P(chi | s)
         brackets = torch.zeros_like(self.loglh_sk)
-        ## Todo: implement update pi_s_k
+        ## Todo: implement update pi_s_k ?
         brackets[x_mask] = self.loglh_sk[x_mask] + self.logPIk_s.reshape(1, self.n_states, self.n_prob_components)
         
         #  The .sum(3) call sums on the components and .sum(2).sum(1) sums on all states and samples
@@ -495,8 +509,11 @@ class GenHMM(torch.nn.Module):
         
         # store the latest NLL of the updated GenHMM model
         self.latestNLL = -torch.cat(list(map(self.pred_score, traindata))).mean()
+
         print("epoch:{}\tclass:{}\tLatest NLL:\t{}".format(self.iepoch,self.iclass,self.latestNLL),file=sys.stdout)
 
+        # Flag back to False
+        self.update_HMM = False
 
 class wrapper(torch.nn.Module):
     def __init__(self, mdl):
