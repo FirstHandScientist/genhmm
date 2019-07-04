@@ -86,7 +86,7 @@ if __name__ == "__main__":
     # Push to GPU if possible
     device = 'cpu'
 
-    # if torch.cuda.is_available():
+    #if torch.cuda.is_available():
     #    device = torch.device('cuda')
 
     mdl.pushto(device)
