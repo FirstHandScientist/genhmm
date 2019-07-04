@@ -34,7 +34,7 @@ if __name__ == "__main__":
     #  Load data
     
     xtrain = pkl.load(open(train_class_inputfile, "rb"))
-    xtrain = xtrain[:100]
+    #xtrain = xtrain[:100]
     # Get the length of all the sequences
     l = [x.shape[0] for x in xtrain]
 
