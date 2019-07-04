@@ -3,39 +3,30 @@
 import os
 import sys
 sys.path.append("..")
-
-from tqdm import tqdm
 import numpy as np
-from scipy.special import logsumexp as lsexp
-from sklearn.utils import check_array, check_random_state
-from sklearn.utils.validation import check_is_fitted
-
-from src.glow.models import Glow, FlowNet
-from src.glow.config import JsonConfig
 from src.realnvp import RealNVP
-
-from functools import partial
-
-#from tensorboardX import SummaryWriter
-
 import torch
 from torch import nn, distributions
-from torch.autograd import Variable
 from src._torch_hmmc import _compute_log_xi_sum, _forward, _backward
 
 
 class GenHMMclassifier(nn.Module):
     def __init__(self, mdlc_files=None, **options):
+        """Initialize a model on CPU. Make sure to push to GPU at runtime."""
         super(GenHMMclassifier, self).__init__()
 
         if mdlc_files == None:
             self.nclasses = options["nclasses"]
             self.hmms = [GenHMM(**options) for _ in range(self.nclasses)]
+            self.pclass = torch.ones(len(self.hmms))
+
         else:
             self.hmms = [load_model(fname) for fname in mdlc_files]
+            self.pclass = torch.FloatTensor([h.number_training_data for h in self.hmms])
+            self.pclass = (self.pclass / self.pclass.sum())
+        
 
     ### consider do linear training based on GenHMMs
-        
     def forward(self, x, weigthed=False):
         """compute likelihood of data under each GenHMM
         INPUT:
@@ -45,13 +36,20 @@ class GenHMMclassifier(nn.Module):
         
         OUTPUT: tensor of likelihood, shape: data_size * ncl
         """
+
         if weigthed:
-            
             batch_llh = [classHMM.pred_score(x) / classHMM.latestNLL for classHMM in self.hmms]
         else:
             batch_llh = [classHMM.pred_score(x) for classHMM in self.hmms]
-        
-        return torch.stack(batch_llh).numpy()
+
+        return torch.stack(batch_llh)
+
+
+    def pushto(self, device):
+        self.hmms = [h.pushto(device) for h in self.hmms]
+        self.pclass = self.pclass.to(device)
+        self.device = device
+        return self
 
 
 class GenHMM(torch.nn.Module):
@@ -77,6 +75,8 @@ class GenHMM(torch.nn.Module):
         # Initialize generative model networks
         self.init_gen()
         self._update_old_networks()
+        self.update_HMM = False
+
         # training log directory and logger
         self.log_dir = log_dir
         if not os.path.exists(self.log_dir):
@@ -115,7 +115,7 @@ class GenHMM(torch.nn.Module):
         """
         H = 28
         D = 14
-        nchain = 3
+        nchain = 8
         d = D // 2
 
         nets = lambda: nn.Sequential(nn.Linear(D, H), nn.LeakyReLU(), nn.Linear(H, H), nn.LeakyReLU(), nn.Linear(H, D),
@@ -127,12 +127,15 @@ class GenHMM(torch.nn.Module):
         ### thus changing it to implementation
         prior = distributions.MultivariateNormal(torch.zeros(D).to(self.device), torch.eye(D).to(self.device))
         # prior = lambda x: GaussianDiag.logp(torch.zeros(D), torch.zeros(D), x)
-        self.flow = RealNVP(nets, nett, masks, prior)
+        # self.flow = RealNVP(nets, nett, masks, prior)
 
 
         #  Init mixture
-        self.pi = self.dtype( np.random.rand(self.n_states, self.n_prob_components) )
+        self.pi = self.dtype(np.random.rand(self.n_states, self.n_prob_components))
         normalize(self.pi, axis=1)
+
+        self.logPIk_s = self.pi.log()
+
 
         # Init networks
         self.networks = [RealNVP(nets, nett, masks, prior) for _ in range(self.n_prob_components*self.n_states)]
@@ -151,7 +154,29 @@ class GenHMM(torch.nn.Module):
             for j in range(self.n_prob_components):
                 self.old_networks[i,j].load_state_dict( self.networks[i,j].state_dict() )
         return self
-     
+    
+    def pushto(self, device):
+        for s in range(self.n_states):
+            for k in range(self.n_prob_components):
+                # push new networks to device
+                self.networks[s,k].to(device)
+                p = self.networks[s,k].prior
+                self.networks[s,k].prior = type(p)(p.loc.to(device),
+                                                  p.covariance_matrix.to(device))
+                
+                # push the old networks to device
+                self.old_networks[s,k].to(device)
+                p = self.old_networks[s,k].prior
+                self.old_networks[s,k].prior = type(p)(p.loc.to(device),
+                                                  p.covariance_matrix.to(device))
+                
+        self.startprob_ = self.startprob_.to(device)
+        self.transmat_ = self.transmat_.to(device)
+        self.logPIk_s = self.logPIk_s.to(device)
+
+        self.device = device
+        return self
+
     def _initialize_sufficient_statistics(self):
         """Initializes sufficient statistics required for M-step.
 
@@ -462,6 +487,9 @@ class GenHMM(torch.nn.Module):
         #self.pi[self.pi.sum(1) == 0, :] = np.ones(self.n_prob_components) / self.n_prob_components
         normalize(self.pi, axis=1)
 
+        self.logPIk_s = self.pi.log()
+
+
         # update output probabilistic model, networks here
         self._update_old_networks()
         
@@ -480,8 +508,10 @@ def save_model(mdl, fname=None):
     torch.save(wrapper(mdl), fname)
     return 0
 
+
 def load_model(fname):
-    savable = torch.load(fname)
+    """Loads a model on CPU by default."""
+    savable = torch.load(fname, map_location='cpu')
     return savable.userdata
 
 
