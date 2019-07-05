@@ -72,7 +72,7 @@ if __name__ == "__main__":
     niter = 2
     
     # em_skip determines the number of back-props before an EM step is performed
-    mdl.em_skip = 5
+    mdl.em_skip = 50
 
     # TODO: pass lr as a param
     mdl.lr = 1e-3

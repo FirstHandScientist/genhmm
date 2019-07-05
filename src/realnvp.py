@@ -11,6 +11,7 @@ class RealNVP(torch.nn.Module):
         self.s = torch.nn.ModuleList([nets() for _ in range(len(mask))])
 
     def g(self, z):
+        # not sure about this
         x = z
         for i in range(len(self.t)):
             x_ = x * self.mask[i]
@@ -25,8 +26,8 @@ class RealNVP(torch.nn.Module):
             z_ = self.mask[i] * z
             s = self.s[i](z_) * (1 - self.mask[i])
             t = self.t[i](z_) * (1 - self.mask[i])
-            z = (1 - self.mask[i]) * (z - t) * torch.exp(-s) + z_
-            log_det_J -= s.sum(dim=2)
+            z = (1 - self.mask[i]) * (z + t) * torch.exp(s) + z_
+            log_det_J += s.sum(dim=2)
         return z, log_det_J
 
     def log_prob(self, x, mask):
