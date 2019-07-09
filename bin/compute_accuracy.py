@@ -55,8 +55,11 @@ def print_results(mdl_file, data_files, results):
     for res, data_f in zip(results, data_files):
         true_class = parse("{}_{}.pkl", os.path.basename(data_f[0]))[1]
         
-        print("epoch:",epoch, "class:",true_class, mdl_file, data_f[0].astype("<U"), res[0], divide(parse_(res[0].astype("<U"))), sep='\t', file=sys.stdout)
-        print("epoch:",epoch, "class:",true_class, mdl_file, data_f[1].astype("<U"), res[1], divide(parse_(res[1].astype("<U"))), sep='\t', file=sys.stdout)
+        # For training and testing performance.
+        for i in range(2):    
+            print("epoch:",epoch, "class:",true_class, mdl_file, data_f[i].astype("<U"), res[i], divide(parse_(res[i].astype("<U"))), sep='\t', file=sys.stdout)
+
+        #print("epoch:",epoch, "class:",true_class, mdl_file, data_f[1].astype("<U"), res[1], divide(parse_(res[1].astype("<U"))), sep='\t', file=sys.stdout)
 
     # Print total accuracy
     res = np.concatenate([np.array([parse_(r[0].astype("<U")), parse_(r[1].astype("<U"))]).T for r in results],axis=1)
@@ -68,11 +71,12 @@ def print_results(mdl_file, data_files, results):
 
 
 if __name__ == "__main__":
-    usage = "Usage: python bin/compute_accuracy.py [mdl file] [ training and testing data .pkl files]\n" \
+    usage = "Computes and print accuracy of a model given train and test data.\n"\
+            "Usage: python bin/compute_accuracy.py [model file] [training data .pkl file] [testing data .pkl files]\n" \
             "Example: python bin/compute_accuracy.py models/epoch1.mdl data/train13.pkl data/test13.pkl" \
 
     if len(sys.argv) != 4 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
-        print(usage, file=sys.stdout)
+        print(usage, file=sys.stderr)
         sys.exit(1)
 
     # Parse argument
@@ -103,10 +107,13 @@ if __name__ == "__main__":
     # Define a function for this particular HMMclassifier model
     f = partial(accuracy_fun, mdl=mdl)
 
-    # todo: I think this will break on GPU because it uses numpy
-    f_v = np.vectorize(f, otypes=["O"])
-    results = f_v(data_files).astype('|S1024')
+    # Force output type to be an object, Implicit signature: ()->() 
+    f_v = np.vectorize(f, otypes=["O"]) 
 
+    # Run the accuracy function on all class train/test datasets, and cast as strings with length < 1024
+    results = f_v(data_files).astype('|S1024')
+    
     print_results(mdl_file, data_files, results)
+    
     sys.exit(0)
 
