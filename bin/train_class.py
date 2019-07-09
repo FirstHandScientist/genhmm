@@ -11,7 +11,10 @@ from torch.utils.data import DataLoader
 import json
 
 if __name__ == "__main__":
-    usage = "python bin/train_class.py data/train13.pkl models/epoch1_class1.mdlc param.json"
+    usage = "Performs one epoch for one class model.\n" \
+            "Usage: python bin/train_class.py [training data .pkl file [class .mdlc file] [optional: parameter .json (default: default.json)]\n"\
+            "Example: python bin/train_class.py data/train13.pkl models/epoch1_class1.mdlc param.json"
+
     if len(sys.argv) < 3 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
         print(usage)
         sys.exit(1)
@@ -98,10 +101,6 @@ if __name__ == "__main__":
     for iiter in range(niter):
         mdl.fit(traindata)
     
-    if int(epoch_str) == 2:
-        mdl.converged = True
-
-
     # Write a class%.cvgd file to indicate that the class has converged
     if mdl.converged:
         with open(class_cvgd_file, "w") as f:
