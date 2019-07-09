@@ -50,6 +50,7 @@ clean:
 	rm -f $(DATA)/test*_*.pkl 
 	rm -f $(MODELS)/epoch*.mdl 
 	rm -f $(MODELS)/epoch*_class*.mdlc
+	rm -f $(MODELS)/class*.cvgd
 	rm -f $(LOG)/class*.log
 	rm -f Makefile_run
 

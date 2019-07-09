@@ -67,6 +67,8 @@ class GenHMM(torch.nn.Module):
         self.lr = lr
         self.em_skip = em_skip
         self.log_dir = log_dir
+        
+        self.converged = False
 
         # Initialize HMM parameters
         self.init_transmat()

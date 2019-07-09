@@ -1,6 +1,16 @@
 import numpy as np
 import torch
 from torch.utils.data import Dataset
+from parse import parse
+
+
+def find_stat_pt(class_cvgd_file):
+    with open(class_cvgd_file, "r") as f:
+        content_str = f.read().split("\n")[0]
+    print(content_str)
+    stat_point = parse("{}converged to {}",content_str)[1]
+    return stat_point
+
 
 
 class TheDataset(Dataset):
