@@ -509,12 +509,22 @@ class GenHMM(torch.nn.Module):
         self._update_old_networks()
         
         # store the latest NLL of the updated GenHMM model
-        self.latestNLL = -torch.cat(list(map(self.pred_score, traindata))).mean()
-
-        print("epoch:{}\tclass:{}\tLatest NLL:\t{}".format(self.iepoch,self.iclass,self.latestNLL),file=sys.stdout)
+        self.train_NLL += [-torch.cat(list(map(self.pred_score, traindata))).mean()]
+        
+        print("epoch:{}\tclass:{}\tLatest NLL:\t{}".format(self.iepoch,self.iclass,self.train_NLL[-1]),file=sys.stdout)
 
         # Flag back to False
         self.update_HMM = False
+        
+        #  Convergence criterion
+        if len(self.train_NLL) >= 5:
+            ref  = self.train_NLL[-5]
+            test_value = self.train_NLL[-1]
+            
+            # If the relative decrease after 4 iteration is not at least 1e-4
+            if (ref - l[-1]) / ref >= -1e-4:
+                self.converged = True
+
 
 class wrapper(torch.nn.Module):
     def __init__(self, mdl):
