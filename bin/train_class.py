@@ -1,6 +1,5 @@
 import os
 import sys
-sys.path.append("..")
 
 from datetime import datetime
 from parse import parse
