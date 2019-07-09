@@ -98,14 +98,19 @@ if __name__ == "__main__":
     # add number of training data in model
     mdl.number_training_data = len(xtrain)
 
+   
     for iiter in range(niter):
         mdl.fit(traindata)
+        if mdl.converged:
+            break
     
-    # Write a class%.cvgd file to indicate that the class has converged
+
+    # If the class has converged, Write a class%.cvgd file.
     if mdl.converged:
         with open(class_cvgd_file, "w") as f:
             print("{} : class {}, converged to {}".format(datetime.now(), iclass_str, out_mdl), file=f)
     
+
     # Push back to cpu for compatibility when GPU unavailable.
     mdl.pushto('cpu')
     save_model(mdl, fname=out_mdl)
