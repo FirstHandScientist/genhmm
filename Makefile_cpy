@@ -26,8 +26,9 @@ prepare_data: $(training_data) $(testing_data)
 
 train: 
 	for i in $(MODELS_INTERM); do \
-		$(MAKE) -f Makefile_run -j 2 -s $$i; \
-		sleep 1;\
+	if [[ -f $(MODELS)/class_all.cvgd ]]; then break; fi; \
+	$(MAKE) -f Makefile_run -j 2 -s $$i; \
+	sleep 1;\
 	done
 #	echo "Done" > $^
 
