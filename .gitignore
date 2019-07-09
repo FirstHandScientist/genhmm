@@ -21,15 +21,16 @@ data/timit/*
 *.work-laptop
 .data
 data/34e2b78745138186976cbc27939b1b34d18bd5b3.torrent
-
 *.json
 log/
+
 
 # Experiment environments
 exp/
 
 # Intermediate models
 *.mdl*
+models/
 
 # Latex intermediates
 *.pdf
