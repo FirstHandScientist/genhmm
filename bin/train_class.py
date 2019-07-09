@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     #  Load data
     xtrain = pkl.load(open(train_class_inputfile, "rb"))
-    xtrain = xtrain[:100]
+    #xtrain = xtrain[:100]
     # Get the length of all the sequences
     l = [x.shape[0] for x in xtrain]
 
@@ -69,9 +69,9 @@ if __name__ == "__main__":
 
 
     mdl.device = 'cpu'
-    #if torch.cuda.is_available():
-    #    device = torch.device('cuda')
-    #    mdl.device = device
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+        mdl.device = device
     
     print("epoch:{}\tclass:{}\tPush model to {}...".format(epoch_str,iclass_str, mdl.device), file=sys.stdout)
     mdl.pushto(mdl.device)   
@@ -98,10 +98,7 @@ if __name__ == "__main__":
     for iiter in range(niter):
         mdl.fit(traindata)
     
-    if int(epoch_str) == 2 and int(iclass_str) == 1:
-        mdl.converged = True
-     
-    if int(epoch_str) == 4 and int(iclass_str) == 2:
+    if int(epoch_str) == 2:
         mdl.converged = True
 
 
