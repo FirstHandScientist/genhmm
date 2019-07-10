@@ -53,8 +53,10 @@ class GenHMMclassifier(nn.Module):
 
 
 class GenHMM(torch.nn.Module):
-    def __init__(self, n_states=None, n_prob_components=None, device='cpu', dtype=torch.FloatTensor, \
-            EPS=1e-12, lr=None, em_skip=None, log_dir=None):
+    def __init__(self, n_states=None, n_prob_components=None, device='cpu',\
+                 dtype=torch.FloatTensor, \
+                 EPS=1e-12, lr=None, em_skip=None,
+                 net_H=28, net_D=14, net_nchain=10):
         super(GenHMM, self).__init__()
 
         self.n_states = n_states
@@ -66,22 +68,17 @@ class GenHMM(torch.nn.Module):
         self.EPS = EPS
         self.lr = lr
         self.em_skip = em_skip
-        self.log_dir = log_dir
-
+        
         # Initialize HMM parameters
         self.init_transmat()
         self.init_startprob()
         
         # Initialize generative model networks
-        self.init_gen()
+        self.init_gen(H=net_H, D=net_D, nchain=net_nchain)
         self._update_old_networks()
         self.update_HMM = False
 
-        # training log directory and logger
-        self.log_dir = log_dir
-        if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)
-    
+        
     def init_startprob(self, random=True):
         """
         Initialize HMM initial coefficients.
@@ -108,18 +105,14 @@ class GenHMM(torch.nn.Module):
             self.transmat_ = torch.ones(self.n_states, self.n_states) * init
         return self
 
-    def init_gen(self):
+    def init_gen(self, H, D, nchain):
 
         """
         Initialize HMM probabilistic model.
         """
-        H = 28
-        D = 14
-        nchain = 10
         d = D // 2
 
         nets = lambda: nn.Sequential(nn.Linear(d, H), nn.LeakyReLU(), nn.Linear(H, H), nn.LeakyReLU(), nn.Linear(H, D))
-        nett = lambda: nn.Sequential(nn.Linear(D, H), nn.LeakyReLU(), nn.Linear(H, H), nn.LeakyReLU(), nn.Linear(H, D))
         
         masks = torch.from_numpy(np.array([[0]*d + [1]*(D-d), [1]*d + [0]*(D-d)] * nchain).astype(np.uint8))
         ### torch MultivariateNormal logprob gets error when input is cuda tensor
@@ -137,13 +130,13 @@ class GenHMM(torch.nn.Module):
 
 
         # Init networks
-        self.networks = [RealNVP(nets, nett, masks, prior) for _ in range(self.n_prob_components*self.n_states)]
+        self.networks = [RealNVP(nets, masks, prior) for _ in range(self.n_prob_components*self.n_states)]
 
         # Reshape in a n_states x n_prob_components array
         self.networks = np.array(self.networks).reshape(self.n_states, self.n_prob_components)
         
         # initial an old networks for posterior computations with the same sturcture
-        self.old_networks = [RealNVP(nets, nett, masks, prior) for _ in range(self.n_prob_components*self.n_states)]
+        self.old_networks = [RealNVP(nets, masks, prior) for _ in range(self.n_prob_components*self.n_states)]
         self.old_networks = np.array(self.old_networks).reshape(self.n_states, self.n_prob_components)
         return self
     

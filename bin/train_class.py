@@ -38,12 +38,13 @@ if __name__ == "__main__":
     # Get the length of all the sequences
     l = [x.shape[0] for x in xtrain]
 
-    #  Load or create model
-    if epoch_str == '1':
-        with open(param_file) as f_in:
+    # load the parameters
+    with open(param_file) as f_in:
             options = json.load(f_in)
 
-        mdl = GenHMM(**options)
+    #  Load or create model
+    if epoch_str == '1':
+        mdl = GenHMM(**options["Net"])
 
     else:
         # Load previous model
@@ -65,18 +66,12 @@ if __name__ == "__main__":
     # zero pad data for batch training
     max_len_ = max([x.shape[0] for x in xtrain])
     xtrain_padded = pad_data(xtrain, max_len_)
-    traindata = DataLoader(dataset=TheDataset(xtrain_padded, lengths=l, device=mdl.device), batch_size=1024, shuffle=True)
+    traindata = DataLoader(dataset=TheDataset(xtrain_padded, lengths=l, device=mdl.device), batch_size=options["Train"]["batch_size"], shuffle=True)
     
 
     # niter counts the number of em steps before saving a model checkpoint
-    niter = 2
+    niter = options["Train"]["niter"]
     
-    # em_skip determines the number of back-props before an EM step is performed
-    mdl.em_skip = 5
-
-    # TODO: pass lr as a param
-    mdl.lr = 1e-3
-
     # add number of training data in model
     mdl.number_training_data = len(xtrain)
 
