@@ -351,17 +351,17 @@ class GenHMM(torch.nn.Module):
 
         local_loglh_sk = torch.zeros((batch_size, n_samples, self.n_states, self.n_prob_components)).to(self.device)
 
-        sequences_true_len = x_mask.type_as(llh).sum(1).reshape(-1, 1, 1)
+        # sequences_true_len = x_mask.type_as(llh).sum(1).reshape(-1, 1, 1)
 
         # TODO: some parallelization here...
         for s in range(self.n_states):
             loglh_sk = [0 for _ in range(self.n_prob_components)]
 
             for k in range(self.n_prob_components):
-                loglh_sk[k] = networks[s, k].log_prob(x, x_mask).reshape(batch_size, 1, -1)
+                loglh_sk[k] = networks[s, k].log_prob(x, x_mask).reshape(batch_size, 1, -1)/x.size(2)
                 #assert((loglh_sk[k] <= 0).all())
 
-            loglh_sk = [llh_sk / sequences_true_len for llh_sk in loglh_sk ]
+            # loglh_sk = [llh_sk / sequences_true_len for llh_sk in loglh_sk ]
 
             ll = torch.cat(loglh_sk, dim=1)
             local_loglh_sk[:, :, s, :] = ll.transpose(1, 2)
@@ -410,6 +410,7 @@ class GenHMM(torch.nn.Module):
             log_denom = torch.logsumexp(log_num, dim=3)
             
             logpk_sX = log_num - log_denom.reshape(batch_size, n_samples, self.n_states, 1)
+            ## To Do: normalize logpk_sX before set un-masked values
             logpk_sX[~x_mask] = 0
         
         # hmm parameters should be updated based on old model
