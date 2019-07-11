@@ -1,15 +1,23 @@
 {
     "Train":
-    {"niter": 2,
-     "batch_size": 1024
+    {
+        "niter": 1,
+        "batch_size": 512,
+        "n_states_min": 3,
+        "n_states_max": 8
     },
     "Net":
-    {"n_states": 3,
-     "n_prob_components": 2,
-     "em_skip": 5,
-     "device": "cpu",
-     "lr": 0.001,
-     "net_H": 28,
-     "net_D": 14,
-     "net_nchain": 10}
+    {
+        "n_states": 3,
+        "n_prob_components": 2,
+        "em_skip": 10,
+        "device": "cpu",
+        "lr": 0.001,
+        "net_H": 64,
+        "net_D": 14,
+        "net_nchain": 10,
+        "mask_type": "cross",
+        "startprob_type": "first",
+        "transmat_type": "random upper triangular"
+    }
 }
