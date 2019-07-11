@@ -9,7 +9,7 @@ from src.utils import pad_data, TheDataset
 import torch
 from torch.utils.data import DataLoader
 import json
-
+import numpy as np
 
 if __name__ == "__main__":
     usage = "python bin/train_class.py data/train13.pkl models/epoch1_class1.mdlc param.json"
@@ -42,6 +42,10 @@ if __name__ == "__main__":
     with open(param_file) as f_in:
             options = json.load(f_in)
 
+    # adoptive to set number of states
+    options["Net"]["n_states"] = np.clip(int(np.floor(np.mean(l)/2)),
+                                         options["Train"]["n_states_min"],
+                                         options["Train"]["n_states_max"])
     #  Load or create model
     if epoch_str == '1':
         mdl = GenHMM(**options["Net"])
