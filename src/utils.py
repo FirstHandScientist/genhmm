@@ -48,6 +48,13 @@ def test_norm_prob():
     xn = norm_prob(x, axis=0)
     assert (np.all(xn == np.array([[1 / (1 + 4), 2 / (5 + 2)], [4 / (4 + 1), 5 / (2 + 5)]])))
 
+def step_learning_rate_decay(init_lr, global_step, minimum,
+                             anneal_rate=0.98,
+                             anneal_interval=1):
+    rate = init_lr * anneal_rate ** (global_step // anneal_interval)
+    if rate < minimum:
+        rate = minimum
+    return rate
 
 if __name__ == "__main__":
     test_norm_prob()

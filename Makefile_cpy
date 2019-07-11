@@ -27,14 +27,14 @@ prepare_data: $(training_data) $(testing_data)
 train: 
 	for i in $(MODELS_INTERM); do \
 		$(MAKE) -f Makefile_run -j 2 -s $$i; \
-		sleep 1;\
+		sleep 2;\
 	done
 #	echo "Done" > $^
 
 
 $(MODELS)/%.mdl:
 	$(PYTHON) $(BIN)/aggregate_models.py $@
-	$(PYTHON) $(BIN)/compute_accuracy.py $@ $(training_data) $(testing_data)  >> $(LOG)/class_all.log
+	$(PYTHON) -m cProfile -o log/acc_profile.txt $(BIN)/compute_accuracy.py $@ $(training_data) $(testing_data)  >> $(LOG)/class_all.log
 
 
 $(MODELS)/%.mdlc:

@@ -15,12 +15,11 @@ class Rescale(torch.nn.Module):
         return x
 
 class RealNVP(torch.nn.Module):
-    def __init__(self, nets, nett, mask, prior):
+    def __init__(self, nets, mask, prior):
         super(RealNVP, self).__init__()
         
         self.prior = prior
         self.mask = torch.nn.Parameter(mask, requires_grad=False)
-        self.t = torch.nn.ModuleList([nett() for _ in range(len(mask))])
         self.s = torch.nn.ModuleList([nets() for _ in range(len(mask))])
         self.rescale = torch.nn.utils.weight_norm(Rescale(int(self.mask.size(1)/2)))
     
@@ -40,16 +39,17 @@ class RealNVP(torch.nn.Module):
     def g(self, z):
         # not sure about this
         x = z
-        for i in range(len(self.t)):
-            x_ = x * self.mask[i]
-            s = self.s[i](x_) * (1 - self.mask[i])
-            t = self.t[i](x_) * (1 - self.mask[i])
-            x = x_ + (1 - self.mask[i]) * (x * torch.exp(s) + t)
-        return x
+        # for i in range(len(self.t)):
+        #     x_ = x * self.mask[i]
+        #     s = self.s[i](x_) * (1 - self.mask[i])
+        #     t = self.t[i](x_) * (1 - self.mask[i])
+        #     x = x_ + (1 - self.mask[i]) * (x * torch.exp(s) + t)
+        # return x
+        pass
 
     def f(self, x):
         log_det_J, z = x.new_zeros((x.shape[0], x.shape[1])), x
-        for i in reversed(range(len(self.t))):
+        for i in reversed(range(len(self.s))):
             z_id, z_s = self._chunk(z, self.mask[i])
             
             st = self.s[i](z_id)

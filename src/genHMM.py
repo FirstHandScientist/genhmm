@@ -8,7 +8,7 @@ from src.realnvp import RealNVP
 import torch
 from torch import nn, distributions
 from src._torch_hmmc import _compute_log_xi_sum, _forward, _backward
-
+from src.utils import step_learning_rate_decay
 
 class GenHMMclassifier(nn.Module):
     def __init__(self, mdlc_files=None, **options):
@@ -53,8 +53,11 @@ class GenHMMclassifier(nn.Module):
 
 
 class GenHMM(torch.nn.Module):
-    def __init__(self, n_states=None, n_prob_components=None, device='cpu', dtype=torch.FloatTensor, \
-            EPS=1e-12, lr=None, em_skip=None, log_dir=None):
+    def __init__(self, n_states=None, n_prob_components=None, device='cpu',\
+                 dtype=torch.FloatTensor, \
+                 EPS=1e-12, lr=None, em_skip=None,
+                 net_H=28, net_D=14, net_nchain=10, mask_type="cross",
+                 startprob_type="first", transmat_type="random upper triangular"):
         super(GenHMM, self).__init__()
 
         self.n_states = n_states
@@ -66,62 +69,84 @@ class GenHMM(torch.nn.Module):
         self.EPS = EPS
         self.lr = lr
         self.em_skip = em_skip
-        self.log_dir = log_dir
-
+        
         # Initialize HMM parameters
         self.init_transmat()
         self.init_startprob()
         
         # Initialize generative model networks
-        self.init_gen()
+        self.init_gen(H=net_H, D=net_D, nchain=net_nchain, mask_type=mask_type)
         self._update_old_networks()
         self.update_HMM = False
 
-        # training log directory and logger
-        self.log_dir = log_dir
-        if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)
-    
-    def init_startprob(self, random=True):
+        # set the global_step
+        self.global_step = 0
+
+        
+    def init_startprob(self, startprob_type="first"):
         """
         Initialize HMM initial coefficients.
         """
-        if random:
+        if "random" in startprob_type:
             init = torch.abs(torch.randn(self.n_states))
             init /= init.sum()
             self.startprob_ = init
+
+        elif "first" in startprob_type:
+            init = torch.zeros(self.n_states)
+            init[0] = 1
+            self.startprob_ = init
+
         else:
             init = 1. / self.n_states
             self.startprob_ = torch.ones(self.n_states) * init
+        
             
         return self
 
-    def init_transmat(self, random=True):
+    def init_transmat(self, transmat_type="random upper triangular"):
         """
         Initialize HMM transition matrix.
         """
-        if random:
-            self.transmat_ = torch.randn(self.n_states, self.n_states).abs()
-            normalize(self.transmat_, axis=1)
+        if "random" in transmat_type:
+            self.transmat_ = (torch.randn(self.n_states, self.n_states)).abs()
+            
+            
         else:
             init = 1/self.n_states
             self.transmat_ = torch.ones(self.n_states, self.n_states) * init
+        if "triangular" in transmat_type:
+            # use upper tra matrix
+            for i in range(self.n_states):
+                for j in range(self.n_states):
+                    if i > j:
+                        self.transmat_[i,j] = 0
+        normalize(self.transmat_, axis=1)
         return self
 
-    def init_gen(self):
+    def init_gen(self, H, D, nchain, mask_type="cross"):
 
         """
         Initialize HMM probabilistic model.
         """
-        H = 28
-        D = 14
-        nchain = 10
         d = D // 2
 
         nets = lambda: nn.Sequential(nn.Linear(d, H), nn.LeakyReLU(), nn.Linear(H, H), nn.LeakyReLU(), nn.Linear(H, D))
-        nett = lambda: nn.Sequential(nn.Linear(D, H), nn.LeakyReLU(), nn.Linear(H, H), nn.LeakyReLU(), nn.Linear(H, D))
+        # set mask
+        if mask_type == "chunk":
+            masks = torch.from_numpy(np.array([[0]*d + [1]*(D-d), [1]*d + [0]*(D-d)] * nchain).astype(np.uint8))
+        elif mask_type == "cross":
+            masks = torch.from_numpy(np.array([[0, 1]*d, [1, 0]*d] * nchain).astype(np.uint8))
+        elif mask_type == "conv":
+            # To do
+            pass
+        try:
+            masks
+        except NameError:
+            print("masks are not defined")
+            assert False
         
-        masks = torch.from_numpy(np.array([[0]*d + [1]*(D-d), [1]*d + [0]*(D-d)] * nchain).astype(np.uint8))
+        
         ### torch MultivariateNormal logprob gets error when input is cuda tensor
         ### thus changing it to implementation
         prior = distributions.MultivariateNormal(torch.zeros(D).to(self.device), torch.eye(D).to(self.device))
@@ -137,13 +162,13 @@ class GenHMM(torch.nn.Module):
 
 
         # Init networks
-        self.networks = [RealNVP(nets, nett, masks, prior) for _ in range(self.n_prob_components*self.n_states)]
+        self.networks = [RealNVP(nets, masks, prior) for _ in range(self.n_prob_components*self.n_states)]
 
         # Reshape in a n_states x n_prob_components array
         self.networks = np.array(self.networks).reshape(self.n_states, self.n_prob_components)
         
         # initial an old networks for posterior computations with the same sturcture
-        self.old_networks = [RealNVP(nets, nett, masks, prior) for _ in range(self.n_prob_components*self.n_states)]
+        self.old_networks = [RealNVP(nets, masks, prior) for _ in range(self.n_prob_components*self.n_states)]
         self.old_networks = np.array(self.old_networks).reshape(self.n_states, self.n_prob_components)
         return self
     
@@ -240,7 +265,7 @@ class GenHMM(torch.nn.Module):
 
         self.stats['nframes'] += mask.sum()
         self.stats['nobs'] += batch_size
-        self.stats['start'] += posteriors[:,0].sum(0)
+        self.stats['start'] += posteriors[:,0].sum(dim=0)
 
         
         
@@ -351,7 +376,7 @@ class GenHMM(torch.nn.Module):
 
         local_loglh_sk = torch.zeros((batch_size, n_samples, self.n_states, self.n_prob_components)).to(self.device)
 
-        sequences_true_len = x_mask.type_as(llh).sum(1).reshape(-1, 1, 1)
+        # sequences_true_len = x_mask.type_as(llh).sum(1).reshape(-1, 1, 1)
 
         # TODO: some parallelization here...
         for s in range(self.n_states):
@@ -361,7 +386,6 @@ class GenHMM(torch.nn.Module):
                 loglh_sk[k] = networks[s, k].log_prob(x, x_mask).reshape(batch_size, 1, -1)/x.size(2)
                 #assert((loglh_sk[k] <= 0).all())
 
-            #loglh_sk = [llh_sk / sequences_true_len for llh_sk in loglh_sk ]
 
             ll = torch.cat(loglh_sk, dim=1)
             local_loglh_sk[:, :, s, :] = ll.transpose(1, 2)
@@ -410,6 +434,7 @@ class GenHMM(torch.nn.Module):
             log_denom = torch.logsumexp(log_num, dim=3)
             
             logpk_sX = log_num - log_denom.reshape(batch_size, n_samples, self.n_states, 1)
+            ## To Do: normalize logpk_sX before set un-masked values
             logpk_sX[~x_mask] = 0
         
         # hmm parameters should be updated based on old model
@@ -434,7 +459,7 @@ class GenHMM(torch.nn.Module):
         #  The .sum(3) call sums on the components and .sum(2).sum(1) sums on all states and samples
         # loss = -(post * (torch.exp(logpk_sX) * brackets).sum(3)).sum(2).sum(1).sum()/float(x_mask.sum())
         loss = -(post[x_mask] * (torch.exp(logpk_sX) * brackets)[x_mask].sum(2)).sum()/float(batch_size)
-        return loss, logprob.mean()
+        return loss, logprob.sum()
 
 
     def fit(self, traindata):
@@ -443,11 +468,15 @@ class GenHMM(torch.nn.Module):
             Input : traindata : torch.data.DataLoader object wrapping the batches.
             Output : None
         """
-
+        # get the adaptive learning rate
+        ada_lr = step_learning_rate_decay(init_lr=self.lr,
+                                          global_step=self.global_step,
+                                          minimum=4e-4,
+                                          anneal_rate=0.98)
         optimizer = torch.optim.Adam(
-            sum([[p for p in flow.parameters() if p.requires_grad == True] for flow in self.networks.reshape(-1).tolist()], []), lr=self.lr)
-        
-
+            sum([[p for p in flow.parameters() if p.requires_grad == True] for flow in self.networks.reshape(-1).tolist()], []), lr=ada_lr)
+        # total number of sequences
+        n_sequences = len(traindata.dataset)
         for i in range(self.em_skip):
             # if i is the index of last loop, set update_HMM as true
 
@@ -471,10 +500,11 @@ class GenHMM(torch.nn.Module):
                 total_logprob += logprob_
             
             # consider put a stop criteria here to 
-            print("epoch:{}\tclass:{}\tStep:{}\tb:{}\tLoss:{}\tNLL:{}".format(self.iepoch,self.iclass,i, b,
-                                               total_loss/(b+1),
-                                               -total_logprob/(b+1)),
-                  file=sys.stdout)
+            
+            print("epoch:{}\tclass:{}\tStep:{}\tb:{}\tLoss:{}\tNLL:{}".format(self.iepoch,
+                                                                              self.iclass,i, b,
+                                                                              total_loss/(b+1),
+                                                                              -total_logprob/n_sequences), file=sys.stdout)
             
             
     
@@ -507,12 +537,14 @@ class GenHMM(torch.nn.Module):
         self._update_old_networks()
         
         # store the latest NLL of the updated GenHMM model
-        self.latestNLL = -torch.cat(list(map(self.pred_score, traindata))).mean()
+        self.latestNLL = -torch.cat(list(map(self.pred_score, traindata))).sum()/n_sequences
 
         print("epoch:{}\tclass:{}\tLatest NLL:\t{}".format(self.iepoch,self.iclass,self.latestNLL),file=sys.stdout)
 
         # Flag back to False
         self.update_HMM = False
+        # set global_step
+        self.global_step += 1
 
 class wrapper(torch.nn.Module):
     def __init__(self, mdl):
