@@ -296,25 +296,33 @@ class GenHMM(torch.nn.Module):
 
  #       print(loglh_sk.shape, self.n_states, self.n_prob_components)
         # max_loglh = torch.max(torch.max(loglh_sk, dim=1)[0],dim=1)[0]
-        ### dong: have not verify this computation
-        local_loglh_sk = loglh_sk.reshape(batch_size, self.n_states, self.n_prob_components, n_samples)
-        max_loglh = torch.max(torch.max(local_loglh_sk, dim=3)[0], dim=2)[0]
-#        print(max_loglh.shape)
+        ### dong: original update here was not correct
 
-        gamma_ = torch.zeros(batch_size, self.n_states, self.n_prob_components, n_samples, device=self.device)
+        local_loglh_sk = loglh_sk
+        max_loglh = torch.max(local_loglh_sk, dim=3, keepdim=True)[0]
+        # should be careful to use the minus max trick here
+        gamma_ = self.pi.reshape(1, 1, self.n_states, self.n_prob_components) * \
+                 (local_loglh_sk - max_loglh).exp()
+        gamma_ /= gamma_.sum(3, keepdim=True)
+        # # set the elements corresponding to padded values to be zeros, this is done by zeroes in posteriors
+        gamma = posteriors.unsqueeze(dim=3) * gamma_
 
-        for i in range(self.n_states):
-            for t in range(n_samples):
-                for m in range(self.n_prob_components):
-                    gamma_[:,i, m, t] = self.pi[i, m] * (local_loglh_sk - max_loglh[:,i].reshape(-1,1,1,1))[:, i, m, t].exp()
-                
- #               print(gamma_[:, i, :, t].shape,  gamma_[:,i, :, t].sum(1).shape) 
-                gamma_[:, i, :, t] /= (gamma_[:,i, :, t].sum(1).reshape(-1, 1) + 1e-6)   #.reshape(self.n_states,1,n_samples)
-#                print(gamma_[:, i, :, t].shape, posteriors[:, t, i].shape)
- 
-                gamma_[:, i, :, t] *= posteriors[:, t, i].reshape(-1,1)
 
-        self.stats["mixture"] += gamma_.sum(3).sum(0)
+        # In- line test for gamma computation, set the if condition to be true to compare gamm and statcs_prob_components
+        if False:
+            statcs_prob_components =torch.zeros(batch_size, n_samples, self.n_states, self.n_prob_components, device=self.device)
+    #        print(max_loglh.shape)
+
+            gamma_ = torch.zeros(batch_size, n_samples, self.n_states, self.n_prob_components, device=self.device)
+            for i in range(self.n_states):
+                for k in range(self.n_prob_components):
+                    gamma_[:,:,i, k] = self.pi[i, k] * local_loglh_sk[:, :, i, k].exp()
+
+                gamma_[:,:,i,:] = gamma_[:, :, i, :] / (gamma_[:, :, i, :].sum(dim=2, keepdim=True) + self.EPS)
+
+                statcs_prob_components[:,:,i,:] = posteriors[:, :, i].reshape(batch_size, n_samples, 1) * gamma_[:, :, i, :]
+
+        self.stats["mixture"] += gamma.sum(1).sum(0)
 
         return
 
