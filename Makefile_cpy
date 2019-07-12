@@ -26,7 +26,7 @@ prepare_data: $(training_data) $(testing_data)
 
 train: 
 	for i in $(MODELS_INTERM); do \
-		$(MAKE) -f Makefile_run -j 2 -s $$i; \
+		$(MAKE) -f Makefile_run -j 6 -s $$i; \
 		sleep 2;\
 	done
 #	echo "Done" > $^
@@ -46,8 +46,8 @@ watch:
 	tail -f $(LOG)/class*.log
 
 clean:
-	rm -f $(DATA)/train*_*.pkl
-	rm -f $(DATA)/test*_*.pkl 
+#	rm -f $(DATA)/train*_*.pkl
+#	rm -f $(DATA)/test*_*.pkl 
 	rm -f $(MODELS)/epoch*.mdl 
 	rm -f $(MODELS)/epoch*_class*.mdlc
 	rm -f $(LOG)/class*.log

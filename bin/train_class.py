@@ -5,12 +5,12 @@ sys.path.append("..")
 from parse import parse
 import pickle as pkl
 from src.genHMM import GenHMM, save_model, load_model
-from src.utils import pad_data, TheDataset
+from src.utils import pad_data, TheDataset, get_freer_gpu
 import torch
 from torch.utils.data import DataLoader
 import json
 import numpy as np
-
+import time
 if __name__ == "__main__":
     usage = "python bin/train_class.py data/train13.pkl models/epoch1_class1.mdlc param.json"
     if len(sys.argv) < 3 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
@@ -60,18 +60,29 @@ if __name__ == "__main__":
 
     mdl.device = 'cpu'
     if torch.cuda.is_available():
-        device = torch.device('cuda')
-        mdl.device = device
-    
-    print("epoch:{}\tclass:{}\tPush model to {}...".format(epoch_str,iclass_str, mdl.device), file=sys.stdout)
-    mdl.pushto(mdl.device)   
-    
+        if not options["Mul_gpu"]:
+            # default case, only one gpu
+            device = torch.device('cuda:0')
+        else:
+            for i in range(4):
+                try:
+                    time.sleep(np.random.randint(20))
+                    device = torch.device('cuda:{}'.format(int(get_freer_gpu()) ))
+                    print("Try to push to device: {}".format(device))
+                    mdl.device = device
+                    mdl.pushto(mdl.device)   
+                    break
+                except:
+                    # if push error (maybe memory overflow, try again)
+                    print("Push to device cuda:{} fail, try again ...")
+                    continue
+    print("epoch:{}\tclass:{}\tPush model to {}. Done.".format(epoch_str,iclass_str, mdl.device), file=sys.stdout)
     
     # zero pad data for batch training
     max_len_ = max([x.shape[0] for x in xtrain])
     xtrain_padded = pad_data(xtrain, max_len_)
+
     traindata = DataLoader(dataset=TheDataset(xtrain_padded, lengths=l, device=mdl.device), batch_size=options["Train"]["batch_size"], shuffle=True)
-    
 
     # niter counts the number of em steps before saving a model checkpoint
     niter = options["Train"]["niter"]

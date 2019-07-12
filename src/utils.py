@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import torch
 from torch.utils.data import Dataset
 
@@ -48,6 +49,7 @@ def test_norm_prob():
     xn = norm_prob(x, axis=0)
     assert (np.all(xn == np.array([[1 / (1 + 4), 2 / (5 + 2)], [4 / (4 + 1), 5 / (2 + 5)]])))
 
+
 def step_learning_rate_decay(init_lr, global_step, minimum,
                              anneal_rate=0.98,
                              anneal_interval=1):
@@ -55,6 +57,12 @@ def step_learning_rate_decay(init_lr, global_step, minimum,
     if rate < minimum:
         rate = minimum
     return rate
+
+def get_freer_gpu():
+    os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp')
+    memory_available = [int(x.split()[2]) for x in open('tmp', 'r').readlines()]
+    return np.argmax(memory_available)
+
 
 if __name__ == "__main__":
     test_norm_prob()

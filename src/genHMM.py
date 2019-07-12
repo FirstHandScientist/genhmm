@@ -71,8 +71,8 @@ class GenHMM(torch.nn.Module):
         self.em_skip = em_skip
         
         # Initialize HMM parameters
-        self.init_transmat()
-        self.init_startprob()
+        self.init_transmat(transmat_type)
+        self.init_startprob(startprob_type)
         
         # Initialize generative model networks
         self.init_gen(H=net_H, D=net_D, nchain=net_nchain, mask_type=mask_type)
@@ -83,7 +83,7 @@ class GenHMM(torch.nn.Module):
         self.global_step = 0
 
         
-    def init_startprob(self, startprob_type="first"):
+    def init_startprob(self, startprob_type="random"):
         """
         Initialize HMM initial coefficients.
         """
@@ -97,9 +97,11 @@ class GenHMM(torch.nn.Module):
             init[0] = 1
             self.startprob_ = init
 
-        else:
-            init = 1. / self.n_states
-            self.startprob_ = torch.ones(self.n_states) * init
+        elif "uniform" in startprob_type:
+            self.startprob_ = torch.ones(self.n_states)
+            
+            
+        normalize(self.startprob_, axis=0)
         
             
         return self
@@ -110,17 +112,21 @@ class GenHMM(torch.nn.Module):
         """
         if "random" in transmat_type:
             self.transmat_ = (torch.randn(self.n_states, self.n_states)).abs()
-            
-            
-        else:
+        elif "uniform" in transmat_type:
             init = 1/self.n_states
             self.transmat_ = torch.ones(self.n_states, self.n_states) * init
-        if "triangular" in transmat_type:
+        elif "triangular" in transmat_type:
             # use upper tra matrix
+            self.transmat_ = (torch.randn(self.n_states, self.n_states)).abs()
             for i in range(self.n_states):
                 for j in range(self.n_states):
                     if i > j:
                         self.transmat_[i,j] = 0
+
+        elif "ergodic" in transmat_type:
+            self.transmat_ = torch.ones(self.n_states, self.n_states) \
+                             + torch.randn(self.n_states, self.n_states) * 0.01 
+
         normalize(self.transmat_, axis=1)
         return self
 
@@ -196,6 +202,7 @@ class GenHMM(torch.nn.Module):
                 
         self.startprob_ = self.startprob_.to(device)
         self.transmat_ = self.transmat_.to(device)
+        self.pi = self.pi.to(device)
         self.logPIk_s = self.logPIk_s.to(device)
 
         self.device = device
