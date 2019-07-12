@@ -202,7 +202,7 @@ We can see that the solution of $H$ depends on the posterior probability $p(\ubm
 We summarize the optimization algorithm as:
 
 \begin{algorithm}[H]
-  \caption{Meta algorithm for HMM powered by Generative Models}
+  \caption{Meta algorithm for HMM powered by Generative Models (GMHMM)}
   \begin{algorithmic}[1]
     \STATE {\bfseries Input:}{
       Building $\bm{H}^{\mathrm{old}}, \bm{H} \in \Hh$ gives: \\
@@ -339,13 +339,12 @@ It could be seen from \autoref{eq:gm-update} that the key to update generate  mo
   \caption{Source $s$ powered by generator mixed generative model (GenHMM).}
   \vspace{0.1cm}
 \end{figure}
-
-Base on the generative model assumption:
-
+In this subsection, we specify the GenHMM model and give the learning algorithm of this model.
+Base on the generative model assumption, for each state $s$, the probabilistic generative model is
 \begin{equation}
   p(\bm{x}| s; \bm{\Phi}_{s}) = \sum_{\kappa=1}^{K}\pi_{s, \kappa} p(\bm{x}| s, \kappa; \bm{\Phi}_{s, \kappa})
 \end{equation}
-where $\bm{\Phi}_s = \left\{ \bm{\Phi}_{s, \kappa}| \kappa = 1, 2, \cdots, K. \right\}$, and 
+where $\bm{\Phi}_s = \left\{ \pi_{s, \kappa}, \bm{\Phi}_{s, \kappa}| \kappa = 1, 2, \cdots, K. \right\}$, $\pi_{s, \kappa} = p(\kappa | \bm{x}, s; \bm{\Phi}_{s, \kappa})$ and 
 \begin{equation}
   \sum_{\kappa = 1}^{K} \pi_{s, \kappa}= 1
 \end{equation}
@@ -359,9 +358,9 @@ where $\bm{\Phi}_s = \left\{ \bm{\Phi}_{s, \kappa}| \kappa = 1, 2, \cdots, K. \r
 
 The help function should be revised to deal with the new latent variable $\kappa$ into:
 \begin{align}\label{eq:obj-q-gen-mix}
-  \Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}}) & = \sum_{r=1}^{R} \sum_{t=1}^{{T}^{(r)}-1} \sum_{\smtr{s}{t}{r}=1}^{|\Ss|} \sum_{\smtr{\kappa}{t}{r}=1}^{K}p(\smtr{s}{t}{r}, \smtr{\kappa}{t}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})  \log\,p(\smtr{\kappa}{t}{r}, \bmtr{x}{t}{r}| \smtr{s}{t}{r}; \bm{\Phi})\nonumber \\
+  \Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}}) & = \sum_{r=1}^{R} \sum_{t=1}^{{T}^{(r)}-1} \sum_{\smtr{s}{t}{r}=1}^{|\Ss|} \sum_{\smtr{\kappa}{t}{r}=1}^{K}p(\smtr{s}{t}{r}, \smtr{\kappa}{t}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})  \log\,p(\smtr{\kappa}{t}{r}, \bmtr{x}{t}{r}| \smtr{s}{t}{r}; \bm{\Phi}_{s})\nonumber \\
   =& \sum_{r=1}^{R} \sum_{t=1}^{{T}^{(r)}-1} \sum_{\smtr{s}{t}{r}=1}^{|\Ss|}  \sum_{\smtr{\kappa}{t}{r}=1}^{K}p(\smtr{s}{t}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})p(\smtr{\kappa}{t}{r}|\smtr{s}{t}{r}, \ubmr{x}{r}; \bm{H}^{\mathrm{old}}) \bigg[\log\,\pi_{\smtr{s}{t}{r},\smtr{\kappa}{t}{r}} \nonumber \\
-                                        & + \log\, p(\bmtr{x}{t}{r} | \smtr{s}{t}{r}, \smtr{\kappa}{t}{r}; \bm{\Phi}) \bigg]
+                                        & + \log\, p(\bmtr{x}{t}{r} | \smtr{s}{t}{r}, \smtr{\kappa}{t}{r}; \bm{\Phi}_s) \bigg]
 \end{align}
                                           %                                           \Nn\left( \bm{f}_{\smtr{s}{t}{r},\smtr{\kappa}{t}{r}}(\bm{x}); \bm{\mu}_{\smtr{s}{t}{r},\smtr{\kappa}{t}{r}}, \bm{C}_{\smtr{s}{t}{r},\smtr{\kappa}{t}{r}} \right) \log\,\bigg| \det\, \left( \pd{\bm{f}_{\smtr{s}{t}{r},\smtr{\kappa}{t}{r}}(\bmtr{x}{t}{r})}{\bmtr{x}{t}{r}} \right) \bigg| \bigg].
                                           %   \end{align}
@@ -382,15 +381,30 @@ where the last equation is due to the fact that only $\bm{x}_t$ among sequence $
     %   \end{align}
 
 The latent prior for mixture of each source $s$ is obtained by solving the following problem:
-\begin{align}
+\begin{align}\label{opm:pi}
   \pi_{s, \kappa} & = \uargmax{\pi_{s, \kappa}} \Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}}) \\ \nonumber
-                  & s.t. \, \sum_{\kappa=1}^{K} \pi_{s, \kappa}= 1
+                  & s.t. \, \sum_{\kappa=1}^{K} \pi_{s, \kappa}= 1, \forall s = 1, 2, \cdots, |\Ss|. 
 \end{align}
-which gives the solution:
+
+To solve problem \autoref{opm:pi}, we formulate its Lagrange function as
+\begin{equation}
+  \Ll = \Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}}) + \sum_{\lambda_s} \lambda_s\left( 1-  \sum_{\kappa=1}^{K}\pi_{s, \kappa}  \right).
+\end{equation}
+Solving $\pd{\Ll}{\pi_{s, \kappa}} = 0$ gives
+\begin{equation}
+  \pi_{s,\kappa} = \frac{1}{\lambda_s}\sum_{r=1}^{R} \sum_{t=1}^{{T}^{(r)}} p(\smtr{s}{t}{r}=s, \smtr{\kappa}{t}{r} =\kappa| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})
+\end{equation}
+With condition $\sum_{\kappa=1}^{K} \pi_{s, \kappa}= 1, \forall s = 1, 2, \cdots, |\Ss|$, we have
+\begin{equation}
+  \lambda_s = \sum_{\kappa=1}^{K}\sum_{r=1}^{R} \sum_{t=1}^{{T}^{(r)}} p(\smtr{s}{t}{r}=s, \smtr{\kappa}{t}{r} =\kappa | \ubmr{x}{r}; \bm{H}^{\mathrm{old}})
+\end{equation}
+Then the solution to \autoref{opm:pi} is
 \begin{equation}\label{eq:mix-latent-parameter-solution}
-  \pi_{s, \kappa} = \frac{\sum_{r=1}^{R} \sum_{t=1}^{{T}^{(r)}-1} p(\smtr{s}{t}{r} =s, \smtr{\kappa}{t}{r}=\kappa | \ubmr{x}{r}; \bm{H}^{\mathrm{old}}) }{\sum_{k =1}^{K}\sum_{r=1}^{R} \sum_{t=1}^{{T}^{(r)}-1} p(\smtr{s}{t}{r} =s, \smtr{\kappa}{t}{r}=k | \ubmr{x}{r}; \bm{H}^{\mathrm{old}}) }
+  \pi_{s, \kappa} = \frac{\sum_{r=1}^{R} \sum_{t=1}^{{T}^{(r)}} p(\smtr{s}{t}{r} =s, \smtr{\kappa}{t}{r}=\kappa | \ubmr{x}{r}; \bm{H}^{\mathrm{old}}) }{\sum_{k =1}^{K}\sum_{r=1}^{R} \sum_{t=1}^{{T}^{(r)}-1} p(\smtr{s}{t}{r} =s, \smtr{\kappa}{t}{r}=k | \ubmr{x}{r}; \bm{H}^{\mathrm{old}}) }
 \end{equation}
 where $p(s, \kappa | \ubm{x}; \bm{H}^{\mathrm{old}}) = p(s| \ubm{x}; \bm{H}^{\mathrm{old}}) p(\kappa | s, \ubm{x}; \bm{H}^{\mathrm{old}})$ that can be computed by results of forward/backward and \autoref{eq:kappa-posterior}.
+
+\textcolor{red}{I am going to put specific update formula for $\pi$ here....}
 
 In implementation, GenHMM uses the generator mixed emission model with $\kappa$-th component as:
 
