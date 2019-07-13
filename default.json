@@ -2,7 +2,7 @@
     "Mul_gpu": true,
     "Train":
     {
-        "niter": 1,
+        "niter": 2,
         "batch_size": 512,
         "n_states_min": 3,
         "n_states_max": 5
@@ -10,8 +10,8 @@
     "Net":
     {
         "n_states": 3,
-        "n_prob_components": 2,
-        "em_skip": 10,
+        "n_prob_components": 5,
+        "em_skip": 5,
         "device": "cpu",
         "lr": 0.001,
         "net_H": 32,

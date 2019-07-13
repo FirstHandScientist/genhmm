@@ -303,7 +303,7 @@ class GenHMM(torch.nn.Module):
         # should be careful to use the minus max trick here
         gamma_ = self.pi.reshape(1, 1, self.n_states, self.n_prob_components) * \
                  (local_loglh_sk - max_loglh).exp()
-        gamma_ /= gamma_.sum(3, keepdim=True)
+        gamma_ = gamma_ / (gamma_.sum(3, keepdim=True) +  self.EPS)
         # # set the elements corresponding to padded values to be zeros, this is done by zeroes in posteriors
         gamma = posteriors.unsqueeze(dim=3) * gamma_
 
@@ -314,13 +314,15 @@ class GenHMM(torch.nn.Module):
     #        print(max_loglh.shape)
 
             gamma_ = torch.zeros(batch_size, n_samples, self.n_states, self.n_prob_components, device=self.device)
-            for i in range(self.n_states):
-                for k in range(self.n_prob_components):
-                    gamma_[:,:,i, k] = self.pi[i, k] * local_loglh_sk[:, :, i, k].exp()
+            for b in range(batch_size):
+                for n in range(n_samples):
+                    for i in range(self.n_states):
+                        for k in range(self.n_prob_components):
+                            gamma_[b,n,i, k] = self.pi[i, k] * (local_loglh_sk[b, n, i, k]-local_loglh_sk[b,n,i,:].max()).exp()
 
-                gamma_[:,:,i,:] = gamma_[:, :, i, :] / (gamma_[:, :, i, :].sum(dim=2, keepdim=True) + self.EPS)
+                        gamma_[b,n,i,:] = gamma_[b, n, i, :] / (gamma_[b, n, i, :].sum() + self.EPS)
 
-                statcs_prob_components[:,:,i,:] = posteriors[:, :, i].reshape(batch_size, n_samples, 1) * gamma_[:, :, i, :]
+                        statcs_prob_components[b,n,i,:] = posteriors[b, n, i] * gamma_[b, n, i, :]
 
         self.stats["mixture"] += gamma.sum(1).sum(0)
 
@@ -486,7 +488,7 @@ class GenHMM(torch.nn.Module):
         # get the adaptive learning rate
         ada_lr = step_learning_rate_decay(init_lr=self.lr,
                                           global_step=self.global_step,
-                                          minimum=4e-4,
+                                          minimum=1e-4,
                                           anneal_rate=0.98)
         optimizer = torch.optim.Adam(
             sum([[p for p in flow.parameters() if p.requires_grad == True] for flow in self.networks.reshape(-1).tolist()], []), lr=ada_lr)
@@ -539,12 +541,13 @@ class GenHMM(torch.nn.Module):
         normalize(self.transmat_, axis=1)
         
         # Update prior
+        tmp_pi = self.pi.clone()
         self.pi = self.stats["mixture"]
-
-        # In case we get a line of zeros in the stats
-        #self.pi[self.pi.sum(1) == 0, :] = np.ones(self.n_prob_components) / self.n_prob_components
         normalize(self.pi, axis=1)
-
+        # In case we get a line of zeros in the stats, skip the update brought by self.stats["mixture"]
+        correct_idx = self.pi.sum(1).isclose(torch.ones(1, device=self.pi.device))
+        self.pi[~ correct_idx] = tmp_pi[~ correct_idx]
+      
         self.logPIk_s = self.pi.log()
 
 
