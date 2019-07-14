@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
     # load the parameters
     with open(param_file) as f_in:
-            options = json.load(f_in)
+        options = json.load(f_in)
 
     # adoptive to set number of states
     options["Net"]["n_states"] = np.clip(int(np.floor(np.mean(l)/2)),
@@ -62,7 +62,10 @@ if __name__ == "__main__":
     if torch.cuda.is_available():
         if not options["Mul_gpu"]:
             # default case, only one gpu
-            device = torch.device('cuda:0')
+            device = torch.device('cuda')
+            mdl.device = device
+            mdl.pushto(mdl.device)   
+
         else:
             for i in range(4):
                 try:
