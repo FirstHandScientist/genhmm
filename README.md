@@ -50,7 +50,7 @@ $ cd ..
 
 Add the `gm_hmm` directory to the path:
 ```bash
-$ echo `$PWD` > gm_hmm/pyenv/lib/python3.6/site-packages/gm_hmm.pth
+$ echo $PWD > gm_hmm/pyenv/lib/python3.6/site-packages/gm_hmm.pth
 ```
 
 Install the dependencies:
