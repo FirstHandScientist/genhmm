@@ -2,13 +2,12 @@
 
 import os
 import sys
-sys.path.append("..")
 import numpy as np
-from src.realnvp import RealNVP
+from gm_hmm.src.realnvp import RealNVP
 import torch
 from torch import nn, distributions
-from src._torch_hmmc import _compute_log_xi_sum, _forward, _backward
-from src.utils import step_learning_rate_decay
+from gm_hmm.src._torch_hmmc import _compute_log_xi_sum, _forward, _backward
+from gm_hmm.src.utils import step_learning_rate_decay
 
 class GenHMMclassifier(nn.Module):
     def __init__(self, mdlc_files=None, **options):
