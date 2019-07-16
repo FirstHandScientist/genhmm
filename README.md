@@ -90,7 +90,7 @@ The logs appear in `log/class...`. you can follow the training with:
 $ make watch
 ```
 
-- Note 1: Modify the `-j` option on the line: `$(MAKE) -f Makefile_run -j 6 -s $$i;` or `Makefile_cpy` use `-j $(nclasses)` to create one job per class.
+- Note 1: Modify the `-j` option on the line: `$(MAKE) -f Makefile_run -j 6 -s $$i;` of `Makefile_cpy`. Use `-j $(nclasses)` to create one job per class.
 - Note 2: epochs are here Expectation Maximization steps.
 - Note 3: make uses the file `Makefile` to modifiy the file 'Makefile_cpy` to create and call `Makefile_run`.
 
