@@ -1,16 +1,15 @@
 import os
 import sys
-sys.path.append("..")
-
 from parse import parse
 import pickle as pkl
-from src.genHMM import GenHMM, save_model, load_model
-from src.utils import pad_data, TheDataset, get_freer_gpu
+from gm_hmm.src.genHMM import GenHMM, save_model, load_model
+from gm_hmm.src.utils import pad_data, TheDataset, get_freer_gpu
 import torch
 from torch.utils.data import DataLoader
 import json
 import numpy as np
 import time
+
 if __name__ == "__main__":
     usage = "python bin/train_class.py data/train13.pkl models/epoch1_class1.mdlc param.json"
     if len(sys.argv) < 3 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
