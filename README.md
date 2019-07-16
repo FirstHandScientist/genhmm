@@ -35,37 +35,45 @@ What if GenHMM does not work as good as our expectation?
 How about the layer-wise input of mel-spectrograms? Refer to [WaveGlow](https://arxiv.org/abs/1811.00002)
 
 ## Installation
-To install hmmlearn library, run:
- 
-```
-$ pip install --upgrade --user hmmlearn
-```
-or
-```
-$ git clone  https://github.com/hmmlearn/hmmlearn.git src/
-$ cd src/hmmlearn
-$ python setup.py install
-```
-Go to https://github.com/hmmlearn/hmmlearn for details.
 
-Create a conda environment from the `.yml` file:
+First clone the repository:
+```bash
+$ git clone https://github.com/FirstHandScientist/gm-hmm.git gm_hmm
 ```
-$ conda env create -f environment.yml
-$ conda activate pyasr
+### Virtual environment
+Create a virtual environment with a python3 interpreter, inside `gm_hmm` folder for instance
+```bash
+$ cd gm_hmm
+$ virtualenv -p python3.6 pyenv
+$ cd ..
 ```
 
+Add the `gm_hmm` directory to the path:
+```bash
+$ echo `$PWD` > gm_hmm/pyenv/lib/python3.6/site-packages/gm_hmm.pth
+```
+
+Install the dependencies:
+```bash
+$ cd gm_hmm
+$ source pyenv/bin/activate
+$ pip install -r requirements.txt
+```
+
+### Additional tools
 You must install `GNU make`, on Ubuntu:
-```
+```bash
 $ sudo apt install build-essential
 $ make -v
 GNU Make 4.1
 Built for x86_64-pc-linux-gnu
 ...
 ```
+
 ## Getting Started
 
 Start by creating the necessary folders with:
-```
+```bash
 $ make init
 ```
 
@@ -73,10 +81,13 @@ To run the training of genHMM on 2 classes and during 10 epochs, run:
 ```
 $ make nclasses=2 nepochs=10 
 ```
-The training is distributed over the number of classes on different processes.
-The parallelization is managed via a Makefile.
+The training is distributed over two jobs at max.
+The parallelization is managed in `Makefile_cpy`.
 
-You can follow the training in `stdout`.
+The logs appear in `log/class...`. you can follow the training with:
+```bash
+$ make watch
+```
 
 - Note 1: make automatically creates as many jobs as the number of classes.
 - Note 2: epochs are here Expectation Maximization steps.
