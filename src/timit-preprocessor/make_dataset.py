@@ -44,7 +44,8 @@ if __name__ == "__main__":
     for isample in range(nsamples):
 
         # Get phone labels
-        fname = timit_folder + "/"+DATA_TYPE+"/" + keys[isample].replace("-", "/") + ".PHN"
+        fname = os.path.join(timit_folder,DATA_TYPE, keys[isample].upper().replace("-", "/") + ".PHN")
+
         #print(isample, "/", nsamples, ":", fname)
         with open(fname, "r") as f:
             lines = f.read().split("\n")[:-1]
