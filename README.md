@@ -49,7 +49,7 @@ $ virtualenv -p python3.6 pyenv
 $ cd ..
 ```
 
-Add the `gm_hmm/` directory to the path:
+Add the root directory of `gm_hmm/` to the path:
 ```bash
 $ echo $PWD > gm_hmm/pyenv/lib/python3.6/site-packages/gm_hmm.pth
 ```
