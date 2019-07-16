@@ -1,9 +1,8 @@
 import sys
-sys.path.append("..")
 
 import os
 import glob
-from src.genHMM import GenHMMclassifier, save_model
+from gm_hmm.src.genHMM import GenHMMclassifier, save_model
 
 if __name__ == "__main__":
     usage = "Aggregate models from several classes.\n" \
