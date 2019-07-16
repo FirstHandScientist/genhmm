@@ -40,15 +40,16 @@ First clone the repository:
 ```bash
 $ git clone https://github.com/FirstHandScientist/gm-hmm.git gm_hmm
 ```
+
 ### Virtual environment
-Create a virtual environment with a python3 interpreter, inside `gm_hmm` folder for instance
+Create a virtual environment with a python3 interpreter, inside a folder called `gm_hmm/` folder for instance
 ```bash
 $ cd gm_hmm
 $ virtualenv -p python3.6 pyenv
 $ cd ..
 ```
 
-Add the `gm_hmm` directory to the path:
+Add the `gm_hmm/` directory to the path:
 ```bash
 $ echo $PWD > gm_hmm/pyenv/lib/python3.6/site-packages/gm_hmm.pth
 ```
@@ -89,7 +90,7 @@ The logs appear in `log/class...`. you can follow the training with:
 $ make watch
 ```
 
-- Note 1: make automatically creates as many jobs as the number of classes.
+- Note 1: Modify the `-j` option on the line: `$(MAKE) -f Makefile_run -j 6 -s $$i;` or `Makefile_cpy` use `-j $(nclasses)` to create one job per class.
 - Note 2: epochs are here Expectation Maximization steps.
 - Note 3: make uses the file `Makefile` to modifiy the file 'Makefile_cpy` to create and call `Makefile_run`.
 
