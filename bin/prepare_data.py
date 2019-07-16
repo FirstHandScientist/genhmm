@@ -1,6 +1,4 @@
 import sys
-sys.path.append("..")
-
 import numpy as np
 import pickle as pkl
 import os
