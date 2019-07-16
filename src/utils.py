@@ -4,6 +4,37 @@ import torch
 from torch.utils.data import Dataset
 
 
+def acc_str(class_hat,class_true):
+    istrue = class_hat == int(class_true)
+    return "{}/{}".format(str(istrue.sum().cpu().numpy()), str(istrue.shape[0]))
+
+
+def test_acc_str():
+    class_hat = torch.FloatTensor([1, 2])
+    class_true = 2
+    assert( acc_str(class_hat, 1) == "1/2" )
+    assert( acc_str(class_hat, 2) == "1/2" )
+
+    class_hat = torch.FloatTensor([1,2,3,4,5,6,7,8,9,10])
+    assert( acc_str(class_hat, 1) == "1/10")
+
+    class_hat = torch.FloatTensor([1, 2, 3, 4, 5, 6, 7, 8, 1, 10])
+    assert (acc_str(class_hat, 1) == "2/10")
+
+def append_class(data_file, iclass):
+    return data_file.replace(".pkl", "_" + str(iclass)+".pkl")
+
+
+def divide(res_int):
+    return res_int[0] / res_int[1]
+
+
+
+def parse_(res_str):
+    res_str_split = res_str.split("/")
+    res_int = [int(x) for x in res_str_split]
+    return res_int
+
 class TheDataset(Dataset):
     """Wrapper for DataLoader input."""
     def __init__(self, xtrain, lengths, device='cpu'):
@@ -65,4 +96,5 @@ def get_freer_gpu():
 
 
 if __name__ == "__main__":
+    test_acc_str()
     test_norm_prob()

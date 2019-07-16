@@ -5,7 +5,7 @@ from functools import partial
 import pickle as pkl
 import numpy as np
 from parse import parse
-from gm_hmm.src.utils import pad_data, TheDataset
+from gm_hmm.src.utils import pad_data, TheDataset, divide, acc_str, append_class, parse_
 
 import torch
 from torch.utils.data import DataLoader
@@ -29,22 +29,9 @@ def accuracy_fun(data_file, mdl=None):
 
     # the out here should be the shape: data_size * nclasses
     class_hat = torch.argmax(out, dim=0) + 1
-    istrue = class_hat == int(true_class)
-    return "{}/{}".format(str(istrue.sum().cpu().numpy()), str(istrue.shape[0]))
 
+    return acc_str(class_hat, true_class)
 
-def append_class(data_file, iclass):
-    return data_file.replace(".pkl", "_" + str(iclass)+".pkl")
-
-
-def divide(res_int):
-    return res_int[0] / res_int[1]
-
-
-def parse_(res_str):
-    res_str_split = res_str.split("/")
-    res_int = [int(x) for x in res_str_split]
-    return res_int
 
 
 def print_results(mdl_file, data_files, results):
