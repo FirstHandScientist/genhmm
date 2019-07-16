@@ -95,4 +95,7 @@ if __name__ == "__main__":
         DATA[i] = np.concatenate((np.array(phones).reshape(-1, 1), DATA[i]), axis=1)
     #X_ = np.concatenate(tuple(DATA), axis=0)
 
-    pkl.dump([DATA, keys, lengths, PHN], open(out_file, "wb"))
+    if "test" in os.path.basename(out_file):
+        pkl.dump([DATA, keys, lengths,codebook, PHN], open(out_file, "wb"))
+    else:
+        pkl.dump([DATA, keys, lengths, PHN], open(out_file, "wb"))
