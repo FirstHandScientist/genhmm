@@ -49,8 +49,8 @@ watch:
 	tail -f $(LOG)/class*.log
 
 clean:
-#	rm -f $(DATA)/train*_*.pkl
-#	rm -f $(DATA)/test*_*.pkl 
+	rm -f $(DATA)/train*_*.pkl
+	rm -f $(DATA)/test*_*.pkl 
 	rm -f $(MODELS)/epoch*.mdl 
 	rm -f $(MODELS)/epoch*_class*.mdlc
 	rm -f $(LOG)/class*.log
