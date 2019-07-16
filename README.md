@@ -85,14 +85,15 @@ $ make nclasses=2 nepochs=10
 The training is distributed over two jobs at max.
 The parallelization is managed in `Makefile_cpy`.
 
+Modify the `-j` option on the line: `$(MAKE) -f Makefile_run -j 6 -s $$i;` of `Makefile_cpy`. Use `-j $(nclasses)` to create one job per class.
+
 The logs appear in `log/class...`. you can follow the training with:
 ```bash
 $ make watch
 ```
 
-- Note 1: Modify the `-j` option on the line: `$(MAKE) -f Makefile_run -j 6 -s $$i;` of `Makefile_cpy`. Use `-j $(nclasses)` to create one job per class.
-- Note 2: epochs are here Expectation Maximization steps.
-- Note 3: make uses the file `Makefile` to modifiy the file 'Makefile_cpy` to create and call `Makefile_run`.
+- Note 1: epochs are here Expectation Maximization steps.
+- Note 2: GNU make uses the file `Makefile` to modify the file `Makefile_cpy` and write the modifications to `Makefile_run.
 
 
 
