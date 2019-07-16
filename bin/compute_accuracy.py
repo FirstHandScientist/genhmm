@@ -1,13 +1,11 @@
 import sys
-sys.path.append("..")
-
 import os
-from src.genHMM import load_model
+from gm_hmm.src.genHMM import load_model
 from functools import partial
 import pickle as pkl
 import numpy as np
 from parse import parse
-from src.utils import pad_data, TheDataset
+from gm_hmm.src.utils import pad_data, TheDataset
 
 import torch
 from torch.utils.data import DataLoader
