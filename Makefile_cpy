@@ -29,7 +29,7 @@ prepare_data: $(training_data) $(testing_data)
 
 train: 
 	for i in $(MODELS_INTERM); do \
-		$(MAKE) -f Makefile_run -j 6 -s $$i; \
+		$(MAKE) -f Makefile_run -j 2 -s $$i; \
 		sleep 2;\
 	done
 #	echo "Done" > $^
