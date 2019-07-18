@@ -21,7 +21,7 @@ def accuracy_fun(data_file, mdl=None):
     batchdata = DataLoader(dataset=TheDataset(x_padded,
                                               lengths=l,
                                               device=mdl.hmms[0].device),
-                           batch_size=2048, shuffle=True)
+                           batch_size=512, shuffle=True)
     
     true_class = parse("{}_{}.pkl", os.path.basename(data_file))[1]
     out_list = [mdl.forward(x) for x in batchdata]
