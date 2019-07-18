@@ -20,8 +20,8 @@ if __name__ == "__main__":
 
     # Find all trained classes submodels
     in_mdlc_files = sorted(glob.glob(out_mdl_file.replace(".mdl", "_class*.mdlc")), key=get_sort_key)
-    
     mdl = GenHMMclassifier(mdlc_files=in_mdlc_files)
+    assert(all([int(h.iclass) == int(i)+1 for i,h in enumerate(mdl.hmms)]))
 
     save_model(mdl, out_mdl_file)
     sys.exit(0)
