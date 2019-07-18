@@ -32,7 +32,7 @@ prepare_data: $(training_data) $(testing_data)
 
 train: 
 	for i in $(MODELS_INTERM); do \
-		if [[ `basename -s .mdlc -a $(MODELS)/*.mdlc | awk '{print substr($$0,length,1)}' | sort -u | wc -l` != $(nclasses) ]]; then rm $$i; fi; \
+		if [[ `echo $${i%.*}_class* | wc -w` != $(nclasses) ]]; then rm $$i; fi; \
 		$(MAKE) -f Makefile_run -j 2 -s $$i; \
 		sleep 2;\
 	done
