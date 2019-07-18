@@ -3,6 +3,7 @@ import sys
 import os
 import glob
 from gm_hmm.src.genHMM import GenHMMclassifier, save_model
+from parse import parse
 
 if __name__ == "__main__":
     usage = "Aggregate models from several classes.\n" \
@@ -15,12 +16,12 @@ if __name__ == "__main__":
     out_mdl_file = sys.argv[1]
 
     # Find the class digit
-    get_sort_key = lambda x: os.path.basename(x).split(".mdlc")[0].split("_")[1].replace("class", "")
+    get_sort_key = lambda x: parse("{}class{:d}.mdlc",x)[1]
 
     # Find all trained classes submodels
     in_mdlc_files = sorted(glob.glob(out_mdl_file.replace(".mdl", "_class*.mdlc")), key=get_sort_key)
-
     mdl = GenHMMclassifier(mdlc_files=in_mdlc_files)
+    assert(all([int(h.iclass) == int(i)+1 for i,h in enumerate(mdl.hmms)]))
 
     save_model(mdl, out_mdl_file)
     sys.exit(0)

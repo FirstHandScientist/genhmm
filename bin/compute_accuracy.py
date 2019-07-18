@@ -21,7 +21,7 @@ def accuracy_fun(data_file, mdl=None):
     batchdata = DataLoader(dataset=TheDataset(x_padded,
                                               lengths=l,
                                               device=mdl.hmms[0].device),
-                           batch_size=2048, shuffle=True)
+                           batch_size=512, shuffle=True)
     
     true_class = parse("{}_{}.pkl", os.path.basename(data_file))[1]
     out_list = [mdl.forward(x) for x in batchdata]
@@ -87,10 +87,12 @@ if __name__ == "__main__":
     # Define a function for this particular HMMclassifier model
     f = partial(accuracy_fun, mdl=mdl)
 
-    # todo: I think this will break on GPU because it uses numpy
+    # force the output type of f to an object, f_v: (str) class data file -> (object) Model accuracy
     f_v = np.vectorize(f, otypes=["O"])
+    
+    # Call the f_v function on all class data files and transform the result from an array of object to an array of string .
     results = f_v(data_files).astype('|S1024')
-
+    
     print_results(mdl_file, data_files, results)
     sys.exit(0)
 

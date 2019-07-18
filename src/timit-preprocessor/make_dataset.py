@@ -4,15 +4,27 @@ import numpy as np
 import glob
 import os
 import pickle as pkl
+import argparse
 
 if __name__ == "__main__":
-    file = sys.argv[1]
-    out_file = sys.argv[2]
+    parser = argparse.ArgumentParser(description="Transform time labels into MFCC labels.\n"\
+                                                  "Example: python make_dataset.py test.39.scp ../../TIMIT test39.pkl")
+
+    parser.add_argument('infile', metavar="<Input scp file>", type=str)
+    parser.add_argument('timit_folder', metavar="<path to timit>", type=str)
+    parser.add_argument('outfile', metavar="<Output .pkl file>", type=str)
+    args = parser.parse_args()
+
+
+    infile = args.infile
+    timit_folder = args.timit_folder
+    outfile = args.outfile
+
 
     timit_folder = "/home/antoine/Documents/projects/asr/gm-hmm/data/timit"
     fname_cb = "TIMIT-61.codebook"
 
-    out = kaldi_io.read_mat_scp(file)
+    out = kaldi_io.read_mat_scp(infile)
 
     n = 0
     for _, mat in out:
@@ -24,7 +36,7 @@ if __name__ == "__main__":
     lengths = []
     keys = []
     seq_start = 0
-    out = kaldi_io.read_mat_scp(file)
+    out = kaldi_io.read_mat_scp(infile)
     for key, mat in out:
         l = mat.shape[0]
         lengths.append(l)
@@ -39,7 +51,7 @@ if __name__ == "__main__":
     DATA = [0 for _ in range(nsamples)]
 
     seq_start = 0
-    DATA_TYPE = "TEST" if "test" in out_file else "TRAIN"
+    DATA_TYPE = "TEST" if "test" in outfile else "TRAIN"
 
     for isample in range(nsamples):
 
@@ -96,7 +108,7 @@ if __name__ == "__main__":
         DATA[i] = np.concatenate((np.array(phones).reshape(-1, 1), DATA[i]), axis=1)
     #X_ = np.concatenate(tuple(DATA), axis=0)
 
-    if "test" in os.path.basename(out_file):
-        pkl.dump([DATA, keys, lengths,codebook, PHN], open(out_file, "wb"))
+    if "test" in os.path.basename(outfile):
+        pkl.dump([DATA, keys, lengths,codebook, PHN], open(outfile, "wb"))
     else:
-        pkl.dump([DATA, keys, lengths, PHN], open(out_file, "wb"))
+        pkl.dump([DATA, keys, lengths, PHN], open(outfile, "wb"))

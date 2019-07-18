@@ -554,7 +554,12 @@ class GenHMM(torch.nn.Module):
         self._update_old_networks()
         
         # store the latest NLL of the updated GenHMM model
-        self.latestNLL = -torch.cat(list(map(self.pred_score, traindata))).sum()/n_sequences
+        log_p_all = torch.cat(list(map(self.pred_score, traindata)))
+        self.latestNLL = -log_p_all.sum()/n_sequences
+        # store the average lop_p
+        self.avrg_log_p = log_p_all.reshape(1, -1).squeeze().logsumexp(0)
+        # stoe the max log_p
+        self.max_log_p = log_p_all.max()
 
         print("epoch:{}\tclass:{}\tLatest NLL:\t{}".format(self.iepoch,self.iclass,self.latestNLL),file=sys.stdout)
 

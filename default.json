@@ -1,22 +1,22 @@
 {
-    "Mul_gpu": true,
+    "Mul_gpu": false,
     "Train":
     {
         "niter": 2,
-        "batch_size": 512,
+        "batch_size": 128,
         "n_states_min": 3,
         "n_states_max": 5
     },
     "Net":
     {
         "n_states": 3,
-        "n_prob_components": 5,
+        "n_prob_components": 2,
         "em_skip": 5,
         "device": "cpu",
         "lr": 0.001,
-        "net_H": 32,
-        "net_D": 14,
-        "net_nchain": 8,
+        "net_H": 64,
+        "net_D": 40,
+        "net_nchain": 4,
         "mask_type": "cross",
         "startprob_type": "uniform",
         "transmat_type": "ergodic"
