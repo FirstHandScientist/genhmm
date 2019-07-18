@@ -38,7 +38,7 @@ How about the layer-wise input of mel-spectrograms? Refer to [WaveGlow](https://
 
 First clone the repository:
 ```bash
-$ git clone https://github.com/FirstHandScientist/gm-hmm.git gm_hmm
+$ git clone https://github.com/FirstHandScientist/gm_hmm.git
 ```
 
 ### Virtual environment
@@ -49,7 +49,7 @@ $ virtualenv -p python3.6 pyenv
 $ cd ..
 ```
 
-Add the root directory of `gm_hmm/` to the path:
+Add the parent directory of `gm_hmm/` to the path:
 ```bash
 $ echo $PWD > gm_hmm/pyenv/lib/python3.6/site-packages/gm_hmm.pth
 ```
@@ -60,7 +60,6 @@ $ cd gm_hmm
 $ source pyenv/bin/activate
 $ pip install -r requirements.txt
 ```
-
 ### Additional tools
 You must install `GNU make`, on Ubuntu:
 ```bash
@@ -74,6 +73,7 @@ Built for x86_64-pc-linux-gnu
 ## Getting Started
 
 Start by creating the necessary folders with:
+
 ```bash
 $ make init
 ```
@@ -96,20 +96,28 @@ $ make watch
 - Note 2: GNU make uses the file `Makefile` to modify the file `Makefile_cpy` and write the modifications to `Makefile_run.
 
 
+## Dataset preparation
+### Dependencies
+You must have downloaded the [TIMIT](https://catalog.ldc.upenn.edu/LDC93S1) dataset.
+You must have a compiled version of [Kaldi](https://github.com/kaldi-asr/kaldi).
+This data preparation has been borrowed from [timit-preprocessor](https://github.com/orbxball/timit-preprocessor).
+`make_dataset.py` relies on [kaldi-io-for-python](https://github.com/vesis84/kaldi-io-for-python)
 
 
-### TIMIT dataset
-Read `src/timit-preprocessor/README` for information on how to process the raw timit dataset.
-The processed and labeled time series are anyways available in a compressed form `data/test13.gz` and `data/train13.gz`.
-You can decompress them using:
-```
-$ gunzip -c data/test13.gz > test13.pkl
-$ gunzip -c data/train13.gz > train13.pkl
+### Steps
+The steps are as follows:
+```bash
+$ cd src/timit-preprocessor
+$ ./convert_wav.sh
+$ python parsing.py  path_to_TIMIT/ test
+$ python parsing.py  path_to_TIMIT/ train
+$ ./extract_mfcc.sh path_to_KALDI/ path_to_TIMIT/ test.39.scp
+$ ./extract_mfcc.sh path_to_KALDI/ path_to_TIMIT/ train.39.scp
+$ python make_dataset.py test.39.scp path_to_TIMIT/ test39.pkl
+$ python make_dataset.py train.39.scp path_to_TIMIT/ train39.pkl
 ```
 
-### Run example
-```
-python bin/test.py data/ test13.pkl train13.pkl hparams/test.json
-```
+These steps create two files: `test39.pkl` and `train39.pkl`
 
+Note 1: Replace 39 with 13 to have the 13 MFCCs without deltas and delta-deltas.
 
