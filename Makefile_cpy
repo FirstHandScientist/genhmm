@@ -13,8 +13,9 @@ nepochs=
 nclasses=
 nfeats=
 
-DATA=$(DATA_tmp)/$(nfeats)feats
-MODELS=$(MODELS_tmp)/$(nfeats)feats
+DATA=$(nfeats)feats/data
+MODELS=$(nfeats)feats/models
+LOG=$(nfeats)feats/log
 MODELS_INTERM=$(shell echo $(MODELS)/epoch{1..$(nepochs)}.mdl)
 
 training_data=$(DATA)/train$(nfeats).pkl
