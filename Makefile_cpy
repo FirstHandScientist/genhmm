@@ -6,22 +6,25 @@ PYTHON=python
 
 SRC=src
 BIN=bin
-DATA=data
-MODELS=models
+DATA_tmp=data
+MODELS_tmp=models
 LOG=log
 nepochs=
 nclasses=
+nfeats=
+
+DATA=$(nfeats)feats/data
+MODELS=$(nfeats)feats/models
+LOG=$(nfeats)feats/log
 MODELS_INTERM=$(shell echo $(MODELS)/epoch{1..$(nepochs)}.mdl)
-ifndef feats
-	feats=13
-endif
-training_data=$(DATA)/train$(feats).pkl
-testing_data=$(DATA)/test$(feats).pkl
+
+training_data=$(DATA)/train$(nfeats).pkl
+testing_data=$(DATA)/test$(nfeats).pkl
 
 all: train
 
 init:
-	mkdir -p $(MODELS) $(LOG)
+	mkdir -p $(MODELS) $(LOG) $(DATA)
 
 
 prepare_data: $(training_data) $(testing_data)
@@ -49,8 +52,9 @@ watch:
 	tail -f $(LOG)/class*.log
 
 clean:
-#	rm -f $(DATA)/train*_*.pkl
-#	rm -f $(DATA)/test*_*.pkl 
+	rm -f $(DATA)/train*_*.pkl
+	rm -f $(DATA)/test*_*.pkl 
+	rm -f $(DATA)/class_map.json
 	rm -f $(MODELS)/epoch*.mdl 
 	rm -f $(MODELS)/epoch*_class*.mdlc
 	rm -f $(LOG)/class*.log

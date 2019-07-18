@@ -58,12 +58,12 @@ def to_phoneme_level(DATA):
     # Return an array of arrays for the data, and an array of float for the labels
     return np.array(data_tr), np.array(labels_tr)
 
-def get_phoneme_mapping(iphn, phn2int):
+def get_phoneme_mapping(iphn, phn2int, n_taken=0):
     # Reverse the codebook for easier manipulation
     int2phn = {y: x for x, y in phn2int.items()}
     # Define a sub-dictionary of the picked phonemes
-    class2phn = {j: int2phn[i] for j, i in enumerate(iphn)}
-    class2int = {j: i for j, i in enumerate(iphn)}
+    class2phn = {j+n_taken: int2phn[i] for j, i in enumerate(iphn)}
+    class2int = {j+n_taken: i for j, i in enumerate(iphn)}
     return class2phn, class2int
 
 
@@ -75,10 +75,11 @@ def test_get_phoneme_mapping():
     assert(get_phoneme_mapping(iphn, phn2int) == {0:"b", 1:"c"})
 
 
-def prepare_data(fname_dtest=None, fname_dtrain=None, n_phn=None, verbose=False):
+def prepare_data(fname_dtest=None, classmap_existing=None, fname_dtrain=None, n_phn=None, verbose=False):
     # Read the datafiles
     te_DATA, te_keys, te_lengths, phn2int, te_PHN = pkl.load(open(fname_dtest, "rb"))
     tr_DATA, tr_keys, tr_lengths, tr_PHN = pkl.load(open(fname_dtrain, "rb"))
+
     if verbose:
         print("Data loaded from files.")
 
@@ -86,18 +87,37 @@ def prepare_data(fname_dtest=None, fname_dtrain=None, n_phn=None, verbose=False)
     data_tr, label_tr = to_phoneme_level(tr_DATA)
     data_te, label_te = to_phoneme_level(te_DATA)
 
-    # Pick n_phn random phonemes
-    iphn = np.random.permutation(len(phn2int))[:n_phn]
 
+    # list the phoneme names already in the data folder.
+    taken = [v for k, v in classmap_existing.items()]
+
+    # Deduce the available phonemes
+    available_phn = [v for k, v in phn2int.items() if not k in taken]
+
+    # Pick new random phonemes
+    iphn = np.random.permutation(available_phn)[:n_phn]
+
+    # Find the phonemes in the dataset
     xtrain, ytrain = getsubset(data_tr, label_tr, iphn)
     xtest, ytest = getsubset(data_te, label_te, iphn)
 
-    class2phn,class2int = get_phoneme_mapping(iphn, phn2int)
 
-    return xtrain, ytrain, xtest, ytest, class2phn,class2int
+    class2phn, class2int = get_phoneme_mapping(iphn, phn2int, n_taken=len(taken))
+
+    return xtrain, ytrain, xtest, ytest, class2phn, class2int
+
+
+def read_classmap(folder):
+    fname = os.path.join(folder,"class_map.json")
+    if os.path.isfile(fname):
+        with open(fname, "r") as f:
+            return json.load(f)
+    else:
+        return {}
 
 
 def write_classmap(class2phn, folder):
+
     # Write dictionary to a JSON file
     with open(os.path.join(folder, "class_map.json"), "w") as outfile:
         json.dump(class2phn, outfile, indent=2)
@@ -130,7 +150,6 @@ def normalize(xtrain, xtest):
     return f_perform_normalize(xtrain), f_perform_normalize(xtest)
 
 
-
 if __name__ == "__main__":
     usage = "Usage: python bin/prepare_data.py [nclasses] [training data] [testing data]"
 
@@ -144,27 +163,50 @@ if __name__ == "__main__":
     test_inputfile = sys.argv[3]
     train_outfiles = [train_inputfile.replace(".pkl", "_" + str(i+1) + ".pkl") for i in range(nclasses)]
     test_outfiles = [test_inputfile.replace(".pkl", "_" + str(i+1) + ".pkl") for i in range(nclasses)]
+    data_folder = os.path.dirname(test_inputfile)
+
+    classmap = read_classmap(data_folder)
+    n_existing = len(classmap)
+
+    # Print the number of classes which already exist
+    if n_existing > 0:
+        print("(info)", n_existing, "classes already exist.", file=sys.stderr)
+
+    # We request less classes than there already are, we skip and check that the files are indeed present
+    if n_existing >= nclasses:
+        print("(skip)", nclasses, "classes already exist.", file=sys.stderr)
+        assert(all([os.path.isfile(x) for x in train_outfiles + test_outfiles]))
+        sys.exit(0)
 
 
-    ########## data preparation ##########
+    # Number of classes left to fetch
+    nclasses_fetch = nclasses - n_existing
+    print("(info)", nclasses_fetch, "classes to fetch.")
+
+    # Now {x,y}{train,test} only contain newly picked phonemes (not present in classmap)
     xtrain, ytrain, xtest, ytest, class2phn, class2int = prepare_data(fname_dtest=test_inputfile, fname_dtrain=train_inputfile,\
-                                                n_phn=nclasses, verbose=False)
+                                                n_phn=nclasses_fetch, classmap_existing=classmap, verbose=False)
 
-    # write the mapping class number <=> phoneme
-    write_classmap(class2phn, os.path.dirname(test_inputfile))
+    classmap = {**classmap, **class2phn}
 
+    # Assert length (If we add an already existing phoneme,
+    # the dictionary size will not be len(classmap) + len(class2phn)
+    assert (len(classmap) == nclasses)
+
+
+
+    # Create only the classes that are left
     for i, ic in class2int.items():
-        if not (os.path.exists(train_outfiles[i]) & os.path.exists(test_outfiles[i]) ):
-            # At least one of the files is missing
-            xtrain_c = xtrain[ytrain == ic]
-            xtest_c = xtest[ytest == ic]
-            xtrain_cn, xtest_cn = normalize(xtrain_c, xtest_c)
+        assert(not os.path.isfile(train_outfiles[i]))
+        assert(not os.path.isfile(test_outfiles[i]))
+        xtrain_c = xtrain[ytrain == ic]
+        xtest_c = xtest[ytest == ic]
+        xtrain_cn, xtest_cn = normalize(xtrain_c, xtest_c)
 
+        pkl.dump(xtrain_cn, open(train_outfiles[i], "wb"))
+        pkl.dump(xtest_cn, open(test_outfiles[i], "wb"))
 
-            pkl.dump(xtrain_cn, open(train_outfiles[i], "wb"))
-            pkl.dump(xtest_cn, open(test_outfiles[i], "wb"))
-
-        else:
-            print("(skip) class data exist:", train_outfiles[i], test_outfiles[i], file=sys.stderr)
+    # Write the mapping class number <=> phoneme
+    write_classmap(classmap, os.path.dirname(test_inputfile))
 
     sys.exit(0)
