@@ -10,7 +10,7 @@ def uniq_test(ref_file, sel_file):
 
     n_samples = 10
     idx_n_sample = np.random.randint(low=0, high=test.shape[0],size=n_samples)
-    sample_in_test = [ test[i] for i in range(n_samples)]
+    sample_in_test = [ test[i] for i in idx_n_sample]
 
     count = 0
     for ref_sample in train:
