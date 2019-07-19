@@ -117,8 +117,7 @@ def read_classmap(folder):
 
 
 def write_classmap(class2phn, folder):
-
-    # Write dictionary to a JSON file
+    """ Write dictionary to a JSON file."""
     with open(os.path.join(folder, "class_map.json"), "w") as outfile:
         json.dump(class2phn, outfile, indent=2)
         outfile.write("\n")
@@ -151,7 +150,10 @@ def normalize(xtrain, xtest):
 
 
 if __name__ == "__main__":
-    usage = "Usage: python bin/prepare_data.py [nclasses] [training data] [testing data]"
+    usage = "Build separate datasets for each family of phonemes.\n\"" \
+            "Each data set contains the sequences of one phoneme.\n"\
+            "Usage: python bin/prepare_data.py [nclasses] [training data] [testing data]\n"\
+            "Example: python bin/prepare_data.py 2 data/train13.pkl data/test13.pkl"
 
     if len(sys.argv) != 4 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
         print(usage)
@@ -161,6 +163,7 @@ if __name__ == "__main__":
     nclasses = int(sys.argv[1])
     train_inputfile = sys.argv[2]
     test_inputfile = sys.argv[3]
+    # 
     train_outfiles = [train_inputfile.replace(".pkl", "_" + str(i+1) + ".pkl") for i in range(nclasses)]
     test_outfiles = [test_inputfile.replace(".pkl", "_" + str(i+1) + ".pkl") for i in range(nclasses)]
     data_folder = os.path.dirname(test_inputfile)
