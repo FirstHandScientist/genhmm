@@ -16,8 +16,8 @@ def test_make_phone_index_sequence():
     assert((make_phone_index_sequence(a) == expected).all())
 
 
-def make_phone_index_sequence(loc_ms):
-    out = np.arange(loc_ms[-1][1])
+def make_phone_index_sequence(loc_ms, utt_end):
+    out = np.arange(utt_end)
     for iy, irange in enumerate(loc_ms.tolist()):
         out[int(np.floor(irange[0])):int(np.floor(irange[1]))] = iy
     return out
@@ -101,12 +101,12 @@ if __name__ == "__main__":
         label_name = PHN_file_data[:, -1]
 
         label_location_sample = label_location_sample.astype(np.int64)
-        utt_end = l * wsize_ms - 1
+        utt_end = l * wsize_ms
         label_location_ms = label_location_sample / fe * 1000
         label_location_ms = make_range_match(label_location_ms, utt_end)
 
         # label_seq_ms [ 0 0 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 3 3 3 3 3 3 3]
-        label_seq_ms = make_phone_index_sequence(label_location_ms)
+        label_seq_ms = make_phone_index_sequence(label_location_ms,utt_end)
 
         # label_seq_ms=[[ 0 0 1 1 1 1 1 1 1 2 2 2],
         #  [ 2 2 2 2 2 2 2 2 2 2 2 2],
@@ -152,3 +152,5 @@ if __name__ == "__main__":
         pkl.dump([DATA, keys, lengths, codebook, PHN], open(outfile, "wb"))
     else:
         pkl.dump([DATA, keys, lengths, PHN], open(outfile, "wb"))
+
+    sys.exit(0)
