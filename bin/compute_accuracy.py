@@ -87,10 +87,12 @@ if __name__ == "__main__":
     # Define a function for this particular HMMclassifier model
     f = partial(accuracy_fun, mdl=mdl)
 
-    # todo: I think this will break on GPU because it uses numpy
+    # force the output type of f to an object, f_v: (str) class data file -> (object) Model accuracy
     f_v = np.vectorize(f, otypes=["O"])
+    
+    # Call the f_v function on all class data files and transform the result from an array of object to an array of string .
     results = f_v(data_files).astype('|S1024')
-
+    
     print_results(mdl_file, data_files, results)
     sys.exit(0)
 

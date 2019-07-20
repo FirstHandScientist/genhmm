@@ -107,13 +107,18 @@ This data preparation has been borrowed from [timit-preprocessor](https://github
 ### Steps
 The steps are as follows:
 ```bash
-$ cd src/timit-preprocessor
-$ ./convert_wav.sh
-$ python parsing.py  path_to_TIMIT/ test
-$ python parsing.py  path_to_TIMIT/ train
-$ ./extract_mfcc.sh path_to_KALDI/ path_to_TIMIT/ test.39.scp
+cd src/timit-preprocessor
+# Replace the original wav file (NIST format) into RIFF format in-place (see comments in convert_wav.sh)
+./convert_wav.sh
+# Create intermediate files with phone sequence of each utterance and each wav file of each utterance
+python parsing.py  path_to_TIMIT/ test
+# Extract MFCCs on frames of size 25ms and step 10ms for all wav files listed in previous command
+./extract_mfcc.sh path_to_KALDI/ path_to_TIMIT/ test.39.scp
+
+python make_dataset.py test.39.scp path_to_TIMIT/ test39.pkl
+
+python parsing.py  path_to_TIMIT/ train
 $ ./extract_mfcc.sh path_to_KALDI/ path_to_TIMIT/ train.39.scp
-$ python make_dataset.py test.39.scp path_to_TIMIT/ test39.pkl
 $ python make_dataset.py train.39.scp path_to_TIMIT/ train39.pkl
 ```
 
