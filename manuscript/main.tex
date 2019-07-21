@@ -402,9 +402,11 @@ Then the solution to \autoref{opm:pi} is
 \begin{equation}\label{eq:mix-latent-parameter-solution}
   \pi_{s, \kappa} = \frac{\sum_{r=1}^{R} \sum_{t=1}^{{T}^{(r)}} p(\smtr{s}{t}{r} =s, \smtr{\kappa}{t}{r}=\kappa | \ubmr{x}{r}; \bm{H}^{\mathrm{old}}) }{\sum_{k =1}^{K}\sum_{r=1}^{R} \sum_{t=1}^{{T}^{(r)}-1} p(\smtr{s}{t}{r} =s, \smtr{\kappa}{t}{r}=k | \ubmr{x}{r}; \bm{H}^{\mathrm{old}}) }
 \end{equation}
-where $p(s, \kappa | \ubm{x}; \bm{H}^{\mathrm{old}}) = p(s| \ubm{x}; \bm{H}^{\mathrm{old}}) p(\kappa | s, \ubm{x}; \bm{H}^{\mathrm{old}})$ that can be computed by results of forward/backward and \autoref{eq:kappa-posterior}.
+where $p(s, \kappa | \ubm{x}; \bm{H}^{\mathrm{old}}) = p(s| \ubm{x}; \bm{H}^{\mathrm{old}}) p(\kappa | s, \ubm{x}; \bm{H}^{\mathrm{old}})$. $p(s| \ubm{x}; \bm{H}^{\mathrm{old}})$ that can be computed by results of forward/backward and \autoref{eq:kappa-posterior}. The posterior for $\kappa$ can be obtained by
+\begin{equation}
+  p(\kappa | s, \ubm{x}; \bm{H}^{\mathrm{old}}) = \frac{p(\kappa, \ubm{x} | s; \bm{H}^{\mathrm{old}})}{\sum_{\kappa}{p(\kappa, \ubm{x} | s; \bm{H}^{\mathrm{old}})}} = \frac{\pi_{s, \kappa} p( \bm{x} | s; \bm{H}^{\mathrm{old}})}{\sum_{\kappa}{\pi_{s, \kappa} p(\bm{x} | s; \bm{H}^{\mathrm{old}})}}
+  \end{equation}
 
-\textcolor{red}{I am going to put specific update formula for $\pi$ here....}
 
 In implementation, GenHMM uses the generator mixed emission model with $\kappa$-th component as:
 
@@ -445,6 +447,73 @@ where $\bm{f}_{{s},{\kappa}} = \bm{g^{-1}_{{s},{\kappa}}}$ is defined by paramet
     
   \end{algorithmic}
 \end{algorithm}
+
+\subsubsection{Generator-tied HMM (GtHMM)}
+\begin{figure}[!h]
+  \centering
+  \begin{tikzpicture}
+    \tikzstyle{enode} = [thick, draw=blue, ellipse, inner sep = 1pt,  align=center]
+                                           %                                            \tikzstyle{nnode} = [thick, rectangle, rounded corners = 1pt,minimum size = 1.2cm,draw,inner sep = 2pt]
+    \tikzstyle{nnode} = [thick, rectangle, rounded corners = 2pt,minimum size = 0.8cm,draw,inner sep = 2pt]
+    \node[enode] (z1) at (0,1.8) {$\bm{y}\sim p_1(\bm{y})$};
+    \node[enode] (z2) at (0,0.5){$\bm{y}\sim p_{2}(\bm{y})$};
+    \node[enode] (zK) at (0,-1.8) {$\bm{y}\sim p_{|\Ss|}(\bm{y})$}; 
+    \node[enode] (x) at (5.8,1){$\ubm{x}\sim p(\ubm{x};\bm{H})$};
+                                           %                                            \node at (3,-1){$p(\bm{z}) = \sum_k\pi_kp_k(\bm{z})$};
+    \node[nnode] (g) at (3.5,1) {$\bm{g}$};
+
+    \node[nnode] (m) at (3.5,-2) {Memory};
+    \node[nnode] (a) at (3.5,-0.5) {${A}$};
+
+
+    \draw[dotted,line width=2pt] (0,-0.3) -- (0,-1.2);
+    \filldraw[->] (1.8, 0.5)circle (2pt) --  (g) ;
+    \draw[->] (z1) -- (1.6, 1.8);
+    \draw[->] (z2) -- (1.6, 0.5);
+                                           %                                            \draw[->] (1,-0.5) -- (1.8, -0.5);
+    \draw[->] (zK) -- (1.6, -1.8);
+                                           %                                            \draw[->] (z1) [in=180,out=0]  to node[right]{$\pi_1$} (g);
+                                           %                                            \draw[->] (z2) [in=180,out=0]  to node[above]{$\pi_2$} (g);
+                                           %                                            \draw[->,dashed] (zK) [in=180,out=0]  to node[right]{$\pi_K$} (g);
+    \draw[->] (g) to (x);
+    \begin{scope}[ thick, every node/.style={sloped,allow upside down}]
+      \draw (2.1,0.9)-- (2.2, 0.);
+      \draw (2.2,0.)-- node {\midarrow} (2.2,-2);
+      \draw (2.2,-2)-- (m);
+      \draw (m)-- (5, -2);
+      \draw (5, -2)-- node {\midarrow} (5 ,-0.5);
+      \draw (5, -0.5) -- (a);
+      \draw (a)-- node {\midarrow} (2.2, -0.5);
+    \end{scope}
+    \node at (4.8, -1) {$s_{t}$};
+    \node at (2.56, -0.25) {$s_{t+1}$};
+
+  \end{tikzpicture}
+  \caption{LatM-HMM Model defined by $\bm{H} = \{\Ss, \bm{q}, A, p({\bm{x}}|{\bm{s}}; \bm{\Phi}) \}$}
+  \vspace{0.1cm}
+\end{figure}
+
+\textcolor{blue}{to be continued...}
+
+Alternatively, we can use a latent-source mixed HMM (LatM-HMM) where different latent source share the same generator functioning as feature mapping. Then the generator of the LatM-HMM is defined as
+\begin{equation}
+  \left\{\bm{g}| \bm{g}: \bm{z}\rightarrow \bm{x}, s \in \Ss, \bm{z}\sim p_{s}(\bm{z})\right\}.
+\end{equation}
+We use $\bm{f} = \bm{g}^{-1}$ to denote inverse of $\bm{g}$ and use $\bm{\theta}$ to denote the parameter set of $\bm{g}$. Then the conditional probability for LatM-HMM is modeled as
+\begin{align}
+  p(\bm{x} | s; \bm{\Phi})
+  &= p_s(\bm{z}) \bigg| \det \left( \pd{\bm{z}}{\bm{x}} \right) \bigg| \nonumber \\
+  &= p_s(\bm{f}(\bm{x})) \bigg| \det \left( \pd{\bm{f}(\bm{x})}{\bm{x}} \right) \bigg|
+\end{align}
+
+The parameter set for this model to be decide is $\bm{\Phi} = \left\{ \bm{\theta},  \bm{\omega}_s, \forall s\in \Ss\right\}$.
+Then the problem in \autoref{eq:sub-gm} can be reformulated as:
+\begin{align}
+  &\umax{\bm{\Phi}} \Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}}) \nonumber \\
+  =&\umax{ \bm{\theta}, \bm{\omega}_s, \forall s\in \Ss} \sum_{r=1}^{R} \sum_{t=1}^{{T}^{(r)}-1} \sum_{\smtr{s}{t}{r}=1}^{|\Ss|}  p(\smtr{s}{t}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}}) \left[\log\,p_{\smtr{s}{t}{r}}(\bm{f}(\bmtr{x}{t}{r})) + \log\,\bigg| \det\, \left( \pd{\bm{f}(\bmtr{x}{t}{r})}{\bmtr{x}{t}{r}} \right) \bigg| \right].
+\end{align}
+
+
 
 
 
@@ -565,77 +634,6 @@ Apart from the emission prboability model difference, rest computation is the sa
 
 
 
-
-\subsubsection{Generator-shared HMM (GSHMM)...to be continued}
-\begin{figure}[!h]
-  \centering
-  \begin{tikzpicture}
-    \tikzstyle{enode} = [thick, draw=blue, ellipse, inner sep = 1pt,  align=center]
-                                           %                                            \tikzstyle{nnode} = [thick, rectangle, rounded corners = 1pt,minimum size = 1.2cm,draw,inner sep = 2pt]
-    \tikzstyle{nnode} = [thick, rectangle, rounded corners = 2pt,minimum size = 0.8cm,draw,inner sep = 2pt]
-    \node[enode] (z1) at (0,1.8) {$\bm{z}\sim p_1(\bm{z})$};
-    \node[enode] (z2) at (0,0.5){$\bm{z}\sim p_{2}(\bm{z})$};
-    \node[enode] (zK) at (0,-1.8) {$\bm{z}\sim p_{|\Ss|}(\bm{z})$}; 
-    \node[enode] (x) at (5.8,1){$\ubm{x}\sim p(\ubm{x};\bm{H})$};
-                                           %                                            \node at (3,-1){$p(\bm{z}) = \sum_k\pi_kp_k(\bm{z})$};
-    \node[nnode] (g) at (3.5,1) {$\bm{g}$};
-
-    \node[nnode] (m) at (3.5,-2) {Memory};
-    \node[nnode] (a) at (3.5,-0.5) {${A}$};
-
-
-    \draw[dotted,line width=2pt] (0,-0.3) -- (0,-1.2);
-    \filldraw[->] (1.8, 0.5)circle (2pt) --  (g) ;
-    \draw[->] (z1) -- (1.6, 1.8);
-    \draw[->] (z2) -- (1.6, 0.5);
-                                           %                                            \draw[->] (1,-0.5) -- (1.8, -0.5);
-    \draw[->] (zK) -- (1.6, -1.8);
-                                           %                                            \draw[->] (z1) [in=180,out=0]  to node[right]{$\pi_1$} (g);
-                                           %                                            \draw[->] (z2) [in=180,out=0]  to node[above]{$\pi_2$} (g);
-                                           %                                            \draw[->,dashed] (zK) [in=180,out=0]  to node[right]{$\pi_K$} (g);
-    \draw[->] (g) to (x);
-    \begin{scope}[ thick, every node/.style={sloped,allow upside down}]
-      \draw (2.1,0.9)-- (2.2, 0.);
-      \draw (2.2,0.)-- node {\midarrow} (2.2,-2);
-      \draw (2.2,-2)-- (m);
-      \draw (m)-- (5, -2);
-      \draw (5, -2)-- node {\midarrow} (5 ,-0.5);
-      \draw (5, -0.5) -- (a);
-      \draw (a)-- node {\midarrow} (2.2, -0.5);
-    \end{scope}
-    \node at (4.8, -1) {$s_{t}$};
-    \node at (2.56, -0.25) {$s_{t+1}$};
-
-  \end{tikzpicture}
-  \caption{LatM-HMM Model defined by $\bm{H} = \{\Ss, \bm{q}, A, p({\bm{x}}|{\bm{s}}; \bm{\Phi}) \}$}
-  \vspace{0.1cm}
-\end{figure}
-
-\textcolor{blue}{to be continued...}
-
-Alternatively, we can use a latent-source mixed HMM (LatM-HMM) where different latent source share the same generator functioning as feature mapping. Then the generator of the LatM-HMM is defined as
-\begin{equation}
-  \left\{\bm{g}| \bm{g}: \bm{z}\rightarrow \bm{x}, s \in \Ss, \bm{z}\sim p_{s}(\bm{z})\right\}.
-\end{equation}
-We use $\bm{f} = \bm{g}^{-1}$ to denote inverse of $\bm{g}$ and use $\bm{\theta}$ to denote the parameter set of $\bm{g}$. Then the conditional probability for LatM-HMM is modeled as
-\begin{align}
-  p(\bm{x} | s; \bm{\Phi})
-  &= p_s(\bm{z}) \bigg| \det \left( \pd{\bm{z}}{\bm{x}} \right) \bigg| \nonumber \\
-  &= p_s(\bm{f}(\bm{x})) \bigg| \det \left( \pd{\bm{f}(\bm{x})}{\bm{x}} \right) \bigg|
-\end{align}
-
-The parameter set for this model to be decide is $\bm{\Phi} = \left\{ \bm{\theta},  \bm{\omega}_s, \forall s\in \Ss\right\}$.
-Then the problem in \autoref{eq:sub-gm} can be reformulated as:
-\begin{align}
-  &\umax{\bm{\Phi}} \Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}}) \nonumber \\
-  =&\umax{ \bm{\theta}, \bm{\omega}_s, \forall s\in \Ss} \sum_{r=1}^{R} \sum_{t=1}^{{T}^{(r)}-1} \sum_{\smtr{s}{t}{r}=1}^{|\Ss|}  p(\smtr{s}{t}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}}) \left[\log\,p_{\smtr{s}{t}{r}}(\bm{f}(\bmtr{x}{t}{r})) + \log\,\bigg| \det\, \left( \pd{\bm{f}(\bmtr{x}{t}{r})}{\bmtr{x}{t}{r}} \right) \bigg| \right].
-\end{align}
-
-
-\subsubsection{Generator Shared HMM (GSHMM)}
-
-
-\textbf{To be continued}...
 
 
 \section{On Implementation of acoustic signal}
