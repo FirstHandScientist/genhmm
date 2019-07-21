@@ -13,7 +13,7 @@ def test_make_phone_index_sequence():
     expected[0:20] = 0
     expected[20:36] = 1
     expected[36:45] = 1
-    assert((make_phone_index_sequence(a) == expected).all())
+    assert((make_phone_index_sequence(a,45) == expected).all())
 
 
 def make_phone_index_sequence(loc_ms, utt_end):
@@ -59,13 +59,14 @@ if __name__ == "__main__":
     timit_folder = "/home/antoine/Documents/projects/asr/gm-hmm/data/timit"
     fname_cb = "TIMIT-61.codebook"
 
-    seq_start = 0
-
     # Now we must have the phonemes corresponding the the MFCC for each utterance
     fe = 16e3
 
-    # That's the step size used to compute the MFCC
-    wsize_ms = 10
+    # That's the step and window size used to compute the MFCC
+    wsize_ms = 25
+    wsize_samp = int(wsize_ms / 1000 * fe)
+    step_ms = 10
+    step_samp = int(step_ms / 1000 * fe)
 
     lengths = [] # Size of all sequnces
     keys = [] # Name of the utterance
@@ -95,26 +96,26 @@ if __name__ == "__main__":
         PHN_file_data = np.array(list(map(lambda x: x.split(" "), lines)))
 
         # Range of the phoneme
-        label_location_sample = PHN_file_data[:, :2]
+        label_location_samp = PHN_file_data[:, :2]
 
         # Actual Phoneme name
         label_name = PHN_file_data[:, -1]
 
-        label_location_sample = label_location_sample.astype(np.int64)
-        utt_end = l * wsize_ms
-        label_location_ms = label_location_sample / fe * 1000
-        label_location_ms = make_range_match(label_location_ms, utt_end)
+        label_location_samp = label_location_samp.astype(int)
+        utt_end = int((l-1) * step_samp + wsize_samp)
+        label_location_samp = make_range_match(label_location_samp, utt_end)
 
-        # label_seq_ms [ 0 0 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 3 3 3 3 3 3 3]
-        label_seq_ms = make_phone_index_sequence(label_location_ms,utt_end)
+        # label_seq_samp [ 0 0 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 3 3 3 3 3 3 3]
+        label_seq_samp = make_phone_index_sequence(label_location_samp, utt_end)
 
-        # label_seq_ms=[[ 0 0 1 1 1 1 1 1 1 2 2 2],
-        #  [ 2 2 2 2 2 2 2 2 2 2 2 2],
-        #  [ 2 3 3 3 3 3 3 3 3 3 3 3 3]
-        label_seq_ms = label_seq_ms.reshape(-1, wsize_ms)
+        # Build an overlapping sequence of index
+        label_seq_idx = np.arange(0, label_seq_samp.shape[0], step_samp, dtype=int).reshape(-1, 1)
+        label_seq_idx = label_seq_idx[:mat.shape[0]].repeat(wsize_samp, axis=1)
+        label_seq_idx = label_seq_idx + np.arange(wsize_samp, dtype=int).reshape(1, -1)
+
 
         # label_seq_mfcc = [1,2,3]
-        label_seq_mfcc = [np.argmax(np.bincount(x)) for x in label_seq_ms.tolist()]
+        label_seq_mfcc = [np.argmax(np.bincount(x)) for x in label_seq_samp[label_seq_idx].tolist()]
         label_seq_mfcc_names = np.array([label_name[xx] for xx in label_seq_mfcc])
 
         assert(len(label_seq_mfcc_names) == l)
@@ -124,9 +125,7 @@ if __name__ == "__main__":
 
 
 
-
-
-    # Now create a reference codebook or load the existing one
+    #  Now create a reference codebook or load the existing one
     if os.path.isfile(fname_cb):
         codebook, = pkl.load(open(fname_cb, "rb"))
 
