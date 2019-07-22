@@ -110,5 +110,5 @@ Replace the values with the location of kaldi, timit and the place you wish to h
 ```bash
 $ cd src/timit-preprocessor
 $ make convert
-$ make (-j 4)
+$ make -j 4
 ```
