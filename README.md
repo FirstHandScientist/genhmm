@@ -108,13 +108,7 @@ First edit the variables `KALDI_ROOT`, `TIMIT_ROOT`, `DATA_OUT` in `src/timit-pr
 Replace the values with the location of kaldi, timit and the place you wish to have the datasets created.
 
 ```bash
-cd src/timit-preprocessor
-```bash
+$ cd src/timit-preprocessor
 $ make convert
-$ make -j 4 (Need 4GB RAM)
+$ make (-j 4)
 ```
-
-These steps create two files: `test39.pkl` and `train39.pkl`
-
-Note 1: Replace 39 with 13 to have the 13 MFCCs without deltas and delta-deltas.
-
