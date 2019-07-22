@@ -13,7 +13,7 @@ def test_make_phone_index_sequence():
     expected[0:20] = 0
     expected[20:36] = 1
     expected[36:45] = 1
-    assert((make_phone_index_sequence(a,45) == expected).all())
+    assert((make_phone_index_sequence(a, 45) == expected).all())
 
 
 def make_phone_index_sequence(loc_ms, utt_end):
@@ -76,10 +76,10 @@ if __name__ == "__main__":
     DATA_TYPE = "TEST" if "test" in outfile else "TRAIN"
 
     # Read mfccs
-    out = kaldi_io.read_mat_scp(infile)
+    utt_iterator = kaldi_io.read_mat_scp(infile)
 
     # Each utterance
-    for key, mat in out:
+    for key, mat in utt_iterator:
         # get the length and store key
         l = mat.shape[0]
         lengths.append(l)
