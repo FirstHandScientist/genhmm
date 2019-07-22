@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
-if [ ${#} != 3 ];then
-    echo "Usage: ./mfcc_extract.sh [Kaldi's relative path] [TIMIT relative path] [output .scp filename]"
+if [ ${#} != 4  ];then
+    echo "Usage: ./mfcc_extract.sh [Kaldi's relative path] [TIMIT relative path] [Intermediate folder] [output .scp filename]"
     exit -1
 fi
 
 kaldi=${1}
 timit=${2}
-target_file=${3}
+path=${3}
+target_file=${4}
 
-path=.data/processed
 options="--use-energy=false"
 
 mkdir -p $path
@@ -19,7 +19,6 @@ fname=$(basename "$target_file")
 fname_trunk="${fname%.*}"
 target=(${fname_trunk//./ })
 
-echo $fname
 
 log=$path/$target.extract.log
 if [[ $fname == *".13."* ]]; then
