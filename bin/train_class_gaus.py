@@ -2,13 +2,16 @@ import os
 import sys
 from parse import parse
 import pickle as pkl
-from gm_hmm.src.genHMM import save_model, load_model
 import json
 import numpy as np
 import time
 from hmmlearn import hmm
+from gm_hmm.src.ref_hmm import ConvgMonitor
 from sklearn.mixture import GaussianMixture
 from sklearn.utils import check_random_state
+
+
+
 
 def create_random_gmm(n_mix, n_features, covariance_type):
     g = GaussianMixture(n_mix, covariance_type=covariance_type)
@@ -81,7 +84,7 @@ if __name__ == "__main__":
                               covariance_type="full", tol=-np.inf, verbose=True)
         # mdl = hmm.GaussianHMM(n_components=options["Net"]["n_states"], \
         #                       covariance_type="full", tol=-np.inf)
-        
+        mdl.monitor_ = ConvgMonitor(mdl.tol, mdl.n_iter, mdl.verbose)
         # param setting
         mdl.startprob_ = np.ones(mdl.n_components) /mdl.n_components
         tmp_transmit = np.ones(mdl.n_components, mdl.n_components) + \
@@ -95,7 +98,7 @@ if __name__ == "__main__":
 
     else:
         # Load previous model
-        mdl = load_model(out_mdl.replace("epoch" + epoch_str, "epoch" + str(int(epoch_str)-1)))
+        mdl = pkl.load(open(out_mdl.replace("epoch" + epoch_str, "epoch" + str(int(epoch_str)-1)), "rb"))
 
     mdl.iepoch = epoch_str
     mdl.iclass = iclass_str
@@ -114,7 +117,8 @@ if __name__ == "__main__":
     mdl.fit(xtrain, lengths=l)
 
     # Push back to cpu for compatibility when GPU unavailable.
-    save_model(mdl, fname=out_mdl)
+    with open(out_mdl, "wb") as handle:
+        pkl.dump(mdl, handle)
     sys.exit(0)
 
 

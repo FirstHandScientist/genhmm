@@ -1,8 +1,10 @@
 import sys
 import os
-from gm_hmm.src.genHMM import load_model
+
 from functools import partial
 import pickle as pkl
+# need to import GaussianHMMclassifier to load it via pkl
+from aggregate_models import GaussianHMMclassifier
 import numpy as np
 from parse import parse
 from gm_hmm.src.utils import pad_data, TheDataset, divide, acc_str, append_class, parse_
@@ -16,21 +18,16 @@ def accuracy_fun(data_file, mdl=None):
     # Get the length of all the sequences
     l = [xx.shape[0] for xx in X]
     # zero pad data for batch training
-    max_len_ = max([xx.shape[0] for xx in X])
-    x_padded = pad_data(X, max_len_)
-    batchdata = DataLoader(dataset=TheDataset(x_padded,
-                                              lengths=l,
-                                              device=mdl.hmms[0].device),
-                           batch_size=512, shuffle=True)
-    
+
     true_class = parse("{}_{}.pkl", os.path.basename(data_file))[1]
-    out_list = [mdl.forward(x) for x in batchdata]
-    out = torch.cat(out_list, dim=1)
+    out_list = [mdl.forward(x_i) for x_i in X]
+    out = np.array(out_list).transpose()
 
     # the out here should be the shape: data_size * nclasses
-    class_hat = torch.argmax(out, dim=0) + 1
+    class_hat = np.argmax(out, axis=0) + 1
+    istrue = class_hat == int(true_class)
+    return "{}/{}".format(str(istrue.sum()), str(istrue.shape[0]))
 
-    return acc_str(class_hat, true_class)
 
 
 
@@ -66,14 +63,8 @@ if __name__ == "__main__":
     testing_data_file = sys.argv[3]
 
     # Load Model
-    mdl = load_model(mdl_file)
-
-    # Push to GPU if possible
-    device = 'cpu'
-
-    if torch.cuda.is_available():
-       device = torch.device('cuda')
-       mdl.pushto(device)
+    with open(mdl_file, "rb") as handle:
+        mdl = pkl.load(handle)
 
 
     # Prepare for computation of results

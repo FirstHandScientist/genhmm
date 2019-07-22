@@ -1,9 +1,10 @@
 import sys
-
+import pickle as pkl
 import os
 import glob
-from gm_hmm.src.genHMM import GenHMMclassifier, save_model
 from parse import parse
+
+from gm_hmm.src.ref_hmm import GaussianHMMclassifier
 
 if __name__ == "__main__":
     usage = "Aggregate models from several classes.\n" \
@@ -20,8 +21,10 @@ if __name__ == "__main__":
 
     # Find all trained classes submodels
     in_mdlc_files = sorted(glob.glob(out_mdl_file.replace(".mdl", "_class*.mdlc")), key=get_sort_key)
-    mdl = GenHMMclassifier(mdlc_files=in_mdlc_files)
+    mdl = GaussianHMMclassifier(mdlc_files=in_mdlc_files)
     assert(all([int(h.iclass) == int(i)+1 for i,h in enumerate(mdl.hmms)]))
-
-    save_model(mdl, out_mdl_file)
+    
+    with open(out_mdl_file, "wb") as handle:
+        pkl.dump(mdl, handle)
+    
     sys.exit(0)
