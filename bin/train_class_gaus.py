@@ -7,6 +7,7 @@ import numpy as np
 import time
 from hmmlearn import hmm
 from gm_hmm.src.ref_hmm import ConvgMonitor
+from gm_hmm.src.ref_hmm import Gaussian_HMM
 from sklearn.mixture import GaussianMixture
 from sklearn.utils import check_random_state
 
@@ -80,8 +81,8 @@ if __name__ == "__main__":
     #  Load or create model
     if epoch_str == '1':
         # init GaussianHMM model
-        mdl = hmm.GaussianHMM(n_components=options["Net"]["n_states"], \
-                              covariance_type="full", tol=-np.inf, verbose=True)
+        mdl = Gaussian_HMM(n_components=options["Net"]["n_states"], \
+                      covariance_type="full", tol=-np.inf, verbose=True)
         # mdl = hmm.GaussianHMM(n_components=options["Net"]["n_states"], \
         #                       covariance_type="full", tol=-np.inf)
         mdl.monitor_ = ConvgMonitor(mdl.tol, mdl.n_iter, mdl.verbose)

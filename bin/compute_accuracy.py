@@ -4,7 +4,7 @@ import os
 from functools import partial
 import pickle as pkl
 # need to import GaussianHMMclassifier to load it via pkl
-from aggregate_models import GaussianHMMclassifier
+from gm_hmm.src.ref_hmm import GaussianHMMclassifier
 import numpy as np
 from parse import parse
 from gm_hmm.src.utils import pad_data, TheDataset, divide, acc_str, append_class, parse_
