@@ -103,23 +103,15 @@ You must have a compiled version of [Kaldi](https://github.com/kaldi-asr/kaldi).
 This data preparation has been borrowed from [timit-preprocessor](https://github.com/orbxball/timit-preprocessor).
 `make_dataset.py` relies on [kaldi-io-for-python](https://github.com/vesis84/kaldi-io-for-python)
 
-
 ### Steps
-The steps are as follows:
+First edit the variables `KALDI_ROOT`, `TIMIT_ROOT`, `DATA_OUT` in `src/timit-preprecessor/Makefile`.
+Replace the values with the location of kaldi, timit and the place you wish to have the datasets created.
+
 ```bash
 cd src/timit-preprocessor
-# Replace the original wav file (NIST format) into RIFF format in-place (see comments in convert_wav.sh)
-./convert_wav.sh
-# Create intermediate files with phone sequence of each utterance and each wav file of each utterance
-python parsing.py  path_to_TIMIT/ test
-# Extract MFCCs on frames of size 25ms and step 10ms for all wav files listed in previous command
-./extract_mfcc.sh path_to_KALDI/ path_to_TIMIT/ test.39.scp
-
-python make_dataset.py test.39.scp path_to_TIMIT/ test39.pkl
-
-python parsing.py  path_to_TIMIT/ train
-$ ./extract_mfcc.sh path_to_KALDI/ path_to_TIMIT/ train.39.scp
-$ python make_dataset.py train.39.scp path_to_TIMIT/ train39.pkl
+```bash
+$ make convert
+$ make -j 4 (Need 4GB RAM)
 ```
 
 These steps create two files: `test39.pkl` and `train39.pkl`
