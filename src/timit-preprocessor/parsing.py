@@ -5,12 +5,12 @@ import sys
 import argparse
 
 def main():
-    target_folder = os.path.join(args.datapath, args.folder)
+    target_folder = os.path.join(args.datapath, args.folder.upper())
     target = args.folder
 
     features = '{}/{}.wav.scp'.format(MATERIAL_PATH, target)
     labels = '{}/{}.lbl'.format(MATERIAL_PATH, target)
-
+    
     with open(features, "w+") as f, open(labels, "w+") as l:
         for person in os.listdir(target_folder):
             person_dir = os.path.join(target_folder, person)
@@ -19,10 +19,10 @@ def main():
                 raw_sentences = [x.split('.')[0] for x in os.listdir(task_dir)]
                 sentences = list(set(raw_sentences))
                 for sentence in sentences:
-                    wav_file = os.path.join(task_dir, sentence+'.wav')
+                    wav_file = os.path.join(task_dir, sentence + '.WAV')
                     f.write('{}-{}-{} {}\n'.format(person, task, sentence, os.path.abspath(wav_file)))
 
-                    phone_seq_file = os.path.join(task_dir, sentence+'.phn')
+                    phone_seq_file = os.path.join(task_dir, sentence+'.PHN')
                     phone_seq = []
                     with open(phone_seq_file, "r+") as pf:
                         for line in pf:
