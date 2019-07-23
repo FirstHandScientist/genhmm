@@ -25,7 +25,7 @@ all: $(targets)
 	
 
 %.pkl: %.scp
-	python make_dataset.py $^ $(material) $@
+	python make_dataset.py $^ $(TIMIT_ROOT) $@
 
 %.scp: $(interm_files)
 	./extract_mfcc.sh $(KALDI_ROOT) $(TIMIT_ROOT) $(processed) $@
