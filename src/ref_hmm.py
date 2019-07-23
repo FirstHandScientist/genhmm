@@ -149,6 +149,9 @@ class GMM_HMM(hmm.GMMHMM):
                 framelogprob = self._compute_log_likelihood(X[i:j])
                 logprob, fwdlattice = self._do_forward_pass(framelogprob)
                 curr_logprob += logprob
+                # if curr_logprob < 0:
+                #     print("negative log likelihood")
+                    
                 bwdlattice = self._do_backward_pass(framelogprob)
                 posteriors = self._compute_posteriors(fwdlattice, bwdlattice)
                 self._accumulate_sufficient_statistics(

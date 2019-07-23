@@ -26,6 +26,7 @@ def accuracy_fun(data_file, mdl=None):
     # the out here should be the shape: data_size * nclasses
     class_hat = np.argmax(out, axis=0) + 1
     istrue = class_hat == int(true_class)
+    print(data_file, "Done ...", file=sys.stdout)
     return "{}/{}".format(str(istrue.sum()), str(istrue.shape[0]))
 
 
