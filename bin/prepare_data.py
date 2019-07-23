@@ -68,7 +68,7 @@ def get_phoneme_mapping(iphn, phn2int, n_taken=0):
 
 
 def test_get_phoneme_mapping():
-    phn2int = {"a": 0, "b":2, "c": 1, "d":3}
+    phn2int = {"a": 0, "b": 2, "c": 1, "d": 3}
     iphn = np.array([1, 2])
     assert(get_phoneme_mapping(iphn, phn2int) == {0:"c", 1:"b"})
     iphn = np.array([2, 1])
@@ -108,7 +108,7 @@ def prepare_data(fname_dtest=None, classmap_existing=None, fname_dtrain=None, n_
 
 
 def read_classmap(folder):
-    fname = os.path.join(folder,"class_map.json")
+    fname = os.path.join(folder, "class_map.json")
     if os.path.isfile(fname):
         with open(fname, "r") as f:
             return json.load(f)
@@ -119,9 +119,11 @@ def read_classmap(folder):
 def write_classmap(class2phn, folder):
     """ Write dictionary to a JSON file."""
     with open(os.path.join(folder, "class_map.json"), "w") as outfile:
-        json.dump(class2phn, outfile, indent=2)
-        outfile.write("\n")
+        out_str = json.dumps(class2phn, indent=2)
+        print("Classes are: \n" + out_str, file=sys.stderr)
+        outfile.write(out_str+"\n")
     return 0
+
 
 def test_norm_minmax():
     x = np.array([[1, 3], [2, 2]])
@@ -158,7 +160,6 @@ if __name__ == "__main__":
     if len(sys.argv) != 4 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
         print(usage)
         sys.exit(1)
-
 
     nclasses = int(sys.argv[1])
     train_inputfile = sys.argv[2]
@@ -204,10 +205,10 @@ if __name__ == "__main__":
         assert(not os.path.isfile(test_outfiles[i]))
         xtrain_c = xtrain[ytrain == ic]
         xtest_c = xtest[ytest == ic]
-        xtrain_cn, xtest_cn = normalize(xtrain_c, xtest_c)
+        #xtrain_cn, xtest_cn = normalize(xtrain_c, xtest_c)
 
-        pkl.dump(xtrain_cn, open(train_outfiles[i], "wb"))
-        pkl.dump(xtest_cn, open(test_outfiles[i], "wb"))
+        pkl.dump(xtrain_c, open(train_outfiles[i], "wb"))
+        pkl.dump(xtest_c, open(test_outfiles[i], "wb"))
 
     # Write the mapping class number <=> phoneme
     write_classmap(classmap, os.path.dirname(test_inputfile))
