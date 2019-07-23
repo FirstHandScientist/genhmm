@@ -18,8 +18,8 @@ MODELS=$(nfeats)feats/models
 LOG=$(nfeats)feats/log
 MODELS_INTERM=$(shell echo $(MODELS)/epoch{1..$(nepochs)}.mdl)
 
-training_data=$(DATA)/train$(nfeats).pkl
-testing_data=$(DATA)/test$(nfeats).pkl
+training_data=$(DATA)/train.$(nfeats).pkl
+testing_data=$(DATA)/test.$(nfeats).pkl
 
 all: train
 
