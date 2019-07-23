@@ -1,6 +1,5 @@
 import sys
 import os
-
 from functools import partial
 import pickle as pkl
 # need to import GaussianHMMclassifier to load it via pkl
@@ -38,8 +37,8 @@ def print_results(mdl_file, data_files, results):
     for res, data_f in zip(results, data_files):
         true_class = parse("{}_{}.pkl", os.path.basename(data_f[0]))[1]
         
-        print("epoch:",epoch, "class:",true_class, mdl_file, data_f[0].astype("<U"), res[0], divide(parse_(res[0].astype("<U"))), sep='\t', file=sys.stdout)
-        print("epoch:",epoch, "class:",true_class, mdl_file, data_f[1].astype("<U"), res[1], divide(parse_(res[1].astype("<U"))), sep='\t', file=sys.stdout)
+        print("epoch:", epoch, "class:", true_class, mdl_file, data_f[0].astype("<U"), res[0], divide(parse_(res[0].astype("<U"))), sep='\t', file=sys.stdout)
+        print("epoch:", epoch, "class:", true_class, mdl_file, data_f[1].astype("<U"), res[1], divide(parse_(res[1].astype("<U"))), sep='\t', file=sys.stdout)
 
     # Print total accuracy
     res = np.concatenate([np.array([parse_(r[0].astype("<U")), parse_(r[1].astype("<U"))]).T for r in results],axis=1)
@@ -78,13 +77,8 @@ if __name__ == "__main__":
 
     # Define a function for this particular HMMclassifier model
     f = partial(accuracy_fun, mdl=mdl)
-
-    # force the output type of f to an object, f_v: (str) class data file -> (object) Model accuracy
-    f_v = np.vectorize(f, otypes=["O"])
-    
-    # Call the f_v function on all class data files and transform the result from an array of object to an array of string .
-    results = f_v(data_files).astype('|S1024')
-    
+    out = [[f(data_files[i, j]) for j in range(data_files.shape[1])] for i in range(data_files.shape[0])]
+    results = np.array(out)
     print_results(mdl_file, data_files, results)
     sys.exit(0)
 
