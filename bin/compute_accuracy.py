@@ -6,33 +6,14 @@ import pickle as pkl
 from gm_hmm.src.ref_hmm import GaussianHMMclassifier
 import numpy as np
 from parse import parse
-from gm_hmm.src.utils import divide, acc_str, append_class, parse_
+from gm_hmm.src.utils import divide, acc_str, append_class, parse_, accuracy_fun
 
 import torch
 from torch.utils.data import DataLoader
 
 
-def accuracy_fun(data_file, mdl=None):
-    X = pkl.load(open(data_file, "rb"))
-    # Get the length of all the sequences
-    l = [xx.shape[0] for xx in X]
-    # zero pad data for batch training
-
-    true_class = parse("{}_{}.pkl", os.path.basename(data_file))[1]
-    out_list = [mdl.forward(x_i) for x_i in X]
-    out = np.array(out_list).transpose()
-
-    # the out here should be the shape: data_size * nclasses
-    class_hat = np.argmax(out, axis=0) + 1
-    istrue = class_hat == int(true_class)
-    print(data_file, "Done ...", "{}/{}".format(str(istrue.sum()), str(istrue.shape[0])), file=sys.stderr)
-    return "{}/{}".format(str(istrue.sum()), str(istrue.shape[0]))
-
-
-
-
 def print_results(mdl_file, data_files, results):
-    epoch=parse("epoch{}.mdl",os.path.basename(mdl_file))[0]
+    epoch = parse("epoch{}.mdl", os.path.basename(mdl_file))[0]
     # Print class by class accuracy
     for res, data_f in zip(results, data_files):
         true_class = parse("{}_{}.pkl", os.path.basename(data_f[0]))[1]

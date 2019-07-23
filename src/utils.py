@@ -2,6 +2,26 @@ import numpy as np
 import os
 import torch
 from torch.utils.data import Dataset
+import sys
+import pickle as pkl
+from parse import parse
+
+
+def accuracy_fun(data_file, mdl=None):
+    X = pkl.load(open(data_file, "rb"))
+    # Get the length of all the sequences
+    l = [xx.shape[0] for xx in X]
+    # zero pad data for batch training
+
+    true_class = parse("{}_{}.pkl", os.path.basename(data_file))[1]
+    out_list = [mdl.forward(x_i) for x_i in X]
+    out = np.array(out_list).transpose()
+
+    # the out here should be the shape: data_size * nclasses
+    class_hat = np.argmax(out, axis=0) + 1
+    istrue = class_hat == int(true_class)
+    print(data_file, "Done ...", "{}/{}".format(str(istrue.sum()), str(istrue.shape[0])), file=sys.stderr)
+    return "{}/{}".format(str(istrue.sum()), str(istrue.shape[0]))
 
 
 def acc_str(class_hat,class_true):
