@@ -7,7 +7,7 @@ import pickle as pkl
 from gm_hmm.src.ref_hmm import GaussianHMMclassifier
 import numpy as np
 from parse import parse
-from gm_hmm.src.utils import pad_data, TheDataset, divide, acc_str, append_class, parse_
+from gm_hmm.src.utils import divide, acc_str, append_class, parse_
 
 import torch
 from torch.utils.data import DataLoader

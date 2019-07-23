@@ -113,3 +113,55 @@ class Gaussian_HMM(hmm.GaussianHMM):
             #     break
 
         return self
+    
+class GMM_HMM(hmm.GMMHMM):
+    def fit(self, X, lengths=None):
+        """Estimate model parameters.
+
+        An initialization step is performed before entering the
+        EM algorithm. If you want to avoid this step for a subset of
+        the parameters, pass proper ``init_params`` keyword argument
+        to estimator's constructor.
+
+        Parameters
+        ----------
+        X : array-like, shape (n_samples, n_features)
+            Feature matrix of individual samples.
+
+        lengths : array-like of integers, shape (n_sequences, )
+            Lengths of the individual sequences in ``X``. The sum of
+            these should be ``n_samples``.
+
+        Returns
+        -------
+        self : object
+            Returns self.
+        """
+        X = check_array(X)
+        if self.iepoch == '1':
+            self._init(X, lengths=lengths)
+            self.monitor_._reset()
+        self._check()
+        for iter in range(self.n_iter):
+            stats = self._initialize_sufficient_statistics()
+            curr_logprob = 0
+            for i, j in iter_from_X_lengths(X, lengths):
+                framelogprob = self._compute_log_likelihood(X[i:j])
+                logprob, fwdlattice = self._do_forward_pass(framelogprob)
+                curr_logprob += logprob
+                bwdlattice = self._do_backward_pass(framelogprob)
+                posteriors = self._compute_posteriors(fwdlattice, bwdlattice)
+                self._accumulate_sufficient_statistics(
+                    stats, X[i:j], framelogprob, posteriors, fwdlattice,
+                    bwdlattice)
+
+            # XXX must be before convergence check, because otherwise
+            #     there won't be any updates for the case ``n_iter=1``.
+            self._do_mstep(stats)
+            
+            self.monitor_.report(curr_logprob)
+            # if self.monitor_.converged:
+            #     break
+
+        return self
+    

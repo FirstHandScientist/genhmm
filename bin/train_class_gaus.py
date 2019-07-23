@@ -6,39 +6,10 @@ import json
 import numpy as np
 import time
 from hmmlearn import hmm
-from gm_hmm.src.ref_hmm import ConvgMonitor
-from gm_hmm.src.ref_hmm import Gaussian_HMM
+from gm_hmm.src.ref_hmm import Gaussian_HMM, GMM_HMM, ConvgMonitor
 from sklearn.mixture import GaussianMixture
 from sklearn.utils import check_random_state
 
-
-
-
-def create_random_gmm(n_mix, n_features, covariance_type):
-    g = GaussianMixture(n_mix, covariance_type=covariance_type)
-    g.means_ = np.random.randn(n_mix, n_features) * 0.01
-    g.covars_ = make_covar_matrix(covariance_type, n_mix, n_features)
-    g.weights_ = np.ones(n_mix) / n_mix
-    return g
-
-def make_covar_matrix(covariance_type, n_components, n_features,
-                      random_state=None):
-    mincv = 0.1
-    prng = check_random_state(random_state)
-    if covariance_type == 'spherical':
-        return (mincv + mincv * prng.random_sample((n_components,))) ** 2
-    elif covariance_type == 'tied':
-        return (make_spd_matrix(n_features)
-                + mincv * np.eye(n_features))
-    elif covariance_type == 'diag':
-        return (mincv + mincv *
-                prng.random_sample((n_components, n_features))) ** 2
-    elif covariance_type == 'full':
-        return np.array([
-            (make_spd_matrix(n_features, random_state=prng)
-             + mincv * np.eye(n_features))
-            for x in range(n_components)
-        ])
 
 if __name__ == "__main__":
     usage = "python bin/train_class_gmm.py data/train13.pkl models/epoch1_class1.mdlc param.json"
@@ -80,11 +51,12 @@ if __name__ == "__main__":
 
     #  Load or create model
     if epoch_str == '1':
-        # init GaussianHMM model
-        mdl = Gaussian_HMM(n_components=options["Net"]["n_states"], \
-                      covariance_type="full", tol=-np.inf, verbose=True)
-        # mdl = hmm.GaussianHMM(n_components=options["Net"]["n_states"], \
-        #                       covariance_type="full", tol=-np.inf)
+        # init GaussianHMM model or GMM_HMM model
+        # mdl = GMM_HMM(n_components=options["Net"]["n_states"], \
+        #               n_mix= 1, #options["Net"]["n_prob_components"], \
+        #               covariance_type="full", tol=-np.inf, verbose=True)
+        mdl = hmm.GaussianHMM(n_components=options["Net"]["n_states"], \
+                              covariance_type="full", tol=-np.inf, verbose=True)
         mdl.monitor_ = ConvgMonitor(mdl.tol, mdl.n_iter, mdl.verbose)
         # param setting
         mdl.startprob_ = np.ones(mdl.n_components) /mdl.n_components
@@ -92,10 +64,6 @@ if __name__ == "__main__":
                        np.random.randn(mdl.n_components, mdl.n_components) * 0.01
         
         mdl.transmat_ = tmp_transmit / tmp_transmit.sum(axis=1)
-        # mdl.gmms = [ create_random_gmm(options["Net"]["n_prob_components"], \
-        #                                options["Net"]["net_D"], \
-        #                                "diag") for _ in range(mdl.n_components)]
-        #mdl._init(xtrain, l)
 
     else:
         # Load previous model
