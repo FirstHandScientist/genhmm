@@ -87,7 +87,7 @@ class Gaussian_HMM(hmm.GaussianHMM):
             Returns self.
         """
         X = check_array(X)
-        if self.iepoch == '1':
+        if int(self.iepoch) == 1:
             self._init(X, lengths=lengths)
             self.monitor_._reset()
         self._check()

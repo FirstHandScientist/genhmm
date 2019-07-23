@@ -5,7 +5,7 @@ import pickle as pkl
 import json
 import numpy as np
 import time
-from hmmlearn import hmm
+
 from gm_hmm.src.ref_hmm import Gaussian_HMM, GMM_HMM, ConvgMonitor
 from sklearn.mixture import GaussianMixture
 from sklearn.utils import check_random_state
@@ -55,8 +55,8 @@ if __name__ == "__main__":
         # mdl = GMM_HMM(n_components=options["Net"]["n_states"], \
         #               n_mix= 1, #options["Net"]["n_prob_components"], \
         #               covariance_type="full", tol=-np.inf, verbose=True)
-        mdl = hmm.GaussianHMM(n_components=options["Net"]["n_states"], \
-                              covariance_type="full", tol=-np.inf, verbose=True)
+        mdl = Gaussian_HMM(n_components=options["Net"]["n_states"], \
+                           covariance_type="full", tol=-np.inf, verbose=True)
         mdl.monitor_ = ConvgMonitor(mdl.tol, mdl.n_iter, mdl.verbose)
         # param setting
         mdl.startprob_ = np.ones(mdl.n_components) /mdl.n_components
