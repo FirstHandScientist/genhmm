@@ -16,7 +16,7 @@ nfeats=
 DATA=$(nfeats)feats/data
 MODELS=$(nfeats)feats/models
 LOG=$(nfeats)feats/log
-MODELS_INTERM=$(shell echo $(MODELS)/epoch{1..$(nepochs)}.mdl)
+MODELS_INTERM=$(shell echo $(MODELS)/epoch{1..$(nepochs)})
 
 training_data=$(DATA)/train.$(nfeats).pkl
 testing_data=$(DATA)/test.$(nfeats).pkl
@@ -33,7 +33,8 @@ prepare_data: $(training_data) $(testing_data)
 train: 
 	for i in $(MODELS_INTERM); do \
 		if [[ `echo $${i%.*}_class* | wc -w` != $(nclasses) ]]; then rm -f $$i; fi; \
-		$(MAKE) -f Makefile_run -j 2 -s $$i; \
+		$(MAKE) -f Makefile_run -j 2 -s $$i.mdl; \
+		$(MAKE) -f Makefile_run -j 2 -s $$i.acc; \
 		sleep 2;\
 	done
 #	echo "Done" > $^
@@ -42,8 +43,8 @@ train:
 $(MODELS)/%.mdl:
 	$(PYTHON) $(BIN)/aggregate_models.py $@
 
-$(LOG)/%.acc:
-	$(PYTHON) $(BIN)/aggregate_accuracy.py $^ >> $(LOG)/class_all.log
+$(MODELS)/%.acc:
+	$(PYTHON) $(BIN)/aggregate_accuracy.py $(training_data) $(testing_data) $^ >> $(LOG)/class_all.log
 
 
 $(MODELS)/%.mdlc:
@@ -51,8 +52,8 @@ $(MODELS)/%.mdlc:
 	echo `date` ":" $(PYTHON) $(BIN)/train_class_gaus.py $(training_data) $@ >> $(logfile)
 	$(PYTHON) $(BIN)/train_class_gaus.py $(training_data) $@ >> $(logfile)
 
-$(LOG)/%.accc:
-	$(PYTHON) $(BIN)/compute_accuracy_class.py $* $(training_data) $(testing_data) $(MODELS) >> $@
+$(MODELS)/%.accc: $(MODELS)/%.mdlc
+	$(PYTHON) $(BIN)/compute_accuracy_class.py $^ $(training_data) $(testing_data) >> $@
 
 watch:
 	tail -f $(LOG)/class*.log
@@ -61,8 +62,8 @@ clean:
 	rm -f $(DATA)/train*_*.pkl
 	rm -f $(DATA)/test*_*.pkl 
 	rm -f $(DATA)/class_map.json
-	rm -f $(MODELS)/epoch*.mdl 
-	rm -f $(MODELS)/epoch*_class*.mdlc
+	rm -f $(MODELS)/epoch*.{mdl,acc} 
+	rm -f $(MODELS)/epoch*_class*.{mdlc,accc}
 	rm -f $(LOG)/class*.log
 	rm -f Makefile_run
 
