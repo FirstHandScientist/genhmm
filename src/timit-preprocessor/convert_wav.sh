@@ -13,5 +13,5 @@ fi
 data=${1}
 kaldi=${2}
 
-find ${data} -name "*.WAV" | xargs -n 1 -I '{}' ${kaldi}/tools/sph2pipe_v2.5/sph2pipe -f wav '{}' '{}'.tmp
-find ${data} -name "*.WAV" | xargs -n 1 -I '{}' mv '{}'.tmp '{}'
+find ${data} -iname "*.wav" | xargs -n 1 -I '{}' ${kaldi}/tools/sph2pipe_v2.5/sph2pipe -f wav '{}' '{}'.tmp
+find ${data} -iname "*.wav" | xargs -n 1 -I '{}' mv '{}'.tmp '{}'
