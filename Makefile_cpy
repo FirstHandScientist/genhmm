@@ -18,8 +18,8 @@ MODELS=$(nfeats)feats/models
 LOG=$(nfeats)feats/log
 MODELS_INTERM=$(shell echo $(MODELS)/epoch{1..$(nepochs)}.mdl)
 
-training_data=$(DATA)/train$(nfeats).pkl
-testing_data=$(DATA)/test$(nfeats).pkl
+training_data=$(DATA)/train.$(nfeats).pkl
+testing_data=$(DATA)/test.$(nfeats).pkl
 
 all: train
 
@@ -41,13 +41,13 @@ train:
 
 $(MODELS)/%.mdl:
 	$(PYTHON) $(BIN)/aggregate_models.py $@
-	$(PYTHON) -m cProfile -o log/acc_profile.txt $(BIN)/compute_accuracy.py $@ $(training_data) $(testing_data)  >> $(LOG)/class_all.log
+	$(PYTHON) $(BIN)/compute_accuracy.py $@ $(training_data) $(testing_data)  >> $(LOG)/class_all.log
 
 
 $(MODELS)/%.mdlc:
 	$(eval logfile=$(LOG)/`basename $@ | sed -e 's/^.*\(class\)/\1/g' -e 's/.mdlc/.log'/g`)
-	echo `date` ":" $(PYTHON) $(BIN)/train_class.py $(training_data) $@ >> $(logfile)
-	$(PYTHON) $(BIN)/train_class.py $(training_data) $@ >> $(logfile)
+	echo `date` ":" $(PYTHON) $(BIN)/train_class_gaus.py $(training_data) $@ >> $(logfile)
+	$(PYTHON) $(BIN)/train_class_gaus.py $(training_data) $@ >> $(logfile)
 
 watch:
 	tail -f $(LOG)/class*.log
