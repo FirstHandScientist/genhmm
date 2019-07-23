@@ -56,7 +56,6 @@ if __name__ == "__main__":
     outfile = args.outfile
 
 
-    timit_folder = "/home/antoine/Documents/projects/asr/gm-hmm/data/timit"
     fname_cb = "TIMIT-61.codebook"
 
     # Now we must have the phonemes corresponding the the MFCC for each utterance
