@@ -4,10 +4,10 @@ SHELL=/bin/bash
 ######
 
 
-PROJECT_ROOT=/home/antoine/Documents/projects/asr
+PROJECT_ROOT=.
 KALDI_ROOT=$(PROJECT_ROOT)/kaldi
-TIMIT_ROOT=$(PROJECT_ROOT)/gm_hmm/data/TIMIT
-DATA_OUT=$(PROJECT_ROOT)/gm_hmm/data
+TIMIT_ROOT=$(PROJECT_ROOT)/raw/TIMIT
+DATA_OUT=$(PROJECT_ROOT)/data
 
 
 #####
