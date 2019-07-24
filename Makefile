@@ -62,7 +62,7 @@ train: prepare_data
 $(MODELS)/%.mdl: $(mdl_dep)
 	$(PYTHON) $(BIN)/aggregate_models.py $@
 
-$(MODELS)/%.acc: $(mdl_dep)
+$(MODELS)/%.acc: $(acc_dep)
 	$(PYTHON) $(BIN)/aggregate_accuracy.py $(training_data) $(testing_data) $^ >> $(LOG)/class_all.log
 
 
