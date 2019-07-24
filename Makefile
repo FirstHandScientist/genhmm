@@ -35,12 +35,14 @@ testing_data=$(DATA)/test.$(nfeats).pkl
 mdl_dep=$(shell echo $(MODELS)/%_class{1..$(nclasses)}.mdlc)
 acc_dep=$(shell echo $(MODELS)/%_class{1..$(nclasses)}.accc)
 
+
+all: train
+
+
 test:
 	echo $(mdl_dep)
 	echo $(acc_dep)
 
-
-all: train
 
 init:
 	mkdir -p $(MODELS) $(LOG) $(DATA)
