@@ -4,8 +4,10 @@ import torch
 from parse import parse
 import pickle as pkl
 from gm_hmm.src.genHMM import load_model
-from gm_hmm.src.utils import append_class, accuracy_fun, accuracy_fun_torch, divide, parse_
+from gm_hmm.src.utils import append_class, accuracy_fun, accuracy_fun_torch, divide, parse_, get_freer_gpu
 from functools import partial
+import time
+import numpy as np
 
 if __name__ == "__main__":
     usage = "bin/compute_accuracy_class.py exp/gaus/13feats/models/epoch2_class1.mdlc exp/gaus/13feats/data/train.13.pkl exp/gaus/13feats/data/test.13.pkl"
