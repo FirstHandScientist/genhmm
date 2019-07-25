@@ -15,7 +15,7 @@
         "device": "cpu",
         "lr": 0.001,
         "net_H": 64,
-        "net_D": 14,
+        "net_D": 40,
         "net_nchain": 4,
         "mask_type": "cross",
         "startprob_type": "uniform",

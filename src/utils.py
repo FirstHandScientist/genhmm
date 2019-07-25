@@ -2,6 +2,7 @@ import numpy as np
 import os
 import torch
 from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
 import sys
 import pickle as pkl
 from parse import parse
@@ -23,6 +24,27 @@ def accuracy_fun(data_file, mdl=None):
     print(data_file, "Done ...", "{}/{}".format(str(istrue.sum()), str(istrue.shape[0])), file=sys.stderr)
     return "{}/{}".format(str(istrue.sum()), str(istrue.shape[0]))
 
+def accuracy_fun_torch(data_file, mdl=None):
+    X = pkl.load(open(data_file, "rb"))
+    # Get the length of all the sequences
+    l = [xx.shape[0] for xx in X]
+    # zero pad data for batch training
+    max_len_ = max([xx.shape[0] for xx in X])
+    x_padded = pad_data(X, max_len_)
+    batchdata = DataLoader(dataset=TheDataset(x_padded,
+                                              lengths=l,
+                                              device=mdl.hmms[0].device),
+                           batch_size=512, shuffle=True)
+    
+    true_class = parse("{}_{}.pkl", os.path.basename(data_file))[1]
+    out_list = [mdl.forward(x) for x in batchdata]
+    out = torch.cat(out_list, dim=1)
+
+    # the out here should be the shape: data_size * nclasses
+    class_hat = torch.argmax(out, dim=0) + 1
+    print(data_file, "Done ...", "{}".format(acc_str(class_hat, true_class)), file=sys.stderr)
+
+    return acc_str(class_hat, true_class)
 
 def acc_str(class_hat,class_true):
     istrue = class_hat == int(class_true)

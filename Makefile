@@ -17,7 +17,7 @@ ifndef nclasses
 	nclasses=2
 endif
 ifndef nfeats
-	nfeats=13
+	nfeats=39
 endif
 ifndef j
 	j=2
