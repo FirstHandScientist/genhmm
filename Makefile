@@ -23,10 +23,16 @@ ifndef j
 	j=2
 endif
 
+ifndef model
+	model=gaus
+endif
 
-DATA=$(nfeats)feats/data
-MODELS=$(nfeats)feats/models
-LOG=$(nfeats)feats/log
+EXP=exp/$(model)
+DATA=$(EXP)/$(nfeats)feats/data
+MODELS=$(EXP)/$(nfeats)feats/models
+LOG=$(EXP)/$(nfeats)feats/log
+
+
 MODELS_INTERM=$(shell echo $(MODELS)/epoch{1..$(nepochs)})
 
 training_data=$(DATA)/train.$(nfeats).pkl
@@ -70,8 +76,8 @@ $(MODELS)/%.acc: $(acc_dep)
 
 $(MODELS)/%.mdlc:
 	$(eval logfile=$(LOG)/`basename $@ | sed -e 's/^.*\(class\)/\1/g' -e 's/.mdlc/.log'/g`)
-	echo `date` ":" $(PYTHON) $(BIN)/train_class_gaus.py $(training_data) $@ >> $(logfile)
-	$(PYTHON) $(BIN)/train_class_gaus.py $(training_data) $@ >> $(logfile)
+	echo `date` ":" $(PYTHON) $(BIN)/train_class_$(model).py $(training_data) $@ >> $(logfile)
+	$(PYTHON) $(BIN)/train_class_$(model).py $(training_data) $@ >> $(logfile)
 
 $(MODELS)/%.accc: $(MODELS)/%.mdlc
 	$(PYTHON) $(BIN)/compute_accuracy_class.py $^ $(training_data) $(testing_data) >> $@
