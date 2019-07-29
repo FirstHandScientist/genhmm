@@ -175,6 +175,8 @@ class GenHMM(torch.nn.Module):
         # initial an old networks for posterior computations with the same sturcture
         self.old_networks = [RealNVP(nets, masks, prior) for _ in range(self.n_prob_components*self.n_states)]
         self.old_networks = np.array(self.old_networks).reshape(self.n_states, self.n_prob_components)
+        self.optimizer = torch.optim.Adam(
+            sum([[p for p in flow.parameters() if p.requires_grad == True] for flow in self.networks.reshape(-1).tolist()], []), lr=self.lr)
         return self
     
     def _update_old_networks(self):
@@ -183,6 +185,17 @@ class GenHMM(torch.nn.Module):
             for j in range(self.n_prob_components):
                 self.old_networks[i,j].load_state_dict( self.networks[i,j].state_dict() )
         return self
+
+    def _affirm_networks_update(self):
+        """affirm the parameters in self.networks are the same as self.old_networks"""
+        
+        for i in range(self.n_states):
+            for j in range(self.n_prob_components):
+                state_dict = self.networks[i,j].state_dict()
+                for key, value in state_dict.items():
+                    assert self.old_networks[i,j].state_dict()[key] == value
+        return self
+        
     
     def pushto(self, device):
         for s in range(self.n_states):
@@ -489,8 +502,8 @@ class GenHMM(torch.nn.Module):
                                           global_step=self.global_step,
                                           minimum=1e-4,
                                           anneal_rate=0.98)
-        optimizer = torch.optim.Adam(
-            sum([[p for p in flow.parameters() if p.requires_grad == True] for flow in self.networks.reshape(-1).tolist()], []), lr=ada_lr)
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = ada_lr
         # total number of sequences
         n_sequences = len(traindata.dataset)
         for i in range(self.em_skip):
@@ -507,11 +520,11 @@ class GenHMM(torch.nn.Module):
             total_logprob = 0
             for b, data in enumerate(traindata):
                 # start = dt.now()
-                optimizer.zero_grad()            
+                self.optimizer.zero_grad()            
                 loss, logprob_ = self.forward(data, testing=False)
                 loss.backward()
             
-                optimizer.step()
+                self.optimizer.step()
                 total_loss += loss.detach().data
                 total_logprob += logprob_
             
@@ -552,6 +565,7 @@ class GenHMM(torch.nn.Module):
 
         # update output probabilistic model, networks here
         self._update_old_networks()
+        
         
         # store the latest NLL of the updated GenHMM model
         log_p_all = torch.cat(list(map(self.pred_score, traindata)))
