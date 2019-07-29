@@ -409,16 +409,11 @@ class GenHMM(torch.nn.Module):
 
         # TODO: some parallelization here...
         for s in range(self.n_states):
-            loglh_sk = [0 for _ in range(self.n_prob_components)]
 
-            for k in range(self.n_prob_components):
-                loglh_sk[k] = networks[s, k].log_prob(x, x_mask).reshape(batch_size, 1, -1)/x.size(2)
-                #assert((loglh_sk[k] <= 0).all())
-
-
-            ll = torch.cat(loglh_sk, dim=1)
-            local_loglh_sk[:, :, s, :] = ll.transpose(1, 2)
-            llh[:, :, s] = (self.logPIk_s[s].reshape(1, self.n_prob_components, 1) + ll).detach().sum(1)
+            loglh_sk = [networks[s, k].log_prob(x, x_mask)/x.size(2) for k in range(self.n_prob_components)]
+            ll = torch.stack(loglh_sk).permute(1,2,0)
+            local_loglh_sk[:, :, s, :] = ll
+            llh[:, :, s] = torch.logsumexp((self.logPIk_s[s].reshape(1, 1, self.n_prob_components) + ll).detach(), dim=2)
         return llh, local_loglh_sk
 
 
