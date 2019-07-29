@@ -36,19 +36,25 @@ if __name__ == "__main__":
     elif model_type == 'gen':
         mdl = load_model(mdl_file)
         if torch.cuda.is_available():
-            for i in range(4):
-                try:
-                    time.sleep(np.random.randint(10))
-                    device = torch.device('cuda:{}'.format(int(get_freer_gpu()) ))
-                    # print("Try to push to device: {}".format(device))
-                    mdl.device = device
-                    mdl.pushto(mdl.device)   
-                    break
-                except:
-                    # if push error (maybe memory overflow, try again)
-                    # print("Push to device cuda:{} fail, try again ...")
-                    continue
-        
+            if not options["Mul_gpu"]:
+                # default case, only one gpu
+                device = torch.device('cuda')
+                mdl.device = device
+                mdl.pushto(mdl.device)   
+            else:
+                for i in range(4):
+                    try:
+                        time.sleep(np.random.randint(10))
+                        device = torch.device('cuda:{}'.format(int(get_freer_gpu()) ))
+                        # print("Try to push to device: {}".format(device))
+                        mdl.device = device
+                        mdl.pushto(mdl.device)   
+                        break
+                    except:
+                        # if push error (maybe memory overflow, try again)
+                        # print("Push to device cuda:{} fail, try again ...")
+                        continue
+
         f = lambda x: accuracy_fun_torch(x, mdl=mdl)
 
 
