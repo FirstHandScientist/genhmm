@@ -216,7 +216,7 @@ class GenHMM(torch.nn.Module):
         self.transmat_ = self.transmat_.to(device)
         self.pi = self.pi.to(device)
         self.logPIk_s = self.logPIk_s.to(device)
-
+        
         self.device = device
         return self
 
@@ -499,6 +499,7 @@ class GenHMM(torch.nn.Module):
                                           anneal_rate=0.98)
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = ada_lr
+        self.optimizer.load_state_dict(self.optimizer.state_dict())
         # total number of sequences
         n_sequences = len(traindata.dataset)
         for i in range(self.em_skip):
