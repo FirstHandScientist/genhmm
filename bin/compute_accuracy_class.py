@@ -19,6 +19,12 @@ if __name__ == "__main__":
     # read the model type, 'gen' or 'gaus'
     model_type = sys.argv[1].split(os.sep)[1]
     
+    # Todo: maybe give choice here
+    # load the parameters
+    with open("default.json") as f_in:
+        options = json.load(f_in)
+
+    
     training_data_file = sys.argv[2]
     testing_data_file = sys.argv[3]
 
