@@ -205,7 +205,7 @@ if __name__ == "__main__":
         assert(not os.path.isfile(test_outfiles[i]))
         xtrain_c = xtrain[ytrain == ic]
         xtest_c = xtest[ytest == ic]
-        #xtrain_cn, xtest_cn = normalize(xtrain_c, xtest_c)
+        xtrain_cn, xtest_cn = normalize(xtrain_c, xtest_c)
 
         pkl.dump(xtrain_c, open(train_outfiles[i], "wb"))
         pkl.dump(xtest_c, open(test_outfiles[i], "wb"))
