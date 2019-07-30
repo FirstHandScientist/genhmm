@@ -12,7 +12,7 @@ from sklearn.utils import check_random_state
 
 
 if __name__ == "__main__":
-    usage = "python bin/train_class_gmm.py data/train13.pkl models/epoch1_class1.mdlc param.json"
+    usage = "python bin/train_class_gaus.py exp/gaus/39feats/data/train.13.pkl exp/gaus/39feats/models/epoch1_class1.mdlc param.json"
     if len(sys.argv) < 3 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
         print(usage)
         sys.exit(1)
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     #  Load data
     
     xtrain_ = pkl.load(open(train_class_inputfile, "rb"))
-    xtrain = [x for x in xtrain_]
+    xtrain = [x[:,1:] for x in xtrain_]
     xtrain = np.concatenate(xtrain, axis=0)
     #xtrain = xtrain[:100]
     # Get the length of all the sequences
@@ -51,14 +51,16 @@ if __name__ == "__main__":
 
     #  Load or create model
     if epoch_str == '1':
-        # init GaussianHMM model or GMM_HMM model
-        # mdl = GMM_HMM(n_components=options["Net"]["n_states"], \
-        #               n_mix= 1, #options["Net"]["n_prob_components"], \
-        #               covariance_type="full", tol=-np.inf, verbose=True)
-        mdl = Gaussian_HMM(n_components=options["Net"]["n_states"], \
-                           covariance_type="full", tol=-np.inf, verbose=True)
+        # init GaussianHMM model or GMM_HMM model by disable/comment one and enable another model. For GMM_HMM, we are now just maintaining diag type of covariance.
+        mdl = GMM_HMM(n_components=options["Net"]["n_states"], \
+                      n_mix= 2, #options["Net"]["n_prob_components"], \
+                      covariance_type="diag", tol=-np.inf, \
+                      init_params="stwmc", params="", verbose=True)
+        # mdl = Gaussian_HMM(n_components=options["Net"]["n_states"], \
+        #                    covariance_type="full", tol=-np.inf, verbose=True)
         mdl.monitor_ = ConvgMonitor(mdl.tol, mdl.n_iter, mdl.verbose)
         # param setting
+        # There is self._init(X, lengths=lengths) in fit method, which would initialize the following parameters according to input data. So The following initialization would be overwritten (thus can be commented out) if self._init is executed in fit.
         mdl.startprob_ = np.ones(mdl.n_components) /mdl.n_components
         tmp_transmit = np.ones(mdl.n_components, mdl.n_components) + \
                        np.random.randn(mdl.n_components, mdl.n_components) * 0.01

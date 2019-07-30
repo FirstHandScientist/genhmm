@@ -3,7 +3,7 @@ import pickle as pkl
 import os
 import glob
 from parse import parse
-
+from gm_hmm.src.genHMM import GenHMMclassifier, save_model
 from gm_hmm.src.ref_hmm import GaussianHMMclassifier
 
 if __name__ == "__main__":
@@ -18,13 +18,19 @@ if __name__ == "__main__":
 
     # Find the class digit
     get_sort_key = lambda x: parse("{}class{:d}.mdlc",x)[1]
+    # find the model used, 'gen' or 'gaus'
+    model_type = out_mdl_file.split(os.sep)[1]
 
     # Find all trained classes submodels
     in_mdlc_files = sorted(glob.glob(out_mdl_file.replace(".mdl", "_class*.mdlc")), key=get_sort_key)
-    mdl = GaussianHMMclassifier(mdlc_files=in_mdlc_files)
-    assert(all([int(h.iclass) == int(i)+1 for i,h in enumerate(mdl.hmms)]))
+    if model_type == 'gaus':
+        mdl = GaussianHMMclassifier(mdlc_files=in_mdlc_files)
+        assert(all([int(h.iclass) == int(i)+1 for i,h in enumerate(mdl.hmms)]))
+        with open(out_mdl_file, "wb") as handle:
+            pkl.dump(mdl, handle)
     
-    with open(out_mdl_file, "wb") as handle:
-        pkl.dump(mdl, handle)
-    
+    elif model_type == 'gen':
+        mdl = GenHMMclassifier(mdlc_files=in_mdlc_files)
+        assert(all([int(h.iclass) == int(i)+1 for i,h in enumerate(mdl.hmms)]))
+        save_model(mdl, out_mdl_file)
     sys.exit(0)
