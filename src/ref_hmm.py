@@ -159,7 +159,7 @@ class GMM_HMM(hmm.GMMHMM):
                 curr_logprob += logprob
                 # if curr_logprob < 0:
                 #     print("negative log likelihood")
-                    
+
                 bwdlattice = self._do_backward_pass(framelogprob)
                 posteriors = self._compute_posteriors(fwdlattice, bwdlattice)
                 stats = self._accumulate_sufficient_statistics(
@@ -206,7 +206,6 @@ class GMM_HMM(hmm.GMMHMM):
     def _accumulate_sufficient_statistics(self, stats, X, framelogprob,
                                           post_comp, fwdlattice, bwdlattice):
 
-
         super(hmm.GMMHMM, self)._accumulate_sufficient_statistics(
             stats, X, framelogprob, post_comp, fwdlattice, bwdlattice
         )
@@ -221,18 +220,20 @@ class GMM_HMM(hmm.GMMHMM):
 
         prob_mix_sum = np.sum(prob_mix, axis=2)
         post_mix = prob_mix / prob_mix_sum[:, :, np.newaxis]
-        post_comp_mix = post_comp[:, :, np.newaxis] * post_mix
-        stats['post_comp_mix'] += post_comp_mix.sum(axis=0)
+        gamma_imt = post_comp[:, :, np.newaxis] * post_mix
+        gamma_im = gamma_imt.sum(0)
+        stats['post_comp_mix'] += gamma_im / gamma_im.sum(1)[:, np.newaxis]
 
-        stats['weighted_mean_nomer'] += np.matmul(post_comp_mix.transpose(1, 2, 0), X)
+        new_mu = np.matmul(gamma_imt.transpose(1, 2, 0), X) / gamma_im[..., np.newaxis]
+        stats['weighted_mean_nomer'] += new_mu
 
         # stats['post_mix_sum'] = np.sum(post_comp_mix, axis=0)
         # stats['post_sum'] = np.sum(post_comp, axis=0)
 
-        centered = X[:, np.newaxis, np.newaxis, :] - self.means_
+        centered = X[:, np.newaxis, np.newaxis, :] - new_mu[np.newaxis, ...]
         centered2 = centered ** 2
-        stats["cov_numer"] = np.einsum('ijk,ijkl->jkl',\
-                                       post_comp_mix, centered2)
+        stats["cov_numer"] += np.einsum('ijk,ijkl->jkl',\
+                                       gamma_imt, centered2) / gamma_im[..., np.newaxis]
         return stats
 
     def _do_mstep(self, stats):
@@ -247,15 +248,15 @@ class GMM_HMM(hmm.GMMHMM):
         
         # Maximizing means
         new_means_numer = stats['weighted_mean_nomer']
-        new_means_denom = stats['post_comp_mix']
+        #new_means_denom = stats['post_comp_mix']
 
-        new_means = new_means_numer / (new_means_denom[:, :, None] + 1e-6)
+        new_means = new_means_numer #/ (new_means_denom[:, :, None] + 1e-6)
 
         if self.covariance_type == 'diag':
             # current working case
             new_cov_numer = stats["cov_numer"]
-            new_cov_denom = stats["post_comp_mix"]
-            new_cov = new_cov_numer / (new_cov_denom[:, :, None] + 1e-6)
+            #new_cov_denom = stats["post_comp_mix"]
+            new_cov = new_cov_numer #/ (new_cov_denom[:, :, None] + 1e-6)
 
         # Assigning new values to class members
         self.weights_ = new_weights
