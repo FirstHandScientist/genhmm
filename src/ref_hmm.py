@@ -138,7 +138,7 @@ class GMM_HMM(hmm.GMMHMM):
             Returns self.
         """
         X = check_array(X)
-        if self.iepoch == '1':
+        if int(self.iepoch) == 1:
             self._init(X, lengths=lengths)
             self.monitor_._reset()
         self._check()
@@ -249,10 +249,11 @@ class GMM_HMM(hmm.GMMHMM):
         except:
             print('error')
 
-        # Maximizing covariancesa
+        # ONLY diag case of co-variance is implemented now. Maximizing covariance
         
 
         if self.covariance_type == 'full':
+            # copy codo, not adapted yet
             centered = stats['centered'].reshape((
                 n_samples, self.n_components, self.n_mix, self.n_features, 1
             ))
@@ -283,12 +284,13 @@ class GMM_HMM(hmm.GMMHMM):
 
             new_cov = new_cov_numer / new_cov_denom
         elif self.covariance_type == 'diag':
-
+            # current working case
             new_cov_numer = stats["cov_numer"]
             new_cov_denom = stats["post_comp_mix"]
 
             new_cov = new_cov_numer / (new_cov_denom[:,:,None] + 1e-6)
         elif self.covariance_type == 'spherical':
+            # copy code, not imported yet
             centered_norm2 = np.sum(stats['centered'] ** 2, axis=-1)
 
             alphas = self.covars_prior

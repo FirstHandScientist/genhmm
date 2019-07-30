@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     #  Load or create model
     if epoch_str == '1':
-        # init GaussianHMM model or GMM_HMM model
+        # init GaussianHMM model or GMM_HMM model by disable/comment one and enable another model. For GMM_HMM, we are now just maintaining diag type of covariance.
         mdl = GMM_HMM(n_components=options["Net"]["n_states"], \
                       n_mix= 2, #options["Net"]["n_prob_components"], \
                       covariance_type="diag", tol=-np.inf, \
@@ -60,6 +60,7 @@ if __name__ == "__main__":
         #                    covariance_type="full", tol=-np.inf, verbose=True)
         mdl.monitor_ = ConvgMonitor(mdl.tol, mdl.n_iter, mdl.verbose)
         # param setting
+        # There is self._init(X, lengths=lengths) in fit method, which would initialize the following parameters according to input data. So The following initialization would be overwritten (thus can be commented out) if self._init is executed in fit.
         mdl.startprob_ = np.ones(mdl.n_components) /mdl.n_components
         tmp_transmit = np.ones(mdl.n_components, mdl.n_components) + \
                        np.random.randn(mdl.n_components, mdl.n_components) * 0.01
