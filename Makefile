@@ -59,7 +59,7 @@ prepare_data: $(training_data) $(testing_data)
 
 train: prepare_data 
 	for i in $(MODELS_INTERM); do \
-		if [[ `ls $${i%.*}_class*.mdlc | wc -w` != $(nclasses) ]]; then rm -f $$i.{mdl,acc}; fi; \
+		if [[ `echo $${i%.*}_class*.mdlc | wc -w` != $(nclasses) ]]; then rm -f $$i.{mdl,acc}; fi; \
 		$(MAKE) -j $(j) -s $$i.mdl; \
 		$(MAKE) -j $(j) -s $$i.acc; \
 		sleep 2;\
