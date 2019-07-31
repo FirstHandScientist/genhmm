@@ -119,7 +119,6 @@ class Gaussian_HMM(hmm.GaussianHMM):
 class GMM_HMM(hmm.GMMHMM):
     def __init__(self, *args, **kwargs):
         super(GMM_HMM, self).__init__(*args, **kwargs)
-        self.params = 'st'
         return
 
     def fit(self, X, lengths=None):
@@ -168,9 +167,9 @@ class GMM_HMM(hmm.GMMHMM):
 
             # XXX must be before convergence check, because otherwise
             #     there won't be any updates for the case ``n_iter=1``.
-            self._do_mstep(stats)
+            self._do_mstep(stats,X)
             
-            self.monitor_.report(curr_logprob)
+            self.monitor_.report(curr_logprob/stats["nobs"])
             # if self.monitor_.converged:
             #     break
 
@@ -198,9 +197,10 @@ class GMM_HMM(hmm.GMMHMM):
                  'n_samples': 0,
                  'start': np.zeros(self.n_components),
                  'trans': np.zeros((self.n_components, self.n_components)),
-                 'post_comp_mix': 0,
-                 'weighted_mean_nomer':0,
-                 'cov_numer': 0}
+                 'samples':[],
+                 'post_comp_mix': [],
+                 'post_mix_sum': [],
+                 'post_sum': []}
         return stats
 
     def _accumulate_sufficient_statistics(self, stats, X, framelogprob,
@@ -212,6 +212,8 @@ class GMM_HMM(hmm.GMMHMM):
 
         n_samples, _ = X.shape
         stats['n_samples'] += n_samples
+        stats['samples'].append(X)
+
         prob_mix = np.zeros((n_samples, self.n_components, self.n_mix))
         for p in range(self.n_components):
             log_denses = self._compute_log_weighted_gaussian_densities(X, p)
@@ -220,43 +222,57 @@ class GMM_HMM(hmm.GMMHMM):
 
         prob_mix_sum = np.sum(prob_mix, axis=2)
         post_mix = prob_mix / prob_mix_sum[:, :, np.newaxis]
-        gamma_imt = post_comp[:, :, np.newaxis] * post_mix
-        gamma_im = gamma_imt.sum(0)
-        stats['post_comp_mix'] += gamma_im / gamma_im.sum(1)[:, np.newaxis]
+        post_comp_mix = post_comp[:, :, np.newaxis] * post_mix
 
-        new_mu = np.matmul(gamma_imt.transpose(1, 2, 0), X) / gamma_im[..., np.newaxis]
-        stats['weighted_mean_nomer'] += new_mu
-
-        # stats['post_mix_sum'] = np.sum(post_comp_mix, axis=0)
-        # stats['post_sum'] = np.sum(post_comp, axis=0)
-
-        centered = X[:, np.newaxis, np.newaxis, :] - new_mu[np.newaxis, ...]
-        centered2 = centered ** 2
-        stats["cov_numer"] += np.einsum('ijk,ijkl->jkl',\
-                                       gamma_imt, centered2) / gamma_im[..., np.newaxis]
+        stats['post_comp_mix'].append(post_comp_mix)
+        stats['post_mix_sum'].append(np.sum(post_comp_mix, axis=0))
+        stats['post_sum'].append(np.sum(post_comp, axis=0))
         return stats
 
-    def _do_mstep(self, stats):
+    def _do_mstep(self, stats, X):
         super(hmm.GMMHMM, self)._do_mstep(stats)
+        post_mix_sum = np.concatenate([x[..., np.newaxis] for x in stats["post_mix_sum"]], axis=-1)
+        post_sum = np.concatenate([x[..., np.newaxis] for x in stats["post_sum"]], axis=-1)
+        post_comp_mix = np.concatenate(stats["post_comp_mix"], axis=0)
 
-        n_samples = stats['n_samples']
-        n_features = self.n_features
 
         # Maximizing weights
-        new_weights = stats['post_comp_mix']
-        normalize(new_weights, axis=1)
-        
+        alphas_minus_one = self.weights_prior - 1
+        new_weights_numer = post_mix_sum + alphas_minus_one[...,np.newaxis]
+        new_weights_denom = (
+            post_sum + np.sum(alphas_minus_one, axis=1)[..., np.newaxis]
+        )[:, np.newaxis, :]
+        new_weights = (new_weights_numer / new_weights_denom).sum(-1) / stats["nobs"]
+
+
         # Maximizing means
-        new_means_numer = stats['weighted_mean_nomer']
-        #new_means_denom = stats['post_comp_mix']
+        lambdas, mus = self.means_weight, self.means_prior
+        new_means_numer = np.einsum(
+            'ijk,il->jkl',
+            post_comp_mix, X
+        ) + lambdas[:, :, np.newaxis] * mus
+        new_means_denom = (post_mix_sum.sum(-1) + lambdas)[:, :, np.newaxis]
+        new_means = new_means_numer / new_means_denom
 
-        new_means = new_means_numer #/ (new_means_denom[:, :, None] + 1e-6)
 
-        if self.covariance_type == 'diag':
-            # current working case
-            new_cov_numer = stats["cov_numer"]
-            #new_cov_denom = stats["post_comp_mix"]
-            new_cov = new_cov_numer #/ (new_cov_denom[:, :, None] + 1e-6)
+        # Maximizing cov
+        centered_means = self.means_ - mus
+
+        centered2 = (X[:, np.newaxis, np.newaxis, :] - self.means_) ** 2
+        centered_means2 = centered_means ** 2
+
+        alphas = self.covars_prior
+        betas = self.covars_weight
+
+        new_cov_numer = np.einsum(
+            'ijk,ijkl->jkl',
+            post_comp_mix, centered2
+        ) + lambdas[:, :, np.newaxis] * centered_means2 + 2 * betas
+        new_cov_denom = (
+                post_mix_sum.sum(-1)[:, :, np.newaxis] + 1 + 2 * (alphas + 1)
+        )
+
+        new_cov = new_cov_numer / new_cov_denom
 
         # Assigning new values to class members
         self.weights_ = new_weights
