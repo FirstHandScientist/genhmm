@@ -55,7 +55,7 @@ class GenHMM(torch.nn.Module):
     def __init__(self, n_states=None, n_prob_components=None, device='cpu',\
                  dtype=torch.FloatTensor, \
                  EPS=1e-12, lr=None, em_skip=None,
-                 net_H=28, net_D=14, net_nchain=10, mask_type="cross",
+                 net_H=28, net_D=14, net_nchain=10, mask_type="cross", p_drop=0.25,
                  startprob_type="first", transmat_type="random upper triangular"):
         super(GenHMM, self).__init__()
 
@@ -74,7 +74,8 @@ class GenHMM(torch.nn.Module):
         self.init_startprob(startprob_type)
         
         # Initialize generative model networks
-        self.init_gen(H=net_H, D=net_D, nchain=net_nchain, mask_type=mask_type)
+        self.init_gen(H=net_H, D=net_D, nchain=net_nchain,
+                      mask_type=mask_type, p_drop=p_drop)
         self._update_old_networks()
         self.update_HMM = False
 
@@ -129,14 +130,16 @@ class GenHMM(torch.nn.Module):
         normalize(self.transmat_, axis=1)
         return self
 
-    def init_gen(self, H, D, nchain, mask_type="cross"):
+    def init_gen(self, H, D, nchain, mask_type="cross", p_drop=0.25):
 
         """
         Initialize HMM probabilistic model.
         """
         d = D // 2
 
-        nets = lambda: nn.Sequential(nn.Linear(d, H), nn.LeakyReLU(), nn.Linear(H, H), nn.LeakyReLU(), nn.Linear(H, D))
+        nets = lambda: nn.Sequential(nn.Linear(d, H), nn.LeakyReLU(), 
+                                     nn.Linear(H, H), nn.LeakyReLU(), 
+                                     nn.Dropout(p_drop), nn.Linear(H, D))
         # set mask
         if mask_type == "chunk":
             masks = torch.from_numpy(np.array([[0]*d + [1]*(D-d), [1]*d + [0]*(D-d)] * nchain).astype(np.uint8))
