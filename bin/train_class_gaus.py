@@ -28,18 +28,18 @@ if __name__ == "__main__":
         param_file = "default.json"
 
 
-    epoch_str, iclass_str = parse('epoch{}_class{}.mdlc',os.path.basename(out_mdl))
+    epoch_str, iclass_str = parse('epoch{}_class{}.mdlc', os.path.basename(out_mdl))
     train_class_inputfile = train_inputfile.replace(".pkl", "_{}.pkl".format(iclass_str))
 
     #  Load data
     
     xtrain_ = pkl.load(open(train_class_inputfile, "rb"))
-    xtrain = [x[:,1:] for x in xtrain_]
+    xtrain = [x[:, 1:] for x in xtrain_]
     xtrain = np.concatenate(xtrain, axis=0)
     #xtrain = xtrain[:100]
     # Get the length of all the sequences
     l = [x.shape[0] for x in xtrain_]
-
+    print(iclass_str,l[:10],file=sys.stderr)
     # load the parameters
     with open(param_file) as f_in:
         options = json.load(f_in)
@@ -53,19 +53,13 @@ if __name__ == "__main__":
     if epoch_str == '1':
         # init GaussianHMM model or GMM_HMM model by disable/comment one and enable another model. For GMM_HMM, we are now just maintaining diag type of covariance.
         mdl = GMM_HMM(n_components=options["Net"]["n_states"], \
-                      n_mix= 2, #options["Net"]["n_prob_components"], \
+                      n_mix=2, #options["Net"]["n_prob_components"], \
                       covariance_type="diag", tol=-np.inf, \
-                      init_params="stwmc", params="", verbose=True)
+                      init_params="stwmc", params="st", verbose=True)
+
         # mdl = Gaussian_HMM(n_components=options["Net"]["n_states"], \
         #                    covariance_type="full", tol=-np.inf, verbose=True)
         mdl.monitor_ = ConvgMonitor(mdl.tol, mdl.n_iter, mdl.verbose)
-        # param setting
-        # There is self._init(X, lengths=lengths) in fit method, which would initialize the following parameters according to input data. So The following initialization would be overwritten (thus can be commented out) if self._init is executed in fit.
-        mdl.startprob_ = np.ones(mdl.n_components) /mdl.n_components
-        tmp_transmit = np.ones(mdl.n_components, mdl.n_components) + \
-                       np.random.randn(mdl.n_components, mdl.n_components) * 0.01
-        
-        mdl.transmat_ = tmp_transmit / tmp_transmit.sum(axis=1)
 
     else:
         # Load previous model
@@ -74,7 +68,7 @@ if __name__ == "__main__":
     mdl.iepoch = epoch_str
     mdl.iclass = iclass_str
     
-    print("epoch:{}\tclass:{}\t.".format(epoch_str,iclass_str), file=sys.stdout)
+    print("epoch:{}\tclass:{}\t.".format(epoch_str, iclass_str), file=sys.stdout)
     
     # zero pad data for batch training
     # niter counts the number of em steps before saving a model checkpoint
@@ -84,7 +78,6 @@ if __name__ == "__main__":
     # mdl.number_training_data = len(xtrain)
     
     mdl.n_iter = niter
-    
     mdl.fit(xtrain, lengths=l)
 
     # Push back to cpu for compatibility when GPU unavailable.

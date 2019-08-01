@@ -207,8 +207,8 @@ if __name__ == "__main__":
         xtest_c = xtest[ytest == ic]
         xtrain_cn, xtest_cn = normalize(xtrain_c, xtest_c)
 
-        pkl.dump(xtrain_c, open(train_outfiles[i], "wb"))
-        pkl.dump(xtest_c, open(test_outfiles[i], "wb"))
+        pkl.dump(xtrain_cn, open(train_outfiles[i], "wb"))
+        pkl.dump(xtest_cn, open(test_outfiles[i], "wb"))
 
     # Write the mapping class number <=> phoneme
     write_classmap(classmap, os.path.dirname(test_inputfile))
