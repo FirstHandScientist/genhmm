@@ -146,6 +146,8 @@ class GMM_HMM(hmm.GMMHMM):
         X = check_array(X)
         if int(self.iepoch) == 1:
             self._init(X, lengths=lengths)
+            self.means_ += 0.1 * np.random.randn(*self.means_.shape)
+            self.covars_ += 0.1 * np.abs(np.random.randn(*self.covars_.shape))
             self.monitor_._reset()
 
         self._check()
@@ -174,7 +176,7 @@ class GMM_HMM(hmm.GMMHMM):
             #     break
 
         return self
-
+   
     def _initialize_sufficient_statistics(self):
         """Initializes sufficient statistics required for M-step.
         The method is *pure*, meaning that it doesn't change the state of
@@ -242,7 +244,7 @@ class GMM_HMM(hmm.GMMHMM):
         new_weights_denom = (
             post_sum + np.sum(alphas_minus_one, axis=1)[..., np.newaxis]
         )[:, np.newaxis, :]
-        new_weights = (new_weights_numer / new_weights_denom).sum(-1) / stats["nobs"]
+        new_weights = new_weights_numer.sum(-1) / new_weights_denom.sum(-1)
 
 
         # Maximizing means
@@ -258,7 +260,7 @@ class GMM_HMM(hmm.GMMHMM):
         # Maximizing cov
         centered_means = self.means_ - mus
 
-        centered2 = (X[:, np.newaxis, np.newaxis, :] - self.means_) ** 2
+        centered2 = (X[:, np.newaxis, np.newaxis, :] - new_means) ** 2
         centered_means2 = centered_means ** 2
 
         alphas = self.covars_prior
@@ -275,6 +277,11 @@ class GMM_HMM(hmm.GMMHMM):
         new_cov = new_cov_numer / new_cov_denom
 
         # Assigning new values to class members
-        self.weights_ = new_weights
-        self.means_ = new_means
-        self.covars_ = new_cov
+        if 'w' in self.params:
+            self.weights_ = new_weights
+
+        if 'm' in self.params:
+            self.means_ = new_means
+
+        if 'c' in self.params:
+            self.covars_ = new_cov
