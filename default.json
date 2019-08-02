@@ -20,5 +20,11 @@
         "mask_type": "cross",
         "startprob_type": "uniform",
         "transmat_type": "ergodic"
+    },
+    "GMM":
+    {
+        "n_states": 3,
+        "n_prob_components": 2
+     
     }
 }

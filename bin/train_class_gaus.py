@@ -39,13 +39,13 @@ if __name__ == "__main__":
     #xtrain = xtrain[:100]
     # Get the length of all the sequences
     l = [x.shape[0] for x in xtrain_]
-    print(iclass_str,l[:10],file=sys.stderr)
+    
     # load the parameters
     with open(param_file) as f_in:
         options = json.load(f_in)
 
     # adoptive to set number of states
-    options["Net"]["n_states"] = np.clip(int(np.floor(np.mean(l)/2)),
+    options["GMM"]["n_states"] = np.clip(int(np.floor(np.mean(l)/2)),
                                          options["Train"]["n_states_min"],
                                          options["Train"]["n_states_max"])
 
@@ -53,9 +53,9 @@ if __name__ == "__main__":
     if epoch_str == '1':
         # init GaussianHMM model or GMM_HMM model by disable/comment one and enable another model. For GMM_HMM, we are now just maintaining diag type of covariance.
         mdl = GMM_HMM(n_components=options["Net"]["n_states"], \
-                      n_mix=2, #options["Net"]["n_prob_components"], \
+                      n_mix=options["GMM"]["n_prob_components"], \
                       covariance_type="diag", tol=-np.inf, \
-                      init_params="stwmc", params="st", verbose=True)
+                      init_params="stwmc", params="stwmc", verbose=True)
 
         # mdl = Gaussian_HMM(n_components=options["Net"]["n_states"], \
         #                    covariance_type="full", tol=-np.inf, verbose=True)
