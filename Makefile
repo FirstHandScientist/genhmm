@@ -27,6 +27,10 @@ ifndef model
 	model=gaus
 endif
 
+ifndef dest
+	dest=default
+endif
+
 EXP=exp/$(model)
 DATA=$(EXP)/$(nfeats)feats/data
 MODELS=$(EXP)/$(nfeats)feats/models
@@ -48,6 +52,23 @@ all: train
 test:
 	echo $(mdl_dep)
 	echo $(acc_dep)
+
+clone:
+	mkdir -p $(dest)/exp/gaus/13feats/data 
+	mkdir -p $(dest)/exp/gen/13feats/data 
+	mkdir -p $(dest)/exp/gaus/39feats/data 
+	mkdir -p $(dest)/exp/gen/39feats/data 
+	ln -s `pwd`/src $(dest)/src
+	ln -s `pwd`/bin $(dest)/bin
+	cp Makefile $(dest)/
+	cp default.json $(dest)/
+	cp exp/gaus/13feats/data/*.pkl $(dest)/exp/gaus/13feats/data/
+	cp exp/gaus/39feats/data/*.pkl $(dest)/exp/gaus/39feats/data/
+	cp exp/gen/13feats/data/*.pkl $(dest)/exp/gen/13feats/data/
+	cp exp/gen/39feats/data/*.pkl $(dest)/exp/gen/39feats/data/
+
+erase:
+	rm -rf $(dest)
 
 
 init:
