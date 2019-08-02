@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     models_dir, epoch, iclass = parse("{}/epoch{:d}_class{:d}.mdlc", sys.argv[1])
     # read the model type, 'gen' or 'gaus'
-    model_type = parse("{}/exp/{}/{:d}feats/{}", os.getcwd())[1]
+    model_type = sys.argv[1].split(os.sep)[1]
     
     # Todo: maybe give choice here
     # load the parameters

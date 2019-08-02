@@ -8,7 +8,7 @@ SRC=src
 BIN=bin
 DATA_tmp=data
 MODELS_tmp=models
-
+LOG=log
 
 ifndef nepochs
 	nepochs=10
@@ -26,18 +26,12 @@ endif
 ifndef model
 	model=gaus
 endif
-ifndef exp_name
-	exp_name=default
-endif
 
 EXP=exp/$(model)
-EXP_DIR=$(EXP)/$(nfeats)feats/$(exp_name)
+DATA=$(EXP)/$(nfeats)feats/data
+MODELS=$(EXP)/$(nfeats)feats/models
+LOG=$(EXP)/$(nfeats)feats/log
 
-MODELS=models
-DATA=data
-LOG=log
-init: MODELS=$(EXP_DIR)/models
-init: LOG=$(EXP_DIR)/log
 
 MODELS_INTERM=$(shell echo $(MODELS)/epoch{1..$(nepochs)})
 
@@ -56,25 +50,19 @@ test:
 	echo $(acc_dep)
 
 
-
 init:
-	mkdir -p $(MODELS) $(LOG)
-	ln -s $(realpath data) $(EXP_DIR)/data
-	ln -s $(realpath bin) $(EXP_DIR)/bin
-	ln -s $(realpath src) $(EXP_DIR)/src
-	cp default.json Makefile $(EXP_DIR)
+	mkdir -p $(MODELS) $(LOG) $(DATA)
 
 
 prepare_data: $(training_data) $(testing_data)
 	$(PYTHON) $(BIN)/prepare_data.py $(nclasses) $^
 
-train: prepare_data
-	echo $(DATA) $(MODELS) $(LOG)
+train: prepare_data 
 	for i in $(MODELS_INTERM); do \
 		if [[ `echo $${i%.*}_class*.mdlc | wc -w` != $(nclasses) ]]; then rm -f $$i.{mdl,acc}; fi; \
 		$(MAKE) -j $(j) -s $$i.mdl; \
-	 	$(MAKE) -j $(j) -s $$i.acc; \
-	 	sleep 2;\
+		$(MAKE) -j $(j) -s $$i.acc; \
+		sleep 2;\
 	done
 #	echo "Done" > $^
 
@@ -98,9 +86,9 @@ watch:
 	tail -f $(LOG)/class*.log
 
 clean:
-#	rm -f $(DATA)/train*_*.pkl
-#	rm -f $(DATA)/test*_*.pkl 
-#	rm -f $(DATA)/class_map.json
+	rm -f $(DATA)/train*_*.pkl
+	rm -f $(DATA)/test*_*.pkl 
+	rm -f $(DATA)/class_map.json
 	rm -f $(MODELS)/epoch*.{mdl,acc} 
 	rm -f $(MODELS)/epoch*_class*.{mdlc,accc}
 	rm -f $(LOG)/class*.log

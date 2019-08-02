@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # Find the class digit
     get_sort_key = lambda x: parse("{}class{:d}.mdlc",x)[1]
     # find the model used, 'gen' or 'gaus'
-    model_type = parse("{}/exp/{}/{:d}feats/{}", os.getcwd())[1]
+    model_type = out_mdl_file.split(os.sep)[1]
 
     # Find all trained classes submodels
     in_mdlc_files = sorted(glob.glob(out_mdl_file.replace(".mdl", "_class*.mdlc")), key=get_sort_key)
