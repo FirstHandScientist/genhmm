@@ -24,7 +24,8 @@
     "GMM":
     {
         "n_states": 3,
+        "n_states_min": 3,
+        "n_states_max": 5,
         "n_prob_components": 2
-     
     }
 }

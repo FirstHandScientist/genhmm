@@ -46,8 +46,8 @@ if __name__ == "__main__":
 
     # adoptive to set number of states
     options["GMM"]["n_states"] = np.clip(int(np.floor(np.mean(l)/2)),
-                                         options["Train"]["n_states_min"],
-                                         options["Train"]["n_states_max"])
+                                         options["GMM"]["n_states_min"],
+                                         options["GMM"]["n_states_max"])
 
     #  Load or create model
     if epoch_str == '1':
