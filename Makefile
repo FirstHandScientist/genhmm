@@ -62,7 +62,8 @@ init:
 	ln -s $(realpath data) $(EXP_DIR)/data
 	ln -s $(realpath bin) $(EXP_DIR)/bin
 	ln -s $(realpath src) $(EXP_DIR)/src
-	cp default.json Makefile $(EXP_DIR)
+	cp default.json $(EXP_DIR)
+	sed 's/model=.*/model=$(model)/' Makefile > $(EXP_DIR)/Makefile
 
 
 prepare_data: $(training_data) $(testing_data)
