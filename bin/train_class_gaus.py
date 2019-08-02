@@ -55,7 +55,7 @@ if __name__ == "__main__":
         mdl = GMM_HMM(n_components=options["Net"]["n_states"], \
                       n_mix=2, #options["Net"]["n_prob_components"], \
                       covariance_type="diag", tol=-np.inf, \
-                      init_params="stwmc", params="st", verbose=True)
+                      init_params="stwmc", params="stwmc", verbose=True)
 
         # mdl = Gaussian_HMM(n_components=options["Net"]["n_states"], \
         #                    covariance_type="full", tol=-np.inf, verbose=True)
