@@ -110,11 +110,12 @@ class Gaussian_HMM(hmm.GaussianHMM):
             #     there won't be any updates for the case ``n_iter=1``.
             self._do_mstep(stats)
             
-            self.monitor_.report(curr_logprob)
+            self.monitor_.report(curr_logprob/stats["nobs"])
             # if self.monitor_.converged:
             #     break
 
         return self
+
     
 class GMM_HMM(hmm.GMMHMM):
     def __init__(self, *args, **kwargs):
@@ -146,8 +147,8 @@ class GMM_HMM(hmm.GMMHMM):
         X = check_array(X)
         if int(self.iepoch) == 1:
             self._init(X, lengths=lengths)
-            self.means_ += 0.1 * np.random.randn(*self.means_.shape)
-            self.covars_ += 0.1 * np.abs(np.random.randn(*self.covars_.shape))
+            # self.means_ += 0.1 * np.random.randn(*self.means_.shape)
+            # self.covars_ += 0.1 * np.abs(np.random.randn(*self.covars_.shape))
             self.monitor_._reset()
 
         self._check()
