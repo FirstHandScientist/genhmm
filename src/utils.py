@@ -15,7 +15,7 @@ def accuracy_fun(data_file, mdl=None):
     # zero pad data for batch training
 
     true_class = parse("{}_{}.pkl", os.path.basename(data_file))[1]
-    out_list = [mdl.forward(x_i) for x_i in X]
+    out_list = [mdl.forward(x_i[:,1:]) for x_i in X]
     out = np.array(out_list).transpose()
 
     # the out here should be the shape: data_size * nclasses
