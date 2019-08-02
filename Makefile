@@ -54,18 +54,18 @@ test:
 	echo $(acc_dep)
 
 clone:
-	mkdir -p $(dest)/exp/gaus/13feats/data 
-	mkdir -p $(dest)/exp/gen/13feats/data 
-	mkdir -p $(dest)/exp/gaus/39feats/data 
-	mkdir -p $(dest)/exp/gen/39feats/data 
+	mkdir -p $(dest)/exp/gaus/13feats
+	mkdir -p $(dest)/exp/gen/13feats 
+	mkdir -p $(dest)/exp/gaus/39feats 
+	mkdir -p $(dest)/exp/gen/39feats
 	ln -s `pwd`/src $(dest)/src
 	ln -s `pwd`/bin $(dest)/bin
 	cp Makefile $(dest)/
 	cp default.json $(dest)/
-	cp exp/gaus/13feats/data/*.pkl $(dest)/exp/gaus/13feats/data/
-	cp exp/gaus/39feats/data/*.pkl $(dest)/exp/gaus/39feats/data/
-	cp exp/gen/13feats/data/*.pkl $(dest)/exp/gen/13feats/data/
-	cp exp/gen/39feats/data/*.pkl $(dest)/exp/gen/39feats/data/
+	ln -s `pwd`/exp/gaus/13feats/data $(dest)/exp/gaus/13feats/data
+	ln -s `pwd`/exp/gaus/39feats/data $(dest)/exp/gaus/39feats/data
+	ln -s `pwd`/exp/gen/13feats/data $(dest)/exp/gen/13feats/data
+	ln -s `pwd`/exp/gen/39feats/data $(dest)/exp/gen/39feats/data
 
 erase:
 	rm -rf $(dest)
