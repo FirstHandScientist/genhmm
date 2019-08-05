@@ -190,6 +190,8 @@ if __name__ == "__main__":
     # Now {x,y}{train,test} only contain newly picked phonemes (not present in classmap)
     xtrain, ytrain, xtest, ytest, class2phn, class2int = prepare_data(fname_dtest=test_inputfile, fname_dtrain=train_inputfile,\
                                                 n_phn=nclasses_fetch, classmap_existing=classmap, verbose=False)
+    # normalization 
+    # xtrain, xtest = normalize(xtrain, xtest)
 
     classmap = {**classmap, **class2phn}
 
@@ -205,10 +207,9 @@ if __name__ == "__main__":
         assert(not os.path.isfile(test_outfiles[i]))
         xtrain_c = xtrain[ytrain == ic]
         xtest_c = xtest[ytest == ic]
-        xtrain_cn, xtest_cn = normalize(xtrain_c, xtest_c)
-
-        pkl.dump(xtrain_cn, open(train_outfiles[i], "wb"))
-        pkl.dump(xtest_cn, open(test_outfiles[i], "wb"))
+        
+        pkl.dump(xtrain_c, open(train_outfiles[i], "wb"))
+        pkl.dump(xtest_c, open(test_outfiles[i], "wb"))
 
     # Write the mapping class number <=> phoneme
     write_classmap(classmap, os.path.dirname(test_inputfile))
