@@ -17,6 +17,7 @@
         "net_H": 64,
         "net_D": 40,
         "net_nchain": 4,
+        "p_drop": 0,
         "mask_type": "cross",
         "startprob_type": "uniform",
         "transmat_type": "ergodic"
