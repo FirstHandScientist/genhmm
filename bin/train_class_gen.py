@@ -91,7 +91,9 @@ if __name__ == "__main__":
     
     # add number of training data in model
     mdl.number_training_data = len(xtrain)
-
+    
+    # set model into train mode
+    mdl.train()
     for iiter in range(niter):
         mdl.fit(traindata)
 
