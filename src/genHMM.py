@@ -50,6 +50,12 @@ class GenHMMclassifier(nn.Module):
         self.device = device
         return self
 
+    def eval(self):
+        for the_mdl in self.hmms:
+            the_mdl.old_eval()
+            the_mdl.eval()
+
+
 
 class GenHMM(torch.nn.Module):
     def __init__(self, n_states=None, n_prob_components=None, device='cpu',\
@@ -77,6 +83,7 @@ class GenHMM(torch.nn.Module):
         self.init_gen(H=net_H, D=net_D, nchain=net_nchain,
                       mask_type=mask_type, p_drop=p_drop)
         self._update_old_networks()
+        self.old_eval()
         self.update_HMM = False
 
         # set the global_step
@@ -222,7 +229,29 @@ class GenHMM(torch.nn.Module):
         
         self.device = device
         return self
+    
+    def old_eval(self):
+        for s in range(self.n_states):
+            for k in range(self.n_prob_components):
+                # set old network mode as eval model
+                self.old_networks[s,k].eval()
+        return self
+    
 
+    def eval(self):
+        for s in range(self.n_states):
+            for k in range(self.n_prob_components):
+                # set mode as eval model
+                self.networks[s,k].eval()
+        return self
+    
+    def train(self):
+        for s in range(self.n_states):
+            for k in range(self.n_prob_components):
+                # set model as train mode
+                self.networks[s,k].train()
+        return self
+    
     def _initialize_sufficient_statistics(self):
         """Initializes sufficient statistics required for M-step.
 
@@ -564,7 +593,7 @@ class GenHMM(torch.nn.Module):
 
         # update output probabilistic model, networks here
         self._update_old_networks()
-        
+        self.old_eval()
         
         # store the latest NLL of the updated GenHMM model
         log_p_all = torch.cat(list(map(self.pred_score, traindata)))
