@@ -61,7 +61,8 @@ if __name__ == "__main__":
                         # if push error (maybe memory overflow, try again)
                         # print("Push to device cuda:{} fail, try again ...")
                         continue
-
+        # set model into eval mode
+        mdl.eval()
         f = lambda x: accuracy_fun_torch(x, mdl=mdl)
 
 
