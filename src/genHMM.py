@@ -587,7 +587,13 @@ class GenHMM(torch.nn.Module):
         # In case we get a line of zeros in the stats, skip the update brought by self.stats["mixture"]
         correct_idx = self.pi.sum(1).isclose(torch.ones(1, device=self.pi.device))
         self.pi[~ correct_idx] = tmp_pi[~ correct_idx]
-      
+        
+        # any zero element in self.pi would cause -inf in self.logPIk_s. Fix: replace with self.EPS
+        zero_idx = self.pi.isclose(torch.zeros(1, device=self.pi.device))
+        self.pi[zero_idx] = self.EPS
+        # normalize again
+        normalize(self.pi, axis=1)
+        # get log of pi
         self.logPIk_s = self.pi.log()
 
 
