@@ -12,10 +12,10 @@
     {
         "n_states": 3,
         "n_prob_components": 2,
-        "em_skip": 8,
+        "em_skip": 5,
         "device": "cpu",
         "lr": 0.001,
-        "net_H": 64,
+        "net_H": 24,
         "net_D": 40,
         "net_nchain": 4,
         "p_drop": 0,
