@@ -4,6 +4,7 @@
     {
         "niter": 2,
         "batch_size": 128,
+        "eval_batch_size": 128,
         "n_states_min": 3,
         "n_states_max": 5
     },

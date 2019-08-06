@@ -24,7 +24,7 @@ def accuracy_fun(data_file, mdl=None):
     print(data_file, "Done ...", "{}/{}".format(str(istrue.sum()), str(istrue.shape[0])), file=sys.stderr)
     return "{}/{}".format(str(istrue.sum()), str(istrue.shape[0]))
 
-def accuracy_fun_torch(data_file, mdl=None):
+def accuracy_fun_torch(data_file, mdl=None, batch_size_=128):
     X = pkl.load(open(data_file, "rb"))
     # Get the length of all the sequences
     l = [xx.shape[0] for xx in X]
@@ -34,7 +34,7 @@ def accuracy_fun_torch(data_file, mdl=None):
     batchdata = DataLoader(dataset=TheDataset(x_padded,
                                               lengths=l,
                                               device=mdl.hmms[0].device),
-                           batch_size=128, shuffle=True)
+                           batch_size=batch_size_, shuffle=True)
     
     true_class = parse("{}_{}.pkl", os.path.basename(data_file))[1]
     out_list = [mdl.forward(x) for x in batchdata]

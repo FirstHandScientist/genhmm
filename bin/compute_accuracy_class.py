@@ -63,7 +63,8 @@ if __name__ == "__main__":
                         continue
         # set model into eval mode
         mdl.eval()
-        f = lambda x: accuracy_fun_torch(x, mdl=mdl)
+        
+        f = lambda x: accuracy_fun_torch(x, mdl=mdl, batch_size_=options["Train"]["eval_batch_size"])
 
 
     # print("[Acc:] epoch:{}\tclass:{}\tPush model to {}. Done.".format(epoch,iclass, mdl.device), file=sys.stdout)
