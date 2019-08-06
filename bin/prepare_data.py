@@ -93,7 +93,7 @@ def prepare_data(fname_dtest=None, classmap_existing=None, fname_dtrain=None, n_
 
     # Deduce the available phonemes
     available_phn = [v for k, v in phn2int.items() if not k in taken]
-
+    np.random.seed(0)
     # Pick new random phonemes
     iphn = np.random.permutation(available_phn)[:n_phn]
 
