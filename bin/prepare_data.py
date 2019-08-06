@@ -191,7 +191,7 @@ if __name__ == "__main__":
     xtrain, ytrain, xtest, ytest, class2phn, class2int = prepare_data(fname_dtest=test_inputfile, fname_dtrain=train_inputfile,\
                                                 n_phn=nclasses_fetch, classmap_existing=classmap, verbose=False)
     # normalization 
-    # xtrain, xtest = normalize(xtrain, xtest)
+    xtrain, xtest = normalize(xtrain, xtest)
 
     classmap = {**classmap, **class2phn}
 
