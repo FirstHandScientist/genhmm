@@ -134,20 +134,40 @@ def test_norm_minmax():
 
 
 def norm_minmax(x, min_=None, max_=None):
-    return ( (x - min_.reshape(1, -1)) / (max_.reshape(1, -1) - min_.reshape(1, -1)))
+    return ((x - min_.reshape(1, -1)) / (max_.reshape(1, -1) - min_.reshape(1, -1)))
 
+def norm_musigma(x, mu_=None, sigma_=None):
+    return ((x - mu_) / sigma_)
+
+
+def test_normalize():
+    xtrain = np.array( [np.random.rand(np.random.randint(20),14) for _ in range(30)])
+    xtest = np.array([np.random.rand(np.random.randint(20), 14) for _ in range(10)])
+    tmp_tr = np.concatenate(xtrain.tolist(), axis=0)
+    tmp_te = np.concatenate(xtest.tolist(), axis=0)
+
+    tmp_tr_n = (tmp_tr - tmp_tr.mean(0)[None, :]) / tmp_tr.std(0)[None, :]
+    tmp_te_n = (tmp_te - tmp_tr.mean(0)[None, :]) / tmp_tr.std(0)[None, :]
+
+    xtrain_n, xtest_n = normalize(xtrain, xtest)
+    assert ((np.concatenate(xtrain_n.tolist(), axis=0) == tmp_tr_n).all())
+    assert ((np.concatenate(xtest_n.tolist(), axis=0) == tmp_te_n).all())
 
 def normalize(xtrain, xtest):
-    """Normalize training data set between 0 and 1. Perform the same scaling on the testing set."""
-    f_min = np.vectorize(lambda x : np.min(x, axis=0), signature="()->(k)")
-    f_max = np.vectorize(lambda x : np.max(x, axis=0), signature="()->(k)")
-    min_tr = np.min(f_min(xtrain), axis=0)
-    max_tr = np.max(f_max(xtrain), axis=0)
+    """Normalize training data set such that mean = 0 and std = 1 for training set.
+    Perform the same scaling on the testing set.
+    It looks a bit complex because I want to keep the sequences of variables lengths."""
+
+    tmp_tr = np.concatenate(xtrain.tolist(), axis=0)
+    mu_tr = tmp_tr.mean(0)[None, :]
+    sigma_tr = tmp_tr.std(0)[None, :]
 
     # The first component is zeros and can create division by 0
-    min_tr[0] = 0
-    max_tr[0] = 1
-    f_perform_normalize = np.vectorize(partial(norm_minmax, min_=min_tr, max_=max_tr), signature="()->()", otypes=[np.ndarray])
+    sigma_tr[sigma_tr == 0] = 1
+
+    f_perform_normalize = np.vectorize(
+        partial(norm_musigma, mu_=mu_tr, sigma_=sigma_tr),
+        signature="()->()", otypes=[np.ndarray])
     return f_perform_normalize(xtrain), f_perform_normalize(xtest)
 
 
