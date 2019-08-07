@@ -9,6 +9,9 @@ BIN=bin
 DATA_tmp=data
 MODELS_tmp=models
 
+ifndef totclasses
+	totclasses=61
+endif
 
 ifndef nepochs
 	nepochs=10
@@ -67,7 +70,7 @@ init:
 
 
 prepare_data: $(training_data) $(testing_data)
-	$(PYTHON) $(BIN)/prepare_data.py $(nclasses) $^
+	$(PYTHON) $(BIN)/prepare_data.py "$(nclasses)/$(totclasses)" $^
 
 train: prepare_data
 	echo $(DATA) $(MODELS) $(LOG)
