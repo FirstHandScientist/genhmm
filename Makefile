@@ -112,8 +112,8 @@ clean:
 	rm -f $(LOG)/class*.log
 
 clean-data:
-	rm -f $(DATA)/*_*.pkl 
-	rm -f $(DATA)/class_map.json
+	rm -f $(DATA)/*_*.pkl $(DATA)/class_map.json
+
 
 .SECONDARY: 
 

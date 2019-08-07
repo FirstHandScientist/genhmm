@@ -134,6 +134,7 @@ def prepare_data(fname_dtest=None, classmap_existing=None, fname_dtrain=None, n_
 
         data_tr, label_tr = remove_label(data_tr, label_tr, phn2int_39)
         data_te, label_te = remove_label(data_te, label_te, phn2int_39)
+        phn2int_39.pop('-', None)
         phn2int = phn2int_39
 
     # List the phoneme names already in the data folder.
