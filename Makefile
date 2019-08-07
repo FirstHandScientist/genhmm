@@ -74,6 +74,7 @@ prepare_data: $(training_data) $(testing_data)
 
 train: prepare_data
 	echo $(DATA) $(MODELS) $(LOG)
+	echo $(MODELS_INTERM)
 	for i in $(MODELS_INTERM); do \
 		if [[ `echo $${i%.*}_class*.mdlc | wc -w` != $(nclasses) ]]; then rm -f $$i.{mdl,acc}; fi; \
 		$(MAKE) -j $(j) -s $$i.mdl; \
@@ -87,7 +88,8 @@ $(MODELS)/%.mdl: $(mdl_dep)
 	$(PYTHON) $(BIN)/aggregate_models.py $@
 
 $(MODELS)/%.acc: $(acc_dep)
-	$(PYTHON) $(BIN)/aggregate_accuracy.py $(training_data) $(testing_data) $^ >> $(LOG)/class_all.log
+	$(PYTHON) $(BIN)/aggregate_accuracy.py $(training_data) $(testing_data) $^ > $@
+	cat $@ >> $(LOG)/class_all.log
 
 
 $(MODELS)/%.mdlc:
@@ -109,6 +111,8 @@ clean:
 	rm -f $(MODELS)/epoch*_class*.{mdlc,accc}
 	rm -f $(LOG)/class*.log
 
+clean-data:
+	rm -f $(DATA)/*_*.pkl class_map.json
 
 .SECONDARY: 
 
