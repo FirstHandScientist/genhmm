@@ -3,6 +3,7 @@ import numpy as np
 import pickle as pkl
 import os
 from functools import partial
+from parse import parse
 import json
 
 def getsubset(data, label, iphn):
@@ -45,7 +46,7 @@ def to_phoneme_level(DATA):
 
     # For all sentences
     for i, x in enumerate(DATA):
-        seq_train[i], targets_train[i] = find_change_loc(x[:,0])
+        seq_train[i], targets_train[i] = find_change_loc(x[:, 0])
 
         # Delete label from data
         x[:, 0] = 0
@@ -75,9 +76,43 @@ def test_get_phoneme_mapping():
     assert(get_phoneme_mapping(iphn, phn2int) == {0:"b", 1:"c"})
 
 
-def prepare_data(fname_dtest=None, classmap_existing=None, fname_dtrain=None, n_phn=None, verbose=False):
+def phn61_to_phn39(label_int_61, int2phn_61=None, data_folder=None, phn2int_39=None):
+    """Group labels based on info found on table 3 of html file."""
+    with open(os.path.join(data_folder, "phoneme_map_61_to_39.json"), "r") as fp:
+        phn61_to_39_map = json.load(fp)
+
+    label_str_61 = [int2phn_61[int(x)] for x in label_int_61]
+
+    label_str_39 = [phn61_to_39_map[x] if x in phn61_to_39_map.keys() else x for x in label_str_61 ]
+
+    # At this point there is still 40 different phones, but '-' will be deleted later.
+    if phn2int_39 is None:
+        unique_str_39 = list(set(label_str_39))
+        phn2int_39 = {k: v for k, v in zip(unique_str_39, range(len(unique_str_39)))}
+
+    label_int_39 = [phn2int_39[x] for x in label_str_39]
+    return np.array(label_int_39), phn2int_39
+
+
+def test_flip():
+    d = {k: v for k, v in zip(list("abcbdefg"), list(range(8)))}
+    assert(d == flip(flip(d)))
+
+def flip(d):
+    """In a dictionary, swap keys and values"""
+    return {v: k for k, v in d.items()}
+
+
+def remove_label(data, labels, phn2int_39):
+    keep_idx = labels != phn2int_39['-']
+    data_out = data[keep_idx]
+    label_out = labels[keep_idx]
+    assert(len(label_out) == data_out.shape[0])
+    return data_out, label_out
+
+def prepare_data(fname_dtest=None, classmap_existing=None, fname_dtrain=None, n_phn=None,totclasses=None, verbose=False):
     # Read the datafiles
-    te_DATA, te_keys, te_lengths, phn2int, te_PHN = pkl.load(open(fname_dtest, "rb"))
+    te_DATA, te_keys, te_lengths, phn2int_61, te_PHN = pkl.load(open(fname_dtest, "rb"))
     tr_DATA, tr_keys, tr_lengths, tr_PHN = pkl.load(open(fname_dtrain, "rb"))
 
     if verbose:
@@ -87,8 +122,21 @@ def prepare_data(fname_dtest=None, classmap_existing=None, fname_dtrain=None, n_
     data_tr, label_tr = to_phoneme_level(tr_DATA)
     data_te, label_te = to_phoneme_level(te_DATA)
 
+    # Checkout table 3 at
+    # https://www.intechopen.com/books/speech-technologies/phoneme-recognition-on-the-timit-database
+    # Or in the html file
+    # for details
+    phn2int = phn2int_61
+    if totclasses == 39:
+        f = partial(phn61_to_phn39, int2phn_61=flip(phn2int_61), data_folder=os.path.dirname(fname_dtest))
+        label_tr, phn2int_39 = f(label_tr)
+        label_te, _ = f(label_te, phn2int_39=phn2int_39)
 
-    # list the phoneme names already in the data folder.
+        data_tr, label_tr = remove_label(data_tr, label_tr, phn2int_39)
+        data_te, label_te = remove_label(data_te, label_te, phn2int_39)
+        phn2int = phn2int_39
+
+    # List the phoneme names already in the data folder.
     taken = [v for k, v in classmap_existing.items()]
 
     # Deduce the available phonemes
@@ -154,14 +202,14 @@ def normalize(xtrain, xtest):
 if __name__ == "__main__":
     usage = "Build separate datasets for each family of phonemes.\n\"" \
             "Each data set contains the sequences of one phoneme.\n"\
-            "Usage: python bin/prepare_data.py [nclasses] [training data] [testing data]\n"\
-            "Example: python bin/prepare_data.py 2 data/train13.pkl data/test13.pkl"
+            "Usage: python bin/prepare_data.py \"[nclasses]/[totclasses (61|39)]\" [training data] [testing data]\n"\
+            "Example: python bin/prepare_data.py 2/61 data/train13.pkl data/test13.pkl"
 
     if len(sys.argv) != 4 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
         print(usage)
         sys.exit(1)
 
-    nclasses = int(sys.argv[1])
+    nclasses, totclasses = parse("{:d}/{:d}", sys.argv[1])
     train_inputfile = sys.argv[2]
     test_inputfile = sys.argv[3]
     # 
@@ -171,6 +219,11 @@ if __name__ == "__main__":
 
     classmap = read_classmap(data_folder)
     n_existing = len(classmap)
+
+    if totclasses != 39 and totclasses != 61:
+        print("(error)", "first argument must be [nclasses]/[61 or 39]", file=sys.stderr)
+        print(usage, file=sys.stderr)
+        sys.exit(1)
 
     # Print the number of classes which already exist
     if n_existing > 0:
@@ -189,7 +242,10 @@ if __name__ == "__main__":
 
     # Now {x,y}{train,test} only contain newly picked phonemes (not present in classmap)
     xtrain, ytrain, xtest, ytest, class2phn, class2int = prepare_data(fname_dtest=test_inputfile, fname_dtrain=train_inputfile,\
-                                                n_phn=nclasses_fetch, classmap_existing=classmap, verbose=False)
+                                                n_phn=nclasses_fetch,
+                                                classmap_existing=classmap,
+                                                totclasses=totclasses,
+                                                verbose=False)
     # normalization 
     xtrain, xtest = normalize(xtrain, xtest)
 
