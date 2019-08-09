@@ -1,1 +1,0 @@
-{"n_states": 3, "n_prob_components": 2, "em_skip": 30, "device": "cpu", "lr": 0.0001, "log_dir": "results"}
