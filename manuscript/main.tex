@@ -1,6 +1,29 @@
-\documentclass{article}
+%\def\year{2020}\relax
+%File: formatting-instruction.tex
+\documentclass[letterpaper]{article} % DO NOT CHANGE THIS
+\usepackage{aaai20}  % DO NOT CHANGE THIS
+\usepackage{times}  % DO NOT CHANGE THIS
+\usepackage{helvet} % DO NOT CHANGE THIS
+\usepackage{courier}  % DO NOT CHANGE THIS
+\usepackage[hyphens]{url}  % DO NOT CHANGE THIS
+\usepackage{graphicx} % DO NOT CHANGE THIS
+\urlstyle{rm} % DO NOT CHANGE THIS
+\def\UrlFont{\rm}  % DO NOT CHANGE THIS
+\usepackage{graphicx}  % DO NOT CHANGE THIS
+\frenchspacing  % DO NOT CHANGE THIS
+\setlength{\pdfpagewidth}{8.5in}  % DO NOT CHANGE THIS
+\setlength{\pdfpageheight}{11in}  % DO NOT CHANGE THIS
+%\nocopyright
+%PDF Info Is REQUIRED.
+% For /Author, add all authors within the parentheses, separated by commas. No accents or commands.
+% For /Title, add Title in Mixed Case. No accents or commands. Retain the parentheses.
+ \pdfinfo{/Title gm_hmm
+} %Leave this	
+\newcommand{\citet}[1]{\citeauthor{#1} \shortcite{#1}}
+\newcommand{\citep}{\cite}
+\newcommand{\citealp}[1]{\citeauthor{#1} \citeyear{#1}}
+%%%%%%%%%%%%%%%%%%%%%%%%
 
-\usepackage{hyperref} %BUG if put after
 \usepackage{tikz}
 \usetikzlibrary{calc,shapes,positioning}
 \usetikzlibrary{arrows}
@@ -10,9 +33,9 @@
 
 \usepackage[latin1]{inputenc}
 
-\usepackage{url}
-\usepackage{fullpage}
-\usepackage{cite}
+
+
+
 \usepackage{caption}
 \usepackage{bm}
 \newcommand{\ubar}[1]{\mkern2mu\underline{\mkern-2mu #1\mkern-2mu}\mkern2mu}
@@ -43,25 +66,34 @@
 \graphicspath{{./images/}}
 
 
-\hypersetup{  
-  bookmarks=true,
-  backref=true,
-  pagebackref=false,
-  colorlinks=true,
-  linkcolor=blue,
-  citecolor=red,
-  urlcolor=blue,
-  pdftitle={Generative Model HMM},
-  pdfauthor={Dong Liu},
-  pdfsubject={}
-}
+% \hypersetup{  
+%   bookmarks=true,
+%   backref=true,
+%   pagebackref=false,
+%   colorlinks=true,
+%   linkcolor=blue,
+%   citecolor=red,
+%   urlcolor=blue,
+%   pdftitle={Generative Model HMM},
+%   pdfauthor={Dong Liu},
+%   pdfsubject={}
+% }
 
 
+\setcounter{secnumdepth}{2} %May be changed to 1 or 2 if section numbers are desired.
+
+% The file aaai20.sty is the style file for AAAI Press 
+% proceedings, working notes, and technical reports.
+%
+\setlength\titlebox{2.5in} % If your paper contains an overfull \vbox too high warning at the beginning of the document, use this
+% command to correct it. You may not alter the value below 2.5 in
 
 \title{Powering Hidden Markov Model by Generative Models}
 \author{
-  Firsthand Scientists
-}
+  Dong Liu, Antoine Honoré, Saikat Chatterjee, and Lars~K. Rasmussen\\
+  KTH Royal Institute of Technology, Stockholm, Sweden \\
+  E-mail: \{doli, honore, sach, lkra\}@kth.se}
+
 
 % \name{
 % Dong Liu,
@@ -77,19 +109,104 @@
 \begin{document}
 
 \maketitle
-\section{Notation}
-Time is indexed by subscript and sequence is denoted by underline. $\bm{x}_t$ is signal at time $t$. The sequential time is denoted by $\ubar{\bm{x}} = \left[ \bm{x}_1,
-  \cdots, \bm{x}_T\right]^{\intercal}$, where $[\cdot]^{\intercal}$ means transpose and $T$ is the length of the sequence.  Sequential signal or clip uses underline notation and is indexed by superscript, for instance $\ubar{\bm{x}}^{(r)}$ means the $r$-th sequential signal, where $r = 1, 2, \cdots, R.$, and $\ubmr{x}{r} = \left[ \bmtr{x}{1}{r}, \bmtr{x}{2}{r}, \cdots, \bmtr{x}{T^{(r)}}{r} \right]$ with length ${T^{(r)}}$. Note different sequential signal $\ubmr{x}{r}$ could have different lengths.
+\begin{abstract}
+to be written...
+\end{abstract}
 
-The hypothesis of Hidden Markov Model (HMM): $\Hh := \{\bm{H} | \{\Ss, \bm{q}, A, p(\bm{x}|{s}; \bm{\Phi})\}$,
+\section{introduction}
+
+\section{Preliminaries}
+\begin{figure}[!h]
+  \centering
+  \begin{tikzpicture}
+    \tikzstyle{enode} = [thick, draw=black, ellipse, inner sep = 1pt,  align=center]
+    \tikzstyle{nnode} = [thick, rectangle, rounded corners = 2pt,minimum size = 0.8cm,draw,inner sep = 2pt]
+    \node[enode] (g1) at (-0.5,1.8) {$p(\bm{x}| s=1; \bm{\Phi}_{1})$};
+    \node[enode] (g2) at (-0.5,0.5) {$p(\bm{x}| s=2; \bm{\Phi}_{2})$};
+    \node[enode] (gs) at (-0.5, -1.8) {$p(\bm{x}| s=|\Ss|; \bm{\Phi}_{|\Ss|})$};
+    \node[enode] (x) at (4.5,1.5){$\ubm{x}\sim p(\ubm{x};\bm{H})$};
+
+    \draw[dotted,line width=2pt] (0,-0.3) -- (0,-1.2);
+    \filldraw[->] (1.9, 0.5)circle (2pt) --  (x) ;
+    \draw[->] (g1) -- (1.8, 1.8);
+    \draw[->] (g2) -- (1.8, 0.5);
+    \draw[->] (gs) -- (1.8, -1.8);
+
+    \begin{scope}[xshift=0.5cm, thick, every node/.style={sloped,allow upside down}]
+      \node[nnode] (m) at (3.5,-2) {Memory};
+      \node[nnode] (a) at (3.5,-0.5) {$\bm{A}$};
+
+      \draw (2.1,0.9)-- (2.2, 0.);
+      \draw (2.2,0.)-- node {\midarrow} (2.2,-2);
+      \draw (2.2,-2)-- (m);
+      \draw (m)-- (5, -2);
+      \draw (5, -2)-- node {\midarrow} (5 ,-0.5);
+      \draw (5, -0.5) -- (a);
+      \draw (a)-- node {\midarrow} (2.2, -0.5);
+      \node at (4.8, -1) {$s_{t}$};
+      \node at (2.56, -0.25) {$s_{t+1}$};
+    \end{scope}
+  \end{tikzpicture}
+  \caption{HMM model illustration.}\label{fig:hmm}
+  \vspace{0.1cm}
+\end{figure}
+
+Our framework is an Hidden Markov Model (HMM). An HMM model $\bm{H}$ defined in a hypothesis space $\Hh$, i.e. $\bm{H} \in \Hh$, is capable to model time-span signal $\ubar{\bm{x}} = \left[ \bm{x}_1, \cdots, \bm{x}_T\right]^{\intercal}$, where $\bm{x}_t\in \RR^{N}$ is the signal at time $t$, $[\cdot]^{\intercal}$ means transpose, and $T$ denote the time length. Using HMM for signal representation or generating is illustrated in \ref{fig:hmm}. The assumption is that different instant signal of $\ubar{\bm{x}}$ is generated by different source, while the source selection is done by a discrete hidden markov process. We define the hypothesis set of HMM as $\Hh := \{\bm{H} | \{\Ss, \bm{q}, \bm{A}, p(\bm{x}|{s}; \bm{\Phi}_{s})\}$, where:
 \begin{itemize}
 \item $\Ss$ is the set of states of HMM $\bm{H}$;
-\item $\bm{q} = \left[ q_1, q_2, \cdots, q_{|\Ss|}\right]^\intercal$ initial distribution of HMM $\bm{H}$ with $|\Ss|$ is cardinality of $\Ss$, $q_k = p(s=k)$ for random state variable $s$.
-\item $A$ is the transition matrix for the HMM $\bm{H}$ of size $|\Ss| \times |\Ss|$.
-\item Observable signal density $p({\bm{x}}|{s};\bm{\Phi})$ given hidden state sequence, where $\bm{\Phi}$ is the parameter set that defines this conditional probabilistic model.
+\item $\bm{q} = \left[ q_1, q_2, \cdots, q_{|\Ss|}\right]^\intercal$ initial distribution of HMM $\bm{H}$ with $|\Ss|$ is cardinality of $\Ss$, $q_k = p(s=k)$ for random state variable $s$. In the following of this paper, we use $s_t$ to denote the state $s$ at time $t$.
+\item $\bm{A}$ is the transition matrix for the HMM $\bm{H}$ of size $|\Ss| \times |\Ss|$, $\bm{A}_{i,j} = p(s_{t+1}=j|s_{t}=i)$.
+\item For given hidden state $s$, the observable signal density is $p({\bm{x}}|{s};\bm{\Phi}_{s})$, where $\bm{\Phi}_{s}$ is the parameter set that defines this conditional probabilistic model.
 \end{itemize}
 
-\section{Problem Statement}
+In the framework of HMM, at each time instance, signal $\bm{x}_t$ is generated by density $p(\bm{x}_t| s_t; \bm{\Phi}_{s_t})$, and $s_t$ is decided by the hidden markov process. This process gives us the probabilistic model $p(\ubm{x};\bm{H})$
+\section{Generator-mixed HMM}
+
+\begin{figure}[!th]
+  \centering
+  \begin{tikzpicture}
+    \tikzstyle{enode} = [thick, draw=black, ellipse, inner sep = 2pt,  align=center]
+    \tikzstyle{nnode} = [thick, rectangle, rounded corners = 2pt,minimum size = 0.8cm,draw,inner sep = 2pt]
+    \node[enode] (z1) at (-1.2,1.8) {$\bm{z}\sim p_{s,1}(\bm{z})$};
+    \node[nnode] (g1) at (1,1.8) {$\bm{g}_{s,1}$};
+    \node[enode] (z2) at (-1.2,0.5){$\bm{z}\sim p_{s,2}(\bm{z})$};
+    \node[nnode] (g2) at (1,0.5) {$\bm{g}_{s,2}$};
+    \node[enode] (zK) at (-1.2,-1.8) {$\bm{z}\sim p_{s,K}(\bm{z})$};
+    \node[nnode] (gs) at (1, -1.8) {$\bm{g}_{s,K}$};
+    \node[enode] (x) at (4.5,0){$\bm{x}\sim p(\bm{x}| s; \bm{\Phi}_{s})$};
+
+    \draw[dotted,line width=2pt] (0,-0.3) -- (0,-1.2);
+    \filldraw[->] (1.9, 0.5)circle (2pt) --  node[above=0.2]{${\kappa}\sim \bm{\pi}_{s}$} (x)  ;
+    \draw[->] (z1) -- (g1);
+    \draw[->] (g1) -- (1.8, 1.8);
+
+    \draw[->] (z2) -- (g2);
+    \draw[->] (g2) -- (1.8, 0.5);
+
+    \draw[->] (zK) -- (gs);
+    \draw[->] (gs) -- (1.8, -1.8);
+  \end{tikzpicture}
+  \caption{Source $s$ powered by generator mixed generative model (GenHMM).}
+  \vspace{0.1cm}
+\end{figure}
+
+In this section, we introduce a neural network based generator-mixed HMM model. We term it as GenHMM. GenHMM has a hidden markov process as typical HMM, while the probabilistic model of GenHMM for each hidden state is induced by mixture of neural network based generators. For $s\in \Ss$, we define the state's probabilistic model in GenHMM as
+\begin{equation}
+  p(\bm{x}| s; \bm{\Phi}_{s}) = \sum_{\kappa=1}^{K}\pi_{s, \kappa} p(\bm{x}| s, \kappa; \bm{\Phi}_{s, \kappa})
+\end{equation}
+where $\kappa$ is a random variable following a categorical distribution, and $\pi_{s, \kappa} = p(\kappa | \bm{x}, s; \bm{\Phi}_{s, \kappa})$. Naturally $\sum_{\kappa = 1}^{K} \pi_{s, \kappa}= 1$. Denote $\bm{\pi}_{s} = [\pi_{s,1}, \pi_{s,2}, \cdots, \pi_{s,K}]$,
+$\bm{\Phi}_s = \left\{ \pi_{s, \kappa}, \bm{\Phi}_{s, \kappa}| \kappa = 1, 2, \cdots, K \right\}$, 
+
+
+
+\subsubsection{Generator Mixed HMM (GenHMM)}\label{subsubsec:GenHMM}
+In this subsection, we specify the GenHMM model and give the learning algorithm of this model.
+Base on the generative model assumption, for each state $s$, the probabilistic generative model is
+
+\subsubsection{Flow structure}
+
+\section{Learning Algorithm of GenHMM}
+\subsection{Problem Statement}
 Given a empirical distribution $\hat{p}(\ubm{x}) = \frac{1}{R}\sum_{r=1}^{R} \delta_{\ubmr{x}{r}}(\ubm{x})$. We want to find a probabilistic model such that:
 \begin{equation}
   \min KL(\hat{p}(\ubm{x})\| p(\ubm{x}))
@@ -108,68 +225,12 @@ The problem can be reformulated as
 \end{equation}
 for independent identical distributed assumption of $\ubm{x}$.
 
-\section{Proposal}
+\subsection{Proposal}
 
 
-\begin{figure}[!h]
-  \centering
-  \begin{tikzpicture}
-    \tikzstyle{enode} = [thick, draw=blue, ellipse, inner sep = 1pt,  align=center]
-    % \tikzstyle{nnode} = [thick, rectangle, rounded corners = 1pt,minimum size = 1.2cm,draw,inner sep = 2pt]
-    \tikzstyle{nnode} = [thick, rectangle, rounded corners = 2pt,minimum size = 0.8cm,draw,inner sep = 2pt]
-    % \node[enode] (z1) at (-1.2,1.8) {Source 1}; 
-    \node[nnode] (g1) at (-0.5,1.8) {Source 1};
-
-    % \node[enode] (z2) at (-1.2,0.5){$\bm{z}\sim p_{2}(\bm{z})$};
-    \node[nnode] (g2) at (-0.5,0.5) {Source 2};
-
-    % \node[enode] (zK) at (-1.2,-1.8) {$\bm{z}\sim p_{|\Ss|}(\bm{z})$};
-    \node[nnode] (gs) at (-0.5, -1.8) {Source $|\Ss|$};
-
-    \node[enode] (x) at (4.5,1.5){$\ubm{x}\sim p(\ubm{x};\bm{H})$};
-    % \node at (3,-1){$p(\bm{z}) = \sum_k\pi_kp_k(\bm{z})$};
-    
-
-    \draw[dotted,line width=2pt] (0,-0.3) -- (0,-1.2);
-    \filldraw[->] (1.9, 0.5)circle (2pt) --  (x) ;
-    
-    \draw[->] (g1) -- (1.8, 1.8);
-
-    
-    \draw[->] (g2) -- (1.8, 0.5);
-
-    % \draw[->] (1,-0.5) -- (1.8, -0.5);
-    
-    \draw[->] (gs) -- (1.8, -1.8);
-
-    % \draw[->] (z1) [in=180,out=0]  to node[right]{$\pi_1$} (g);
-    % \draw[->] (z2) [in=180,out=0]  to node[above]{$\pi_2$} (g);
-    % \draw[->,dashed] (zK) [in=180,out=0]  to node[right]{$\pi_K$} (g);
-    % \draw[->] (g) to (x);
-    \begin{scope}[xshift=0.5cm, thick, every node/.style={sloped,allow upside down}]
-      \node[nnode] (m) at (3.5,-2) {Memory};
-      \node[nnode] (a) at (3.5,-0.5) {$\bm{A}$};
-
-      \draw (2.1,0.9)-- (2.2, 0.);
-      \draw (2.2,0.)-- node {\midarrow} (2.2,-2);
-      \draw (2.2,-2)-- (m);
-      \draw (m)-- (5, -2);
-      \draw (5, -2)-- node {\midarrow} (5 ,-0.5);
-      \draw (5, -0.5) -- (a);
-      \draw (a)-- node {\midarrow} (2.2, -0.5);
-      \node at (4.8, -1) {$s_{t}$};
-      \node at (2.56, -0.25) {$s_{t+1}$};
-    \end{scope}
-    
-    
-
-  \end{tikzpicture}
-  \caption{HMM Model defined by $\bm{H} = \{\Ss, \bm{q}, \bm{A}, p({\bm{x}}|{\bm{s}}; \bm{\Phi}) \}$}
-  \vspace{0.1cm}
-\end{figure}
 
 
-Since model $\bm{H}$ contains hidden sequential variable $\ubm{s}$, we can not directly solve the maximum likelihood problem in \autoref{eq:ml-of-hmm}. We use expectation maximization (EM) to address the hidden variable problem by
+Since model $\bm{H}$ contains hidden sequential variable $\ubm{s}$, we can not directly solve the maximum likelihood problem in \ref{eq:ml-of-hmm}. We use expectation maximization (EM) to address the hidden variable problem by
 \begin{itemize}
 \item E-step: % the posterior probability of $\ubm{s}$:
   % \begin{equation}
@@ -186,7 +247,7 @@ Since model $\bm{H}$ contains hidden sequential variable $\ubm{s}$, we can not d
 \end{itemize}
 
 
-The \autoref{eq:em-m-opt} can be reformulated as:
+The \eqref{eq:em-m-opt} can be reformulated as:
 \begin{equation}\label{eq:m-step-subs}
   \umax{\bm{H}} \Qq(\bm{H}; \bm{H}^{\mathrm{old}}) = \umax{\bm{q}}\Qq(\bm{q}; \bm{H}^{\mathrm{old}}) + \umax{{A}}\Qq({A}; \bm{H}^{\mathrm{old}}) + \umax{\bm{\Phi}}\Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}})
 \end{equation}
@@ -213,9 +274,9 @@ We summarize the optimization algorithm as:
     \FOR { $\bm{H}$ not converge}
     \STATE Sample a batch of data $\left\{ \ubmr{x}{r} \right\}_{r=1}^{R_b}$ from the dataset $\hat{p}(\ubm{x})$
     \STATE Compute $p(\smtr{s}{t}{r} | \ubmr{x}{r}; \bm{H}^{\mathrm{old}})$, $p(\smtr{s}{t}{r}, \smtr{s}{t+1}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})$ by forward/backward algorithm;
-    \STATE $\bm{q} \gets \uargmin{\bm{q}}\, \Qq(\bm{q}; \bm{H}^{\mathrm{old}})$ by \autoref{eq:update-initial-state-prob};
-    \STATE $\bm{A} \gets \uargmin{\bm{A}}\Qq(\bm{A}; \bm{H}^{\mathrm{old}})$ by \autoref{eq:update-transition-prob};
-    \STATE $\bm{\Phi} \gets \uargmin{\bm{\Phi}}\Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}})$ by calling Algorithm \autoref{algo:opt-Phi-GenHMM} or \autoref{algo:opt-Phi-LatHMM};
+    \STATE $\bm{q} \gets \uargmin{\bm{q}}\, \Qq(\bm{q}; \bm{H}^{\mathrm{old}})$ by \eqref{eq:update-initial-state-prob};
+    \STATE $\bm{A} \gets \uargmin{\bm{A}}\Qq(\bm{A}; \bm{H}^{\mathrm{old}})$ by \eqref{eq:update-transition-prob};
+    \STATE $\bm{\Phi} \gets \uargmin{\bm{\Phi}}\Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}})$ by calling Algorithm~\ref{algo:opt-Phi-GenHMM} or \ref{algo:opt-Phi-LatHMM};
     \STATE $\bm{H}^{\mathrm{old}} \gets \bm{H}$
 
     \ENDFOR
@@ -224,7 +285,7 @@ We summarize the optimization algorithm as:
 
 
 \subsection{Initial Probability Update}
-\autoref{eq:init-distribution-update} can be written as:
+\eqref{eq:init-distribution-update} can be written as:
 \begin{align}
   \Qq(\bm{q}; \bm{H}^{\mathrm{old}}) &= \sum_{r=1}^{R}\sum_{\ubmr{s}{r}} {p(\ubmr{s}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})} \log\,p(\smtr{s}{1}{r}; \bm{q}) \nonumber \\
                                      & = \sum_{r=1}^{R}\sum_{\smtr{s}{1}{r}=1}^{|\Ss|}\sum_{\smtr{s}{2}{r}=1}^{|\Ss|}\cdots \sum_{\smtr{s}{T^{r}}{r}}^{{|\Ss|}} {p(\smtr{s}{1}{r}, \smtr{s}{2}{r}, \cdots, \smtr{s}{T^{r}}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})} \log\,p(\smtr{s}{1}{r}; \bm{q}) \\
@@ -243,7 +304,7 @@ is
 \end{equation}
 
 \subsection{Transition Probability Update}
-\autoref{eq:transition-update} can be written as
+\eqref{eq:transition-update} can be written as
 \begin{align}
   \Qq(\bm{A}; \bm{H}^{\mathrm{old}})
   &= \sum_{r=1}^{R} \EE_{p(\ubmr{s}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})} \left[\log\,\sum_{t=1}^{T^{(r)}-1}p(\smtr{s}{t+1}{r}|\smtr{s}{t}{r}; {A})\right] \nonumber\\
@@ -268,86 +329,23 @@ where
 \end{equation}
 
 \subsection{Generative Model Update}
-\autoref{eq:generative-model-update} can be rewritten as
+\eqref{eq:generative-model-update} can be rewritten as
 \begin{align}\label{eq:gm-update}
   \Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}})
   &= \sum_{r=1}^{R}\sum_{\ubmr{s}{r}}{p(\ubmr{s}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})} \log\,p(\ubmr{x}{r} | \ubmr{s}{r}; \bm{\Phi}) \nonumber \\
   &= \sum_{r=1}^{R} \sum_{t=1}^{{T}^{(r)}-1} \sum_{\smtr{s}{t}{r}=1}^{|\Ss|}  p(\smtr{s}{t}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}}) \log\, p(\bmtr{x}{t}{r} | \smtr{s}{t}{r}; \bm{\Phi}).
 \end{align}
 
-Then the third subproblem of \autoref{eq:m-step-subs} becomes:
+Then the third subproblem of \eqref{eq:m-step-subs} becomes:
 \begin{align}\label{eq:sub-gm}
   &\uargmax{\bm{\Phi}} \Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}}), \nonumber \\
   \mathrm{s.t.} &\hspace{0.2cm} p(\bm{x} | {s}; \bm{\Phi}) \mathrm{~is~our~ general~model}
 \end{align}
 
-It could be seen from \autoref{eq:gm-update} that the key to update generate  model is to evaluate $p(\bm{x}|{s}; \bm{\Phi})$ for all $s \in \Ss$. In Forward/Backward algorithm, evaluation of $p(\bm{x}|{s}; \bm{\Phi})$ is also all what is needed to compute $p(s|\bm{x};\bm{\Phi})$. In the following two subsections, we will provide two neural network based generative models that fulfill this requirement and also have high capability for complex signal modeling.
+It could be seen from \eqref{eq:gm-update} that the key to update generate  model is to evaluate $p(\bm{x}|{s}; \bm{\Phi})$ for all $s \in \Ss$. In Forward/Backward algorithm, evaluation of $p(\bm{x}|{s}; \bm{\Phi})$ is also all what is needed to compute $p(s|\bm{x};\bm{\Phi})$. In the following two subsections, we will provide two neural network based generative models that fulfill this requirement and also have high capability for complex signal modeling.
 
 
 
-\subsubsection{Generator Mixed HMM (GenHMM)}\label{subsubsec:GenHMM}
-\begin{figure}[!h]
-  \centering
-  \begin{tikzpicture}
-    % \tikzstyle{enode} = [thick, draw=blue, circle, inner sep = 3pt,
-    % align=center]
-    \tikzstyle{enode} = [thick, draw=blue, ellipse, inner sep = 2pt,  align=center]
-    \tikzstyle{nnode} = [thick, rectangle, rounded corners = 2pt,minimum size = 0.8cm,draw,inner sep = 2pt]
-
-    \node[enode] (z1) at (-1.2,1.8) {$\bm{z}\sim p_{s,1}(\bm{z})$};
-    \node[nnode] (g1) at (1,1.8) {$\bm{g}_{s,1}$};
-
-    \node[enode] (z2) at (-1.2,0.5){$\bm{z}\sim p_{s,2}(\bm{z})$};
-    \node[nnode] (g2) at (1,0.5) {$\bm{g}_{s,2}$};
-
-    \node[enode] (zK) at (-1.2,-1.8) {$\bm{z}\sim p_{s,K}(\bm{z})$};
-    \node[nnode] (gs) at (1, -1.8) {$\bm{g}_{s,K}$};
-
-    \node[enode] (x) at (4.5,0){$\bm{x}\sim p(\bm{x}| s; \bm{\Phi}_{s})$};
-    % \node at (3,-1){$p(\bm{z}) = \sum_k\pi_kp_k(\bm{z})$};
-    
-
-    \draw[dotted,line width=2pt] (0,-0.3) -- (0,-1.2);
-    \filldraw[->] (1.9, 0.5)circle (2pt) --  node[above=0.2]{${\kappa}\sim \bm{\pi}_{s}$} (x)  ;
-    \draw[->] (z1) -- (g1);
-    \draw[->] (g1) -- (1.8, 1.8);
-
-    \draw[->] (z2) -- (g2);
-    \draw[->] (g2) -- (1.8, 0.5);
-
-    % \draw[->] (1,-0.5) -- (1.8, -0.5);
-    \draw[->] (zK) -- (gs);
-    \draw[->] (gs) -- (1.8, -1.8);
-
-
-    % \node[enode] (z) at (0,0) {$\bm{z}\sim p(\bm{z})$};
-    % \node[enode] (x) at (5.5,0){$\bm{x}\sim p(\bm{x}; \bm{\Phi})$};
-    %               % \node at (5.2,-1) {$p(\bm{x};\bm{\Phi}) = \textstyle\sum_{k=1}^K \pi_k  p_k(\bm{x})$};
-    % \node[nnode] (g1) at (2.6,1.8) {$\bm{g}_1$};
-    % \node[nnode] (g2) at (2.6,0.5) {$\bm{g}_2$};
-    % \node[nnode] (gk) at (2.6,-1.8) {$\bm{g}_K$};
-    % \draw[dotted,line width=2pt] (2.6,-0.3) -- (2.6,-1.2);
-    % \draw[->] (z) [in= 180, out =0] to (g1);
-    % \draw[->] (z) [in= 180, out =0] to (g2);
-    % \draw[->] (z) [in= 180, out =0] to (gk);
-    % \filldraw[->] (3.7, 0.5)circle (2pt) -- node[above=0.2]{$\bm{s}\sim \bm{\pi}$} (x) ;
-    %               % \draw[->] (3,-0.8) -- (3.5, -0.8);
-    % \draw[->] (g1) -- (3.5,1.8);
-    % \draw[->] (g2) -- (3.5, 0.5);
-    % \draw[->] (gk) -- (3.5, -1.8);
-  \end{tikzpicture}
-  \caption{Source $s$ powered by generator mixed generative model (GenHMM).}
-  \vspace{0.1cm}
-\end{figure}
-In this subsection, we specify the GenHMM model and give the learning algorithm of this model.
-Base on the generative model assumption, for each state $s$, the probabilistic generative model is
-\begin{equation}
-  p(\bm{x}| s; \bm{\Phi}_{s}) = \sum_{\kappa=1}^{K}\pi_{s, \kappa} p(\bm{x}| s, \kappa; \bm{\Phi}_{s, \kappa})
-\end{equation}
-where $\bm{\Phi}_s = \left\{ \pi_{s, \kappa}, \bm{\Phi}_{s, \kappa}| \kappa = 1, 2, \cdots, K. \right\}$, $\pi_{s, \kappa} = p(\kappa | \bm{x}, s; \bm{\Phi}_{s, \kappa})$ and 
-\begin{equation}
-  \sum_{\kappa = 1}^{K} \pi_{s, \kappa}= 1
-\end{equation}
 
 % Let us denote the inverse of $\bm{g}_s$ as $\bm{f}_s = \bm{g}_s^{-1}$.
 % For this case we assume the latent sources are Gaussian. We write the emission probability model as a $K$ generator mixed model:
@@ -364,7 +362,7 @@ The help function should be revised to deal with the new latent variable $\kappa
 \end{align}
                                           %                                           \Nn\left( \bm{f}_{\smtr{s}{t}{r},\smtr{\kappa}{t}{r}}(\bm{x}); \bm{\mu}_{\smtr{s}{t}{r},\smtr{\kappa}{t}{r}}, \bm{C}_{\smtr{s}{t}{r},\smtr{\kappa}{t}{r}} \right) \log\,\bigg| \det\, \left( \pd{\bm{f}_{\smtr{s}{t}{r},\smtr{\kappa}{t}{r}}(\bmtr{x}{t}{r})}{\bmtr{x}{t}{r}} \right) \bigg| \bigg].
                                           %   \end{align}
-In \autoref{eq:obj-q-gen-mix}, $p(s_t| \ubm{x}, \bm{H}^{\mathrm{old}})$ is computed by forward/backward algorithm. The posterior of $\kappa$ is:
+In \eqref{eq:obj-q-gen-mix}, $p(s_t| \ubm{x}, \bm{H}^{\mathrm{old}})$ is computed by forward/backward algorithm. The posterior of $\kappa$ is:
 \begin{align}\label{eq:kappa-posterior}
   p(\kappa| s, \ubm{x}; \bm{H}^{\mathrm{old}})
   &=  \frac{p(\kappa, \ubm{x}| s; \bm{H}^{\mathrm{old}})}{p(\ubm{x}| s,\bm{H}^{\mathrm{old}})} \nonumber \\
@@ -386,7 +384,7 @@ The latent prior for mixture of each source $s$ is obtained by solving the follo
                   & s.t. \, \sum_{\kappa=1}^{K} \pi_{s, \kappa}= 1, \forall s = 1, 2, \cdots, |\Ss|. 
 \end{align}
 
-To solve problem \autoref{opm:pi}, we formulate its Lagrange function as
+To solve problem \eqref{opm:pi}, we formulate its Lagrange function as
 \begin{equation}
   \Ll = \Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}}) + \sum_{\lambda_s} \lambda_s\left( 1-  \sum_{\kappa=1}^{K}\pi_{s, \kappa}  \right).
 \end{equation}
@@ -398,11 +396,11 @@ With condition $\sum_{\kappa=1}^{K} \pi_{s, \kappa}= 1, \forall s = 1, 2, \cdots
 \begin{equation}
   \lambda_s = \sum_{\kappa=1}^{K}\sum_{r=1}^{R} \sum_{t=1}^{{T}^{(r)}} p(\smtr{s}{t}{r}=s, \smtr{\kappa}{t}{r} =\kappa | \ubmr{x}{r}; \bm{H}^{\mathrm{old}})
 \end{equation}
-Then the solution to \autoref{opm:pi} is
+Then the solution to \eqref{opm:pi} is
 \begin{equation}\label{eq:mix-latent-parameter-solution}
   \pi_{s, \kappa} = \frac{\sum_{r=1}^{R} \sum_{t=1}^{{T}^{(r)}} p(\smtr{s}{t}{r} =s, \smtr{\kappa}{t}{r}=\kappa | \ubmr{x}{r}; \bm{H}^{\mathrm{old}}) }{\sum_{k =1}^{K}\sum_{r=1}^{R} \sum_{t=1}^{{T}^{(r)}-1} p(\smtr{s}{t}{r} =s, \smtr{\kappa}{t}{r}=k | \ubmr{x}{r}; \bm{H}^{\mathrm{old}}) }
 \end{equation}
-where $p(s, \kappa | \ubm{x}; \bm{H}^{\mathrm{old}}) = p(s| \ubm{x}; \bm{H}^{\mathrm{old}}) p(\kappa | s, \ubm{x}; \bm{H}^{\mathrm{old}})$. $p(s| \ubm{x}; \bm{H}^{\mathrm{old}})$ that can be computed by results of forward/backward and \autoref{eq:kappa-posterior}. The posterior for $\kappa$ can be obtained by
+where $p(s, \kappa | \ubm{x}; \bm{H}^{\mathrm{old}}) = p(s| \ubm{x}; \bm{H}^{\mathrm{old}}) p(\kappa | s, \ubm{x}; \bm{H}^{\mathrm{old}})$. $p(s| \ubm{x}; \bm{H}^{\mathrm{old}})$ that can be computed by results of forward/backward and \eqref{eq:kappa-posterior}. The posterior for $\kappa$ can be obtained by
 \begin{equation}
   p(\kappa | s, \ubm{x}; \bm{H}^{\mathrm{old}}) = \frac{p(\kappa, \ubm{x} | s; \bm{H}^{\mathrm{old}})}{\sum_{\kappa}{p(\kappa, \ubm{x} | s; \bm{H}^{\mathrm{old}})}} = \frac{\pi_{s, \kappa} p( \bm{x} | s; \bm{H}^{\mathrm{old}})}{\sum_{\kappa}{\pi_{s, \kappa} p(\bm{x} | s; \bm{H}^{\mathrm{old}})}}
   \end{equation}
@@ -426,10 +424,10 @@ where $\bm{f}_{{s},{\kappa}} = \bm{g^{-1}_{{s},{\kappa}}}$ is defined by paramet
     \FOR {epoch $t < T$}
     \STATE Sample a batch of data $\left\{ \ubmr{x}{r} \right\}_{r=1}^{R_b}$ from dataset $P_d(\ubm{x})$
     
-    \STATE Compute $p(\smtr{s}{t}{r}, \smtr{\kappa}{t}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})$  by Forward/backward and \autoref{eq:kappa-posterior}.
+    \STATE Compute $p(\smtr{s}{t}{r}, \smtr{\kappa}{t}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})$  by Forward/backward and \eqref{eq:kappa-posterior}.
     %     = \frac{\pi_k \Nn\left(f(X); \bm{\mu}_k^{t},\bm{\sigma}_k^{t}\right)}{\sum_{k=1}^K\; \pi_k\Nn\left(f(X); \bm{\mu}_k^{t},\bm{\sigma}_k^{t}\right) }, \forall \left\{ x^{(i)}\right\}_{i=1}^{n_b}$
     % \Comment{Calculate posterior \autoref{eq-posterior-gamma}}
-    \STATE Compute loss ${\Qq}\left({\bm{\Phi}}, {\bm{H}}^{\mathrm{old}}\right)$ in \autoref{eq:obj-q-gen-mix}
+    \STATE Compute loss ${\Qq}\left({\bm{\Phi}}, {\bm{H}}^{\mathrm{old}}\right)$ in \eqref{eq:obj-q-gen-mix}
 
     \STATE $\partial{\bm{\th}_s} \gets  \nabla_{\bm{\theta}} -
     \frac{1}{R_{b}}{\Qq}\left({\bm{\Phi}},{\bm{H}}^{\mathrm{old}}\right)$
@@ -440,7 +438,7 @@ where $\bm{f}_{{s},{\kappa}} = \bm{g^{-1}_{{s},{\kappa}}}$ is defined by paramet
     \STATE $\bm{\th}_s \gets \bm{\th}_s - \eta \cdot \partial{\bm{\theta}_s}$, $\forall s \in \Ss$
     \ENDFOR
     
-    \STATE Update $\pi_{s, \kappa}, \forall, s\in \Ss, \kappa= 1, 2, \cdots, K$, according to \autoref{eq:mix-latent-parameter-solution}
+    \STATE Update $\pi_{s, \kappa}, \forall, s\in \Ss, \kappa= 1, 2, \cdots, K$, according to \eqref{eq:mix-latent-parameter-solution}
         
     \STATE Assemble $\bm{\Phi} = \left\{  \bm{\Phi}_s| s \in \Ss\right\}$ for $\bm{\Phi}_s = \left\{ \bm{\theta}_{s, \kappa}, \bm{\mu}_{{s},{\kappa}}, \bm{C}_{{s},{\kappa}}| \kappa = 1, 2, \cdots, K \right\}$.
     
@@ -507,7 +505,7 @@ We use $\bm{f} = \bm{g}^{-1}$ to denote inverse of $\bm{g}$ and use $\bm{\theta}
 \end{align}
 
 The parameter set for this model to be decide is $\bm{\Phi} = \left\{ \bm{\theta},  \bm{\omega}_s, \forall s\in \Ss\right\}$.
-Then the problem in \autoref{eq:sub-gm} can be reformulated as:
+Then the problem in \eqref{eq:sub-gm} can be reformulated as:
 \begin{align}
   &\umax{\bm{\Phi}} \Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}}) \nonumber \\
   =&\umax{ \bm{\theta}, \bm{\omega}_s, \forall s\in \Ss} \sum_{r=1}^{R} \sum_{t=1}^{{T}^{(r)}-1} \sum_{\smtr{s}{t}{r}=1}^{|\Ss|}  p(\smtr{s}{t}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}}) \left[\log\,p_{\smtr{s}{t}{r}}(\bm{f}(\bmtr{x}{t}{r})) + \log\,\bigg| \det\, \left( \pd{\bm{f}(\bmtr{x}{t}{r})}{\bmtr{x}{t}{r}} \right) \bigg| \right].
@@ -518,141 +516,23 @@ Then the problem in \autoref{eq:sub-gm} can be reformulated as:
 
 
 
-\subsubsection{Latent-source Mixed HMM (LatMM)}
 
-\begin{figure}[h]
-  \centering
-  \begin{tikzpicture}
-    \tikzstyle{enode} = [thick, draw=blue, ellipse, inner sep = 1pt,  align=center]
-    % \tikzstyle{nnode} = [thick, rectangle, rounded corners = 1pt,minimum size = 1.2cm,draw,inner sep = 2pt]
-    \tikzstyle{nnode} = [thick, rectangle, rounded corners = 2pt,minimum size = 0.8cm,draw,inner sep = 2pt]
-    \node[enode] (z1) at (0,1.8) {$\bm{z}\sim p_{s,1}(\bm{z})$};
-    \node[enode] (z2) at (0,0.5){$\bm{z}\sim p_{s,2}(\bm{z})$};
-    \node[enode] (zK) at (0,-1.8) {$\bm{z}\sim p_{s, K}(\bm{z})$}; 
-    \node[enode] (x) at (5.5,0){$\bm{x}\sim p(\bm{x}|s;{\bm{\Phi}}_{s})$};
-    % \node at (3,-1){$p(\bm{z}) = \sum_k\pi_kp_k(\bm{z})$};
-    \node[nnode] (g) at (3.2,0) {$\bm{g}_s$};
-    \draw[dotted,line width=2pt] (0,-0.3) -- (0,-1.2);
-    \filldraw[->] (1.8, 0.5)circle (2pt) -- node[above=0.2]{${\kappa}\sim \bm{\pi}_s$} (g) ;
-    \draw[->] (z1) -- (1.6, 1.8);
-    \draw[->] (z2) -- (1.6, 0.5);
-    % \draw[->] (1,-0.5) -- (1.8, -0.5);
-    \draw[->] (zK) -- (1.6, -1.8);
-    % \draw[->] (z1) [in=180,out=0]  to node[right]{$\pi_1$} (g);
-    % \draw[->] (z2) [in=180,out=0]  to node[above]{$\pi_2$} (g);
-    % \draw[->,dashed] (zK) [in=180,out=0]  to node[right]{$\pi_K$} (g);
-    \draw[->] (g) to (x);
-  \end{tikzpicture}
-  \caption{Source $s$ powered by Latent mixed generative model (LatHMM).}
-  \vspace{0.1cm}
-\end{figure}
-
-LatHMM, (\textbf{benching marking}), the latent source mixed emission model is built by allowing different latent source sharing the same generator $\bm{g}_s$:
-\begin{align}
-  & p(\bm{x}| s, \kappa; \bm{\Phi}_{s}) \nonumber \\
-  =&p_{s, \kappa}(\bm{z}) \bigg| \det \left( \pd{\bm{z}}{\bm{x}} \right) \bigg| \nonumber \\
-  =& \Nn\left( \bm{f}_{{s}}(\bm{x}); \bm{\mu}_{{s},{\kappa}}, \bm{C}_{{s},{\kappa}} \right) \bigg| \det\, \left( \pd{\bm{f}_{{s}}(\bm{x})}{\bm{x}} \right) \bigg|
-\end{align}
-where $\bm{f}_{{s}} = \bm{g^{-1}}_{s}$ is defined by $\bm{\theta}$, and $\bm{\Phi}_s = \left\{ \bm{\theta}_s, \bm{\mu}_{{s},{\kappa}}, \bm{C}_{{s},{\kappa}}| \kappa = 1, 2, \cdots, K \right\}$.
-
-This emission generator sharing makes the posterior computation w.r.t. of $\kappa$ easier:
-
-
-\begin{equation}\label{eq:kappa-posterior-LatHMM}
-  p(\kappa| s, \ubm{x}; \bm{H}^{\mathrm{old}})
-  = \frac{\pi_{s, \kappa} p(\bm{x}| s, \kappa, \bm{H}^{\mathrm{old}})}{\sum_{\kappa=1}^{K}  \pi_{s, \kappa} p(\bm{x}| s, \kappa,\bm{H}^{\mathrm{old}})}
-  = \frac{\pi_{s, \kappa} \Nn\left( \bm{z}; \bm{\mu}_{s, \kappa}, \bm{C}_{s, \kappa} \right)}{\sum_{\kappa=1}^{K}  \pi_{s, \kappa} \Nn\left( \bm{z}; \bm{\mu}_{s, \kappa}, \bm{C}_{s, \kappa}\right)} \bigg|_{\bm{z} = \bm{f}_s(\bm{x})}.
-  % & = \frac{\pi_{s_t, \kappa_t} \Nn\left( \bm{f}_{{s}_{t},{\kappa}_{t}}(\bm{x}); \bm{\mu}_{{s}_{t},{\kappa}_{t}}, \bm{C}_{{s}_{t},{\kappa}_{t}} \right) \bigg| \det\, \left( \pd{\bm{f}_{{s}_{t},{\kappa}_{t}}(\bmtr{x}{t}{r})}{\bmtr{x}{t}{r}} \right) \bigg| }{\sum_{\kappa_t=1}^{K}\pi_{s_t, \kappa_t} \Nn\left( \bm{f}_{{s}_{t},{\kappa}_{t}}(\bm{x}); \bm{\mu}_{{s}_{t},{\kappa}_{t}}, \bm{C}_{{s}_{t},{\kappa}_{t}} \right) \bigg| \det\, \left( \pd{\bm{f}_{{s}_{t},{\kappa}_{t}}(\bmtr{x}{t}{r})}{\bmtr{x}{t}{r}} \right) \bigg|} \nonumber \\
-\end{equation}
-Computation of $p(s_t| \ubm{x}, \bm{H}^{\mathrm{old}})$ remains the same, relying on forward/backward algorithm.
-
-In implementation, $\bm{C}_{s, \kappa} = diag\left( \bm{\sigma}_{s, \kappa} \right)$ for simplicity. To avoid the singularity problem of Gaussian mixture, we put a Gamma distribution as prior for $\bm{\sigma}_{s, \kappa}$, i.e. $\Gamma(\bm{\sigma}_{s, \kappa}^{-1}, a, b)$ where $a$ and $b$ are hyperparameter for Gamma distribution. Then the problem can be reformulated as:
-\begin{equation}\label{eq:loss-on-Phi-LatHMM}
-  \uargmax{\bm{\Phi}} \Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}}) + \frac{1}{K}\log\prod_{k=1}^K\Gamma(\bm{\sigma}_{s, k}^{-1}; a, b)
-\end{equation}
-
-
-
-Apart from the emission prboability model difference, rest computation is the same as \autoref{subsubsec:GenHMM}. We summarize the algorithm as:
-
-
-\begin{algorithm}[H]
-  \caption{M-step w.r.t. $\bm{\Phi}$ powered by LatMM}\label{algo:opt-Phi-LatHMM}
-  \begin{algorithmic}[1]
-    \STATE {\bfseries Input:}
-    Latent mixture distribution: $\sum_{k=1}^{K}\pi_{s, \kappa} \Nn\left(\bm{z}; \bm{\mu}_{s, \kappa}, \mathrm{diag}(\bm{\sigma}_{s, \kappa}^2)\right)$\\
-    Empirical distribution $\hat{p}(\bm{x})$ of dataset; \\
-    \STATE Set a total number of epochs $T$ of training as stop criterion. A learning rate $\eta$. Set hyperparameter $a$ , $b$ for prior of $\bm{\sigma}_{s, \kappa}^{-1}, \forall k$.
-    \FOR {epoch $t < T$}
-    \STATE Sample a batch of data $\left\{ \ubmr{x}{r} \right\}_{r=1}^{R_b}$ from dataset $P_d(\ubm{x})$
-    \STATE Compute $p(\smtr{s}{t}{r}, \smtr{\kappa}{t}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})$  by Forward/backward and \autoref{eq:kappa-posterior-LatHMM}. %= \frac{\pi_k \Nn\left(f(X); \bm{\mu}_k^{t},\bm{\sigma}_k^{t}\right)}{\sum_{k=1}^K\; \pi_k\Nn\left(f(X); \bm{\mu}_k^{t},\bm{\sigma}_k^{t}\right) }, \forall \left\{ x^{(i)}\right\}_{i=1}^{n_b}$
-    % \Comment{Calculate posterior \autoref{eq-posterior-gamma}}
-    \STATE Compute loss in \autoref{eq:loss-on-Phi-LatHMM}%\Comment{Expectation}
-
-    \STATE $\partial{\bm{\th}_s}, \partial{\bm{\mu}_{s, \kappa}}, \partial{\bm{\sigma}_{s, \kappa}}\gets 
-    \nabla_{\bm{\theta}, \bm{\mu}_k, \bm{\sigma}_k} -
-    \frac{1}{R_{b}}{\Qq}\left({\bm{\Phi}},\ubar{\bm{H}}^{\mathrm{old}}\right)
-    -\frac{1}{K}\sum_{k=1}^K \log \, \Gamma(\bm{\sigma}_{s, \kappa}^{-1}; a, b)$ %\Comment{E-step}
-    % \STATE $\partial{g_k} \gets \nabla_{\th_k}\widetilde{\Qq}\left(\left\{ \th_k
-    %   \right\}_{k=1}^{K};\left\{ \th_k^t\right\}_{k=1}^{K}\right)$,
-    % $\forall \th_k \in\left\{ \th_k\right\}_{k=1}^{K}$
-    \STATE $\bm{\th}_s \gets \bm{\th}_s - \eta \cdot \partial{\bm{\theta}_s}$, $\forall s \in \Ss$
-    \STATE $\bm{\mu}_{s, \kappa} \gets \bm{\mu}_{s, \kappa} - \eta \cdot \partial{\bm{\mu}_{s, \kappa}}, \forall \kappa, s$
-    \STATE $\bm{\sigma}_{s, \kappa} \gets \bm{\sigma}_{s, \kappa} - \eta \cdot \partial{\bm{\sigma}_{s, \kappa}}, \forall \kappa, s$
-    \ENDFOR
-    
-    \STATE Update $\pi_k$ according to \autoref{eq:mix-latent-parameter-solution}
-        
-    \STATE Assemble $\bm{\Phi} = \left\{  \bm{\Phi}_s| s \in \Ss\right\}$ for $\bm{\Phi}_s = \left\{ \bm{\theta}_s, \bm{\mu}_{{s},{\kappa}}, \bm{C}_{{s},{\kappa}}| \kappa = 1, 2, \cdots, K \right\}$.
-    
-    
-  \end{algorithmic}
-\end{algorithm}
-
-
-
-
-    %     This mixture emission probability model introduces anther latent variable $\kappa$, indicating the actual component of the mixture probability model that corresponding to the signal $\bm{x}$.
-
-
-    % %     For this proposal, we seek to use a generator mixed HMM scheme, termed as GenM-HMM. We define a set of generators for GenM-HMM:
-    % %     \begin{equation}
-    % %       \{\bm{g}_{s}| s \in \Ss, \bm{g}_s: \bm{z}\rightarrow \bm{x}, \bm{z}\sim p_{s}(\bm{z})\}.
-    % %     \end{equation}
-    %     Thus there are total $|\Ss|$ generators. $p(\bm{x}|{s}; \bm{\Phi})$ is induced as $\bm{g}_s(\bm{z}) \sim p(\bm{x}|{s}; \bm{\Phi})$ where $\bm{z} \sim p_s(\bm{z})$ for $s \in \Ss$.  We have the $s$-th component of the GenM-HMM model as
-    %     \begin{align}
-    %     p(\bm{x} | s; \bm{\Phi})
-    %                                    &= p_s(\bm{z}) \bigg| \det \left( \pd{\bm{z}}{\bm{x}} \right) \bigg| \nonumber \\
-    %                                    &= p_s(\bm{f}_s(\bm{x})) \bigg| \det \left( \pd{\bm{f}_s(\bm{x})}{\bm{x}} \right) \bigg|
-                                           %   \end{align}
-                                           %                                            where $p_s(\bm{z})$ is the latent source distribution for $s=1, 2, \cdots, |\Ss|$.
-
-                                           %                                            Let us denote the parameter set that defines latent distribution $p_s(z)$ by $\bm{\omega}_s$ and the parameter set that defines generator $\bm{g}_s$ by $\bm{\theta}_s$. Then $\bm{\Phi} = \left\{ \bm{\theta}_s,
-                                           %                                            \bm{\omega}_s, \forall s\in \Ss\right\}$. The problem in \autoref{eq:sub-gm} can be reformulated as:
-
-
-
-
-
-
+\section{Convergence Analysis}
 
 \section{On Implementation of acoustic signal}
-Found a HMM python lib that basics provide needed API for us, see \href{https://hmmlearn.readthedocs.io/en/stable/index.html}{hmmlearn}. Saikat also has suggestion.
+test citing \cite{2018arXiv180703039K}
 
-
-For problem \autoref{eq:sub-gm} we are going to use our generative models to solve. I have the following consideration to revised our LatMM and GenMM for this application:
+For problem \eqref{eq:sub-gm} we are going to use our generative models to solve. I have the following consideration to revised our LatMM and GenMM for this application:
 \begin{itemize}
 \item Use factorized model instead of additive mixture model, to make likelihood computation logarithm domain compatible; 
 \item Use full EM fashion instead of mini-batch fashion for training: store generative model as old for EM, there are always two neural networks working, one old for probability evaluation and one new for optimization.
 \end{itemize}
 
-\section{On Implementation of Planning}
-Refer to \cite{kurutach2018learning_plan} and its \href{https://github.com/thanard/causal-infogan}{experiments}.
-
-\bibliographystyle{plain}
+\bibliography{myref}
+\bibliographystyle{aaai}
 
      %      \bibliography{bibliography}
-\bibliography{myref}
+
 
      %      \appendix
 
