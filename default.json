@@ -1,5 +1,5 @@
 {
-    "Mul_gpu": false,
+    "Mul_gpu": true,
     "Train":
     {
         "niter": 2,
@@ -14,7 +14,7 @@
         "n_prob_components": 2,
         "em_skip": 5,
         "device": "cpu",
-        "lr": 0.001,
+        "lr": 0.004,
         "net_H": 24,
         "net_D": 40,
         "net_nchain": 4,
