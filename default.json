@@ -2,7 +2,7 @@
     "Mul_gpu": true,
     "Train":
     {
-        "niter": 2,
+        "niter": 4,
         "batch_size": 128,
         "eval_batch_size": 128,
         "n_states_min": 3,
