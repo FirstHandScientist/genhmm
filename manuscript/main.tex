@@ -1,5 +1,5 @@
-%\def\year{2020}\relax
-%File: formatting-instruction.tex
+% \def\year{2020}\relax
+% File: formatting-instruction.tex
 \documentclass[letterpaper]{article} % DO NOT CHANGE THIS
 \usepackage{aaai20}  % DO NOT CHANGE THIS
 \usepackage{times}  % DO NOT CHANGE THIS
@@ -13,16 +13,16 @@
 \frenchspacing  % DO NOT CHANGE THIS
 \setlength{\pdfpagewidth}{8.5in}  % DO NOT CHANGE THIS
 \setlength{\pdfpageheight}{11in}  % DO NOT CHANGE THIS
-%\nocopyright
-%PDF Info Is REQUIRED.
+% \nocopyright
+% PDF Info Is REQUIRED.
 % For /Author, add all authors within the parentheses, separated by commas. No accents or commands.
 % For /Title, add Title in Mixed Case. No accents or commands. Retain the parentheses.
- \pdfinfo{/Title gm_hmm
+\pdfinfo{/Title gm_hmm
 } %Leave this	
 \newcommand{\citet}[1]{\citeauthor{#1} \shortcite{#1}}
 \newcommand{\citep}{\cite}
 \newcommand{\citealp}[1]{\citeauthor{#1} \citeyear{#1}}
-%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%% 
 
 \usepackage{tikz}
 \usetikzlibrary{calc,shapes,positioning}
@@ -67,16 +67,16 @@
 
 
 % \hypersetup{  
-%   bookmarks=true,
-%   backref=true,
-%   pagebackref=false,
-%   colorlinks=true,
-%   linkcolor=blue,
-%   citecolor=red,
-%   urlcolor=blue,
-%   pdftitle={Generative Model HMM},
-%   pdfauthor={Dong Liu},
-%   pdfsubject={}
+% bookmarks=true,
+% backref=true,
+% pagebackref=false,
+% colorlinks=true,
+% linkcolor=blue,
+% citecolor=red,
+% urlcolor=blue,
+% pdftitle={Generative Model HMM},
+% pdfauthor={Dong Liu},
+% pdfsubject={}
 % }
 
 
@@ -84,7 +84,7 @@
 
 % The file aaai20.sty is the style file for AAAI Press 
 % proceedings, working notes, and technical reports.
-%
+% 
 \setlength\titlebox{2.5in} % If your paper contains an overfull \vbox too high warning at the beginning of the document, use this
 % command to correct it. You may not alter the value below 2.5 in
 
@@ -110,7 +110,7 @@
 
 \maketitle
 \begin{abstract}
-to be written...
+  to be written...
 \end{abstract}
 
 \section{introduction}
@@ -205,7 +205,7 @@ We define $p(\bm{x}| s, \kappa; \bm{\theta}_{s, \kappa})$ as induced distributio
 
 For a state $s$ of GenHMM, the induced probability distribution is illustrated in Figure~\ref{fig:gen-mix}.
 
-\subsection{Problem Statement}
+\subsection{Learning in EM framework}
 
 For a given dataset, we denote its empirical distribution by $\hat{p}(\ubm{x}) = \frac{1}{R}\sum_{r=1}^{R} \delta_{\ubmr{x}{r}}(\ubm{x})$, where superscipt $(\cdot)^{r}$ denotes the index of sequential signal. The natural question is how to use GenHMM to represent the dataset. Alternative, we are looking for the answer to question:
 \begin{equation}
@@ -215,21 +215,6 @@ where $KL(\cdot\|\cdot)$ denotes the Kullback-Leibler divergence. The KL diverge
 \begin{equation}\label{eq:ml-of-hmm}
   \uargmax{\bm{H} \in \Hh} \sum_{r=1}^{R}\log\,p(\ubmr{x}{r}; \bm{H}).
 \end{equation}
-
-With such a model GenHMM at hand, the remaining problems are:
-\begin{itemize}
-\item How to realize GenHMM by neural networks to have high modeling capacity?
-\item How to train GenHMM to sovle problem in \eqref{eq:ml-of-hmm} using practical algorithm?
-\item Would the training of GenHMM converges?
-\end{itemize}
-We would answer these questions in the following section.
-
-
-
-
-\section{Practical Solution for GenHMM}
-
-In this section, we provide answers to the questions at the end of last section.
 
 Since model $\bm{H}$ contains hidden sequential variable $\ubm{s}$ and $\ubm{\kappa}$, we can not directly solve the maximum likelihood problem in \ref{eq:ml-of-hmm}. We use expectation maximization (EM) to address the hidden variable problem by
 \begin{itemize}
@@ -253,18 +238,34 @@ The \eqref{eq:em-m-opt} can be reformulated as:
 \begin{align}\label{eq:m-step-subs}
   &\umax{\bm{H}} \Qq(\bm{H}; \bm{H}^{\mathrm{old}}) \nonumber \\
   =&\umax{\bm{q}}\Qq(\bm{q}; \bm{H}^{\mathrm{old}}) + \umax{{A}}\Qq({A}; \bm{H}^{\mathrm{old}}) 
-  + \umax{\bm{\Phi}}\Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}})
+     + \umax{\bm{\Phi}}\Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}})
 \end{align}
 where
 \begin{align}
   \Qq(\bm{q}; \bm{H}^{\mathrm{old}}) 
-    &=\EE_{\hat{p}(\ubm{x}),p(\ubm{s},\ubm{\kappa}| \ubm{x}; \bm{H}^{\mathrm{old}})} \left[ \log\,p({s}_{1})  \right] \nonumber\\
-    &= \EE_{\hat{p}(\ubm{x}),p(\ubm{s}| \ubm{x}; \bm{H}^{\mathrm{old}})} \left[ \log\,p({s}_{1})  \right]\label{eq:init-distribution-update}\\
+  &=\EE_{\hat{p}(\ubm{x}),p(\ubm{s},\ubm{\kappa}| \ubm{x}; \bm{H}^{\mathrm{old}})} \left[ \log\,p({s}_{1})  \right] \nonumber\\
+  &= \EE_{\hat{p}(\ubm{x}),p(\ubm{s}| \ubm{x}; \bm{H}^{\mathrm{old}})} \left[ \log\,p({s}_{1})  \right]\label{eq:init-distribution-update}\\
   \Qq(\bm{A}; \bm{H}^{\mathrm{old}}) &=\EE_{\hat{p}(\ubm{x}),p(\ubm{s}| \ubm{x}; \bm{H}^{\mathrm{old}})}\left[ \sum_{t}\log\,p({s}_{t+1}|{s}_{t}; \bm{H}) \right] \label{eq:transition-update}\\
   \Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}}) &= \EE_{\hat{p}(\ubm{x}),p(\ubm{s},\ubm{\kappa}| \ubm{x}; \bm{H}^{\mathrm{old}})} \left[ \log\,p(\ubm{x}, \ubm{\kappa}| \ubm{s}; \bm{H}) \right]\label{eq:generative-model-update}
 \end{align}
 
 We can see that the solution of $H$ depends on the posterior probability $p(\ubm{s}| \ubm{x}; \bm{H})$. Though the evaluation of posterior according to Bayesian theorem is simple, the computation complexity of $p(\ubm{s}| \ubm{x}; \bm{H})$ grows exponentially with the length of $\ubm{s}$. Therefore, we would employ Forward/Backward algorithm \cite{} to do the posterior computation efficiently. The marginal $p(s_t| \ubm{x}; \bm{H})$ is also efficiently computed as the joint posterior. 
+
+
+With such a model GenHMM at hand, the remaining problems are:
+\begin{itemize}
+\item How to realize GenHMM by neural networks to have high modeling capacity?
+\item How to train GenHMM to sovle problem in \eqref{eq:ml-of-hmm} using practical algorithm?
+\item Would the training of GenHMM converges?
+\end{itemize}
+We would answer these questions in the following section.
+
+
+
+\section{Practical Solution for GenHMM}
+
+In this section, we provide answers to the questions at the end of last section.
+
 
 
 \subsection{Modeling $\bm{g}_{s,\kappa}$ by a flow model }
@@ -337,12 +338,12 @@ For the flow-based neural network, the determinant of Jacobian matrix is
 where $\nabla{f_{s,\kappa}^{[l]}}$ is the Jacobian of the transformation from the $l$-th layer to the $(l-1)$-th layer, i.e., the inverse transformation. We compute the determinate of the Jacobian matrix as
 \begin{align}\label{eq-hl-determinate}
   \det (\nabla{f_{s,\kappa}^{[l]}})& = \det \left[  \pd{\bm{h}_{l-1}}{\bm{h}_l} \right] \nonumber\\
-                               & = \det
-                                 \begin{bmatrix}
-                                   \bm{I}_a & \mathbf{0} \nonumber\\
-                                   \pd{\bm{h}_{l-1,b}}{\bm{h}_{l,a}} & \mathrm{diag}(\bm{m}_a(\bm{h}_{l,a}))
-                                 \end{bmatrix}\nonumber\\
-                               &= \det \left( \mathrm{diag}(\bm{m}_a(\bm{h}_{l,a})) \right),
+                                   & = \det
+                                     \begin{bmatrix}
+                                       \bm{I}_a & \mathbf{0} \nonumber\\
+                                       \pd{\bm{h}_{l-1,b}}{\bm{h}_{l,a}} & \mathrm{diag}(\bm{m}_a(\bm{h}_{l,a}))
+                                     \end{bmatrix}\nonumber\\
+                                   &= \det \left( \mathrm{diag}(\bm{m}_a(\bm{h}_{l,a})) \right),
 \end{align}
 where $\bm{I}_a$ is identity matrix and $\mathrm{diag}(\cdot)$ returns a square matrix with the elements of $(\cdot)$ on the main diagnal.
 \textcolor{red}{do I still need this?}
@@ -352,14 +353,14 @@ Then the pdf is
             &  = p(\bm{z}) \prod_{l=1}^L \abs{\det\left( \mathrm{diag}(\bm{m}_a(\bm{h}_{l,a}))]  \right)}.
 \end{align}
 [] describes a \textit{coupling} mapping between layers. Since the coupling has a partial identity mapping, direct concatenation of multiple such coupling mappings would result in a partial identity mapping of the whole neural network $\tilde{\bm{g}}$. Alternating the positions of identity mapping \cite{2016arXiv160508803D} or using $1\times1$ convolution operations \cite{2018arXiv180703039K} before each coupling mapping is used to treat the issue.
-              %               \textcolor{blue}{Some reading problem in this sentence: Since the coupling has a partial identity mapping, alternating the positions of identity mapping \cite{2016arXiv160508803D} or using $1\times1$ convolution operations \cite{2018arXiv180703039K} when
-              %               concatenating multiple layers together were proposed to avoid the situation that a part of the output is equal to a part of the input.} %In addition, applying affine mapping does not affect its advantage of trivial inverse and determinate computation.
+% \textcolor{blue}{Some reading problem in this sentence: Since the coupling has a partial identity mapping, alternating the positions of identity mapping \cite{2016arXiv160508803D} or using $1\times1$ convolution operations \cite{2018arXiv180703039K} when
+% concatenating multiple layers together were proposed to avoid the situation that a part of the output is equal to a part of the input.} %In addition, applying affine mapping does not affect its advantage of trivial inverse and determinate computation.
 Furthermore, \cite{2016arXiv160508803D}\cite{2018arXiv180703039K} split some hidden
 layer signal $\bm{h}$ and model a part of it directly as standard Gaussian to reduce computation and memory burden.
 % % \textcolor{blue}{Therefore the dimension
-              %               of latent signal $\bm{z}$ to model can be smaller than $N$.}
+% of latent signal $\bm{z}$ to model can be smaller than $N$.}
 
-\subsection{Learning of GenHMM}
+\subsection{Learning of GenHMM}\label{subsec:optmGenHMM}
 
 \subsubsection{Generative Model Update}
 We use notation $\bm{\Pi} = \left\{  \bm{\pi}_{s}| s\in \Ss \right\}$, $\bm{\Theta}=\left\{ \bm{\theta}_s| s\in \Ss \right\}$.
@@ -378,7 +379,7 @@ The neural network loss can be thus formulated as
   &\Qq(\bm{\Theta}; \bm{H}^{\mathrm{old}}) \nonumber \\
   = &\frac{1}{R}\sum_{r=1}^{R}\sum_{\ubmr{s}{r}}\sum_{\ubmr{\kappa}{r}}{p(\ubmr{s}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})} \sum_{t=1}^{{T}^{r}}\log\,p(\bm{x}^{(r)} | \smtr{s}{t}{r}, \smtr{\kappa}{t}{r}; \bm{H}) \nonumber \\
   =& \frac{1}{R}\sum_{r=1}^{R} \sum_{t=1}^{{T}^{r}-1} \sum_{\smtr{s}{t}{r}=1}^{|\Ss|}  \sum_{\smtr{\kappa}{t}{r}=1}^{K}p(\smtr{s}{t}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})p(\smtr{\kappa}{t}{r}|\smtr{s}{t}{r}, \ubmr{x}{r}; \bm{H}^{\mathrm{old}}) \nonumber\\
-&  \log\, p(\bmtr{x}{t}{r} | \smtr{s}{t}{r}, \smtr{\kappa}{t}{r}; \bm{H}) 
+  &  \log\, p(\bmtr{x}{t}{r} | \smtr{s}{t}{r}, \smtr{\kappa}{t}{r}; \bm{H}) 
 \end{align}
 
 
@@ -390,11 +391,11 @@ Here, $p(s_t| \ubm{x}, \bm{H}^{\mathrm{old}})$ is computed by forward/backward a
 \end{align}
 where the last equation is due to the fact that only $\bm{x}_t$ among sequence $\ubm{x}$ depends on $s_t, \kappa_t$. 
 
-\textcolor{red}{expand to neural network here}By substituting \eqref{eq:changel-variable} and \eqref{eq:cat-jacobian} into \eqref{eq:obj-q-gen-mix}, we have loss function for neural networks as
+By substituting \eqref{eq:changel-variable} and \eqref{eq:cat-jacobian} into \eqref{eq:obj-q-gen-mix}, we have loss function for neural networks as
 \begin{align}\label{eq:obj-q-gen-mix}
   &\Qq(\bm{\Theta}; \bm{H}^{\mathrm{old}}) \nonumber \\
   =& \frac{1}{R}\hspace{-3pt}\sum_{r=1}^{R}\hspace{-3pt} \sum_{t=1}^{{T}^{r}-1}\hspace{-3pt} \sum_{\smtr{s}{t}{r}=1}^{|\Ss|} \hspace{-3pt} \sum_{\smtr{\kappa}{t}{r}=1}^{K}p(\smtr{s}{t}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})p(\smtr{\kappa}{t}{r}|\smtr{s}{t}{r}, \ubmr{x}{r}; \bm{H}^{\mathrm{old}}) \nonumber\\
-&\left[ \log\, p_{\smtr{s}{t}{r}, \smtr{\kappa}{t}{r}}(\bm{f}_{\smtr{s}{t}{r}, \smtr{\kappa}{t}{r}}(\bmtr{x}{t}{r})) + \sum_{l=1}^{L}\log\,| \det (\nabla{\bm{f}_{s,\kappa}^{[l]}})|\right]
+  &\left[ \log\, p_{\smtr{s}{t}{r}, \smtr{\kappa}{t}{r}}(\bm{f}_{\smtr{s}{t}{r}, \smtr{\kappa}{t}{r}}(\bmtr{x}{t}{r})) + \sum_{l=1}^{L}\log\,| \det (\nabla{\bm{f}_{s,\kappa}^{[l]}})|\right]
 \end{align}
 
 
@@ -434,14 +435,14 @@ where $p(s, \kappa | \ubm{x}; \bm{H}^{\mathrm{old}}) = p(s| \ubm{x}; \bm{H}^{\ma
 \begin{align}
   &\Qq(\bm{q}; \bm{H}^{\mathrm{old}}) \nonumber\\
   &=\frac{1}{R} \sum_{r=1}^{R}\sum_{\ubmr{s}{r}} {p(\ubmr{s}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})} \log\,p(\smtr{s}{1}{r}) \nonumber \\
-% & = \frac{1}{R}\sum_{r=1}^{R}\sum_{\smtr{s}{1}{r}=1}^{|\Ss|}\sum_{\smtr{s}{2}{r}=1}^{|\Ss|}\cdots \sum_{\smtr{s}{T^{r}}{r}}^{{|\Ss|}} {p(\smtr{s}{1}{r}, \smtr{s}{2}{r}, \cdots, \smtr{s}{T^{r}}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})} \log\,p(\smtr{s}{1}{r}) \\
-& = \frac{1}{R}\sum_{r=1}^{R}\sum_{\smtr{s}{1}{r}=1}^{|\Ss|}{p(\smtr{s}{1}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})} \log\,p(\smtr{s}{1}{r}) 
+  % & = \frac{1}{R}\sum_{r=1}^{R}\sum_{\smtr{s}{1}{r}=1}^{|\Ss|}\sum_{\smtr{s}{2}{r}=1}^{|\Ss|}\cdots \sum_{\smtr{s}{T^{r}}{r}}^{{|\Ss|}} {p(\smtr{s}{1}{r}, \smtr{s}{2}{r}, \cdots, \smtr{s}{T^{r}}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})} \log\,p(\smtr{s}{1}{r}) \\
+  & = \frac{1}{R}\sum_{r=1}^{R}\sum_{\smtr{s}{1}{r}=1}^{|\Ss|}{p(\smtr{s}{1}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})} \log\,p(\smtr{s}{1}{r}) 
 \end{align}
 
 Since $p(\smtr{s}{1}{r})$ is the probability of initial state of GenHMM $\bm{H}$ for $r$-th sequential sample, actually $q_i = p({s}_{1} =i) $, $i= 1, 2, \cdots, |\Ss|$ for $\bm{H}$. Solution to problem:
 \begin{align}
   \bm{q} &= \uargmax{\bm{q}} \Qq(\bm{q}; \bm{H}^{\mathrm{old}}), \nonumber \\
-                        &\mathrm{s.t.} \sum_{i=1}^{ |\Ss| }q_i = 1, q_i \geq 0, \forall s.
+         &\mathrm{s.t.} \sum_{i=1}^{ |\Ss| }q_i = 1, q_i \geq 0, \forall s.
 \end{align}
 is
 \begin{equation}\label{eq:update-initial-state-prob}
@@ -461,19 +462,20 @@ Since $\bm{A}_{i, j}  = p(\smtr{s}{t+1}{r}=j|\smtr{s}{t}{r}=i; {A})$ where $A_{i
 \begin{align}\label{eq:update-transition-prob}
   \bm{A} = &\uargmax{\bm{A}} \Qq(\bm{A}; \bm{H}^{\mathrm{old}}), \nonumber \\
   \mathrm{s.t.} &\hspace{0.2cm} \bm{A} \cdot \bm{1} = \bm{1} \nonumber \\
-                          &  \bm{A}^{\intercal} \cdot \bm{1} = \bm{1} \nonumber \\
-                          & \bm{A}_{i,j} \geq 0.
+           &  \bm{A}^{\intercal} \cdot \bm{1} = \bm{1} \nonumber \\
+           & \bm{A}_{i,j} \geq 0.
 \end{align}
 is
 \begin{equation}
   \bm{A}_{i,j} = \frac{\bar{\xi}_{i,j}}{\sum_{k = 1}^{|\Ss|} \bar{\xi}_{i,k}},
 \end{equation}
 where
-\begin{equation}
+\begin{equation}\label{eq:update-transition-solt}
   \bar{\xi}_{i,j} = \sum_{r= 1}^{R} \sum_{t= 1}^{T^{(r)}-1}{p(\smtr{s}{t}{r}=i, \smtr{s}{t+1}{r}=j| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})}
 \end{equation}
 
 \subsection{Algorithm of GenHMM}
+We goal is to minimize the KL divergence $KL(\hat{p}(\ubm{x})\| p(\ubm{x};\bm{H}))$ or maximizing$\sum_{r=1}^{R}\log\,p(\ubmr{x}{r}; \bm{H})$. The 
 Algorithm here:
 things to talk:
 \begin{itemize}
@@ -486,20 +488,28 @@ things to talk:
 We summarize the optimization algorithm as:
 
 \begin{algorithm}[H]
-  \caption{Meta algorithm for HMM powered by Generative Models (GMHMM)}
+  \caption{Learning of GenHMM}
   \begin{algorithmic}[1]
     \STATE {\bfseries Input:}{
       Building $\bm{H}^{\mathrm{old}}, \bm{H} \in \Hh$ gives: \\
-      $\bm{H}^{\mathrm{old}} = \{\Ss, \bm{q}^{\mathrm{old}}, A^{\mathrm{old}}, p(\bm{x}|s; \bm{\Phi}^{\mathrm{old}})\}$, $\bm{H} = \{\Ss, \bm{q}, A, p(\bm{x}|s; \bm{\Phi})\}$
-    }, \\
+      $\bm{H}^{\mathrm{old}} = \{\Ss, \bm{q}^{\mathrm{old}}, A^{\mathrm{old}}, p(\bm{x}|s; \bm{\Phi}^{\mathrm{old}})\}$, $\bm{H} = \{\Ss, \bm{q}, A, p(\bm{x}|s; \bm{\Phi})\}$\\
+    Empirical distribution $\hat{p}(\bm{x})$ of dataset;} \\
     \STATE Initialize $\bm{H}$
     \STATE $\bm{H}^{\mathrm{old}} \gets \bm{H}$
+    \STATE Set learning rate $\eta$, neural network optimization epochs $T$ per EM step.
     \FOR { $\bm{H}$ not converge}
-    \STATE Sample a batch of data $\left\{ \ubmr{x}{r} \right\}_{r=1}^{R_b}$ from the dataset $\hat{p}(\ubm{x})$
-    \STATE Compute $p(\smtr{s}{t}{r} | \ubmr{x}{r}; \bm{H}^{\mathrm{old}})$, $p(\smtr{s}{t}{r}, \smtr{s}{t+1}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})$ by forward/backward algorithm;
-    \STATE $\bm{q} \gets \uargmin{\bm{q}}\, \Qq(\bm{q}; \bm{H}^{\mathrm{old}})$ by \eqref{eq:update-initial-state-prob};
-    \STATE $\bm{A} \gets \uargmin{\bm{A}}\Qq(\bm{A}; \bm{H}^{\mathrm{old}})$ by \eqref{eq:update-transition-prob};
-    \STATE $\bm{\Phi} \gets \uargmin{\bm{\Phi}}\Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}})$ by calling Algorithm~\ref{algo:opt-Phi-GenHMM} or \ref{algo:opt-Phi-LatHMM};
+        \FOR {epoch $t < T$}
+    \STATE Sample a batch of data $\left\{ \ubmr{x}{r} \right\}_{r=1}^{R_b}$ from dataset $\hat{p}(\ubm{x})$
+    
+    \STATE Compute posterior $p(\smtr{s}{t}{r}, \smtr{\kappa}{t}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})$  
+    \STATE Formulate loss ${\Qq}\left({\bm{\Theta}}, {\bm{H}}^{\mathrm{old}}\right)$ in \eqref{eq:obj-q-gen-mix}
+
+    \STATE $\partial{\bm{\Theta}} \gets  \nabla_{\bm{\Theta}} {\Qq}\left({\bm{\Theta}},{\bm{H}}^{\mathrm{old}}\right)$
+    \STATE $\bm{\Theta} \gets \bm{\Theta} + \eta \cdot \partial{\bm{\theta}_s}$
+    \ENDFOR
+    \STATE $\bm{q} \gets \uargmax{\bm{q}}\, \Qq(\bm{q}; \bm{H}^{\mathrm{old}})$ by \eqref{eq:update-initial-state-prob};
+    \STATE $\bm{A} \gets \uargmax{\bm{A}}\Qq(\bm{A}; \bm{H}^{\mathrm{old}})$ by \eqref{eq:update-transition-prob};
+    \STATE $\bm{\Pi} \gets \uargmax{\bm{\Pi}}\Qq(\bm{\Phi}; \bm{H}^{\mathrm{old}})$ by \eqref{eq:update-transition-solt};
     \STATE $\bm{H}^{\mathrm{old}} \gets \bm{H}$
 
     \ENDFOR
@@ -509,45 +519,62 @@ We summarize the optimization algorithm as:
 
 
 
-\begin{algorithm}[H]
-  \caption{M-step w.r.t. $\bm{\Phi}$ powered by GenMM}\label{algo:opt-Phi-GenHMM}
-  \begin{algorithmic}[1]
-    \STATE {\bfseries Input:}
-    Latent mixture distribution: $\Nn\left(\bm{z}; \bm{0}, \mathrm{diag}(\bm{1})\right)$, $\forall \, s \in \Ss, \kappa = 1, 2, \cdots, K$;\\
-    Empirical distribution $\hat{p}(\bm{x})$ of dataset; \\
-    \STATE Set a total number of epochs $T$ of training as stop criterion. A learning rate $\eta$.
-    \FOR {epoch $t < T$}
-    \STATE Sample a batch of data $\left\{ \ubmr{x}{r} \right\}_{r=1}^{R_b}$ from dataset $P_d(\ubm{x})$
-    
-    \STATE Compute $p(\smtr{s}{t}{r}, \smtr{\kappa}{t}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})$  by Forward/backward and \eqref{eq:kappa-posterior}.
-    %     = \frac{\pi_k \Nn\left(f(X); \bm{\mu}_k^{t},\bm{\sigma}_k^{t}\right)}{\sum_{k=1}^K\; \pi_k\Nn\left(f(X); \bm{\mu}_k^{t},\bm{\sigma}_k^{t}\right) }, \forall \left\{ x^{(i)}\right\}_{i=1}^{n_b}$
-    % \Comment{Calculate posterior \autoref{eq-posterior-gamma}}
-    \STATE Compute loss ${\Qq}\left({\bm{\Phi}}, {\bm{H}}^{\mathrm{old}}\right)$ in \eqref{eq:obj-q-gen-mix}
-
-    \STATE $\partial{\bm{\th}_s} \gets  \nabla_{\bm{\theta}} -
-    \frac{1}{R_{b}}{\Qq}\left({\bm{\Phi}},{\bm{H}}^{\mathrm{old}}\right)$
-    % \Comment{E-step}
-    % \STATE $\partial{g_k} \gets \nabla_{\th_k}\widetilde{\Qq}\left(\left\{ \th_k
-    %   \right\}_{k=1}^{K};\left\{ \th_k^t\right\}_{k=1}^{K}\right)$,
-    % $\forall \th_k \in\left\{ \th_k\right\}_{k=1}^{K}$
-    \STATE $\bm{\th}_s \gets \bm{\th}_s - \eta \cdot \partial{\bm{\theta}_s}$, $\forall s \in \Ss$
-    \ENDFOR
-    
-    \STATE Update $\pi_{s, \kappa}, \forall, s\in \Ss, \kappa= 1, 2, \cdots, K$, according to \eqref{eq:mix-latent-parameter-solution}
-        
-    \STATE Assemble $\bm{\Phi} = \left\{  \bm{\Phi}_s| s \in \Ss\right\}$ for $\bm{\Phi}_s = \left\{ \bm{\theta}_{s, \kappa}, \bm{\mu}_{{s},{\kappa}}, \bm{C}_{{s},{\kappa}}| \kappa = 1, 2, \cdots, K \right\}$.
-    
-    
-  \end{algorithmic}
-\end{algorithm}
 
 
+\subsection{Convergence Analysis}
+\begin{prop}
+  Assume that parameters of GenHMM are in a compact set. Further assume that $\Qq(\bm{\Theta}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}) \geq \Qq(\bm{\Theta}^{\mathrm{old}}; \bm{H}^{\mathrm{old}})$, then we always have $KL(\hat{p}(\ubm{x})\| p(\ubm{x};\bm{H}^{\mathrm{new}})) \geq KL(\hat{p}(\ubm{x})\| p(\ubm{x};\bm{H}^{\mathrm{old}}))$, and GenHMM converges.
+\end{prop}
 
+\begin{proof}
+  We begin with the comparison of log-likelihood evaluated under $\bm{H}^{\mathrm{old}}$ and $\bm{H}^{\mathrm{old}}$. The log-likelihood of dataset given by $\hat{p}(\ubm{x})$ can be reformulated as
+  \begin{align*}
+    &\EE_{\hat{p}(\ubm{x})}\left[ \log\,p(\ubm{x};\bm{H}^{\mathrm{new}}) \right] \nonumber \\
+    =& \EE_{\hat{p}(\ubm{x}),p(\ubm{s},\ubm{\kappa}| \ubm{x}; \bm{H}^{\mathrm{old}})}\left[ \log\,\frac{p(\ubm{x}, \ubm{s}, \ubm{\kappa}; \bm{H}^{\mathrm{new}})}{p(\ubm{s}, \ubm{\kappa}|\ubm{x}; \bm{H}^{\mathrm{old}})}\right] \nonumber \\
+    &+ \EE_{\hat{p}(\ubm{x})}\left[ KL(p(\ubm{s}, \ubm{\kappa}|\ubm{x}; \bm{H}^{\mathrm{old}})\|p(\ubm{s}, \ubm{\kappa}|\ubm{x}; \bm{H}^{\mathrm{new}})) \right],
+  \end{align*}
+  where the first term on the right hand side of equality can be further written as
+  \begin{align*}
+    &\EE_{\hat{p}(\ubm{x}),p(\ubm{s},\ubm{\kappa}| \ubm{x}; \bm{H}^{\mathrm{old}})}\left[ \log\,\frac{p(\ubm{x}, \ubm{s}, \ubm{\kappa}; \bm{H}^{\mathrm{new}})}{p(\ubm{s}, \ubm{\kappa}|\ubm{x}; \bm{H}^{\mathrm{old}})}\right] \nonumber \\
+    = &\Qq(\bm{H}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}) + \EE_{\hat{p}(\ubm{x}),p(\ubm{s},\ubm{\kappa}| \ubm{x}; \bm{H}^{\mathrm{old}})}\left[p(\ubm{s}, \ubm{\kappa}|\ubm{x}; \bm{H}^{\mathrm{old}})\right].
+  \end{align*}
+  According to subsection~\ref{subsec:optmGenHMM}, the subproblem solutions gives
+  \begin{align*}
+    \Qq(\bm{q}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}) &\geq \Qq(\bm{q}^{\mathrm{old}}; \bm{H}^{\mathrm{old}}),\nonumber \\
+    \Qq(\bm{A}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}) &\geq \Qq(\bm{A}^{\mathrm{old}}; \bm{H}^{\mathrm{old}}),\nonumber \\
+    \Qq(\bm{\Pi}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}) &\geq \Qq(\bm{\Pi}^{\mathrm{old}}; \bm{H}^{\mathrm{old}}).
+  \end{align*}
+  For the learning w.r.t. neural network parameter set $\bm{\Theta}$, as long as the lose function does not decrease during EM iterations, i.e. $\Qq(\bm{\Theta}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}) \geq \Qq(\bm{\Theta}^{\mathrm{old}}; \bm{H}^{\mathrm{old}})$, we would have
+  \begin{equation*}
+    \Qq(\bm{H}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}) \geq \Qq(\bm{H}^{\mathrm{old}}; \bm{H}^{\mathrm{old}}),
+  \end{equation*}
+  since
+  \begin{align*}
+    \Qq(\bm{H}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}) = &\Qq(\bm{q}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}) + \Qq(\bm{A}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}) \nonumber \\
+    &+ \Qq(\bm{\Pi}^{\mathrm{new}}; \bm{H}^{\mathrm{old}})
+    + \Qq(\bm{\Theta}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}).
+  \end{align*}
+  Therefore we have the inequality 
+  \begin{align*}
+    &\EE_{\hat{p}(\ubm{x}),p(\ubm{s},\ubm{\kappa}| \ubm{x}; \bm{H}^{\mathrm{old}})}\left[ \log\,\frac{p(\ubm{x}, \ubm{s}, \ubm{\kappa}; \bm{H}^{\mathrm{new}})}{p(\ubm{s}, \ubm{\kappa}|\ubm{x}; \bm{H}^{\mathrm{old}})}\right] \nonumber \\
+    \geq &\EE_{\hat{p}(\ubm{x}),p(\ubm{s},\ubm{\kappa}| \ubm{x}; \bm{H}^{\mathrm{old}})}\left[ \log\,\frac{p(\ubm{x}, \ubm{s}, \ubm{\kappa}; \bm{H}^{\mathrm{old}})}{p(\ubm{s}, \ubm{\kappa}|\ubm{x}; \bm{H}^{\mathrm{old}})}\right].
+  \end{align*}
+  Due to the fact that $KL(p(\ubm{s}, \ubm{\kappa}|\ubm{x}; \bm{H}^{\mathrm{old}})\|p(\ubm{s}, \ubm{\kappa}|\ubm{x}; \bm{H}^{\mathrm{old}}))=0$, we have
+  \begin{align*}
+      &\EE_{\hat{p}(\ubm{x})}\left[ \log\,p(\ubm{x};\bm{H}^{\mathrm{new}}) \right] \nonumber \\
+    \geq & \EE_{\hat{p}(\ubm{x}),p(\ubm{s},\ubm{\kappa}| \ubm{x}; \bm{H}^{\mathrm{old}})}\left[ \log\,\frac{p(\ubm{x}, \ubm{s}, \ubm{\kappa}; \bm{H}^{\mathrm{old}})}{p(\ubm{s}, \ubm{\kappa}|\ubm{x}; \bm{H}^{\mathrm{old}})}\right] \nonumber \\
+    = & \EE_{\hat{p}(\ubm{x})}\left[ \log\,p(\ubm{x};\bm{H}^{\mathrm{old}}) \right].
+  \end{align*}
+  Therefore
+  \begin{align*}
+    KL(\hat{p}(\ubm{x})\|p(\ubm{x};\bm{H}^{\mathrm{new}})) = &\EE_{\hat{p}(\ubm{x})}\left[ \log\,\frac{\hat{p}(\ubm{x})}{p(\ubm{x};\bm{H}^{\mathrm{new}})} \right] \nonumber \\
+    \leq &\EE_{\hat{p}(\ubm{x})}\left[ \log\,\frac{\hat{p}(\ubm{x})}{p(\ubm{x};\bm{H}^{\mathrm{old}})} \right] \\
+    = & KL(\hat{p}(\ubm{x})\|p(\ubm{x};\bm{H}^{\mathrm{old}})).
+    \end{align*}
+  Since KL divergence is non-negative and thus lower bounded, GenHMM will converge.
+\end{proof}
 
-
-\section{Convergence Analysis}
-
-\section{On Implementation of acoustic signal}
+\section{Experiments}
 test citing \cite{2018arXiv180703039K}
 
 For problem \eqref{eq:sub-gm} we are going to use our generative models to solve. I have the following consideration to revised our LatMM and GenMM for this application:
@@ -559,12 +586,12 @@ For problem \eqref{eq:sub-gm} we are going to use our generative models to solve
 \bibliography{myref}
 \bibliographystyle{aaai}
 
-     %      \bibliography{bibliography}
+% \bibliography{bibliography}
 
 
-     %      \appendix
+% \appendix
 
-     %      \input{section/sec-appendixA}
+% \input{section/sec-appendixA}
 \end{document}
 
 
