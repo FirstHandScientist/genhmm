@@ -3,8 +3,8 @@
     "Train":
     {
         "niter": 4,
-        "batch_size": 128,
-        "eval_batch_size": 128,
+        "batch_size": 512,
+        "eval_batch_size": 512,
         "n_states_min": 3,
         "n_states_max": 5
     },
@@ -20,8 +20,8 @@
         "net_nchain": 4,
         "p_drop": 0,
         "mask_type": "cross",
-        "startprob_type": "uniform",
-        "transmat_type": "ergodic"
+        "startprob_type": "first",
+        "transmat_type": "triangular"
     },
     "GMM":
     {
