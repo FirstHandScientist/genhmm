@@ -114,6 +114,16 @@
 \end{abstract}
 
 \section{introduction}
+Sequential data modeling is a challenging topic in pattern recognition and machine learning, since for many applications, the assumption of independent and identically distributed data points is too strong to model data properly. Hidden Markov model (HMM) is classic way to model sequential data. HMM has been widely used in different practical problems, and especially is known for applications in reinforcement learning [], natural language modeling [, biological sequence analysis such as proteins and DNA [], etc.
+
+HMM provides an framework for sequential data modeling. But for ..., a probabilistic model is used to describe how each state of HMM should represent a part of sequential data. The typical way is to use a Gaussian mixture model (GMM) per state of HMM, where GMMs are used to represent the relationship between states of HMM and sequential data input. A large amount of research on GMM based HMM (GMMHMM) has been carried out[] in literature.
+
+Given the success of GMMHMM, it is not efficient for modeling data in nonlinear manifold. Research attempts of training HMM with neural networks have been done to boost the modeling capacity of HMM. A successful work is to bring restrictive Boltzmann machine (RBM) \cite{Hinton2012} into HMM learning \cite{hinton2012deepSpeech}. In RBM based HMM, the hierarchical learning scheme is used, where a stack of RBMs are trained in unsupervised fashion , and then the stack of RBMs with a final softmax layer are used to mapping sequential input signal to states of a HMM. ... talk about some other DNNHMMs.
+
+Introduce our model...
+
+Contribution ...
+
 
 \section{Generator-mixed HMM}
 
