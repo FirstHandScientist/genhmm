@@ -114,15 +114,34 @@
 \end{abstract}
 
 \section{introduction}
-Sequential data modeling is a challenging topic in pattern recognition and machine learning, since for many applications, the assumption of independent and identically distributed data points is too strong to model data properly. Hidden Markov model (HMM) is classic way to model sequential data. HMM has been widely used in different practical problems, and especially is known for applications in reinforcement learning [], natural language modeling [, biological sequence analysis such as proteins and DNA [], etc.
+Sequential data modeling is a challenging topic in pattern recognition and machine learning, since for many applications, the assumption of independent and identically distributed data points is too strong to model data properly. Hidden Markov model (HMM) is classic way to model sequential data. HMM has been widely used in different practical problems, and especially is known for applications in reinforcement learning \cite{ding2018reinforcementhmm,levine2018reinforcementReview}, natural language modeling \cite{khan2016survey,Hariyanti_2019}, biological sequence analysis such as proteins \cite{ASHWIN20172} and DNA \cite{ren2015dna}, etc.
 
-HMM provides an framework for sequential data modeling. But for ..., a probabilistic model is used to describe how each state of HMM should represent a part of sequential data. The typical way is to use a Gaussian mixture model (GMM) per state of HMM, where GMMs are used to represent the relationship between states of HMM and sequential data input. A large amount of research on GMM based HMM (GMMHMM) has been carried out[] in literature.
+HMM provides an framework for sequential data modeling. But for ..., a probabilistic model is used to describe how each state of HMM should represent a part of sequential data. The typical way is to use a Gaussian mixture model (GMM) per state of HMM, where GMMs are used to represent the relationship between states of HMM and sequential data input. A large amount of research on GMM based HMM (GMM-HMM) has been carried out[] in literature.
 
-Given the success of GMMHMM, it is not efficient for modeling data in nonlinear manifold. Research attempts of training HMM with neural networks have been done to boost the modeling capacity of HMM. A successful work is to bring restrictive Boltzmann machine (RBM) \cite{Hinton2012} into HMM learning \cite{hinton2012deepSpeech}. In RBM based HMM, the hierarchical learning scheme is used, where a stack of RBMs are trained in unsupervised fashion , and then the stack of RBMs with a final softmax layer are used to mapping sequential input signal to states of a HMM. ... talk about some other DNNHMMs.
+Given the success of GMM-HMM, it is not efficient for modeling data in nonlinear manifold. Research attempts of training HMM with neural networks have been done to boost the modeling capacity of HMM. A successful work is to bring restrictive Boltzmann machine (RBM) \cite{Hinton2012} into HMM learning \cite{hinton2012deepSpeech,li2013hybrid,Miao2013ImprovingLC}. In RBM based HMM, the hierarchical learning scheme is used: i) a stack of RBMs are trained in unsupervised fashion, ii) then a final softmax layer is added to the stack of RBMs to represent the posterior of state of HMM given data input, iii) a discriminative training is followed to do the final tuning of the model.
 
-Introduce our model...
+Another track of related work is hybrid method of temporal neural network models and HMM. In \cite{liu2019lstmHmmHyb,buys2018bridging,vik2016rnnHmm}, a long short-term memory (LSTM) model/recurrent neural network (RNN) is combined with HMM as hybridization. A hierarchical training is carried out by: i) training a HMM first, ii) and then doing modified training of LSTM using trained HMM. This training procedure is argued by the authors to use LSTM or RNN to fill in the gap where HMM can not learn.
 
-Contribution ...
+work of epfl fiting GMM with neural network...
+
+The above work help improve modeling capacity of HMM based models by bringing in neural networks. A softmax layer is usually used to represent probability whenever a conditional distribution is needed. These hierarchical schemes are built based on intuition of domain knowledge. Training of these hierarchical models usually need specific experience in relevant area to be able to the hierarchical procedure of training. 
+
+In this work, we propose a generator-mixed HMM model, termed as GenHMM, where generators are realized by neural networks to help the model gain high modeling capacity.
+Our proposed model, GenHMM:
+\begin{itemize}
+\item has advantage of easy to do training, since GenHMM training employs expectation maximization (EM) framework. Training a GenHMM is as easy as training a GMM-HMM model, but configure of GenHMM is flexible.
+\item has high modeling capability of sequence data, though its training and using are handy
+\item is able to compute loglikelihood exactly and efficiently.
+\end{itemize}
+Instead of using softmax for probability representation, our GenHMM is able to compute exact loglikelihood of given sequence data based on change of variable formula. To make the loglikelihood computation efficient, neural network based generators of GenHMM are implemented as flow models. 
+
+Our contributions in the paper are as follows:
+\begin{itemize}
+\item Proposing a neural network based HMM for sequential data modeling, i.e. GenHMM. The likelihood computation of sequential data under GenHMM can be computed exactly and efficiently.
+\item Designing practical algorithm for training GenHMM under EM framework. Stochastic gradient  search in batch fashion is embedded in this algorithm.
+\item Convergence analysis for GenHMM with the learning algorithm with gradient based optimization.
+\end{itemize}
+
 
 
 \section{Generator-mixed HMM}
@@ -306,7 +325,7 @@ where $\bm{g}_{s,\kappa}^{[l]}$ and $\bm{f}_{s,\kappa}^{[l]}$ are the $l$-th lay
 the full feed-forward neural network is invertible. The inverse
 function is given by $\bm{z}=\bm{f}_{s,\kappa}(\bm{x})$. Flow-based
 network, proposed in \cite{DBLP:journals/corr/DinhKB14}, is such a
-feed-forward neural network, which is further improved in subsequent works \cite{2016arXiv160508803D, 2018arXiv180703039K}. It also has additional advantages as efficient Jacobian computation and low computational complexity. %Computation of inverse mapping for flow-based network and determinant of Jacobin were addressed in the literature. 
+feed-forward neural network, which is further improved in subsequent works \cite{2016arXiv160508803D,kingma2018glow}. It also has additional advantages as efficient Jacobian computation and low computational complexity. %Computation of inverse mapping for flow-based network and determinant of Jacobin were addressed in the literature. 
 
 For a flow-based neural network architecture, let us assume that
 the feature $\bm{h}_l$ at the $l$'th layer has two subparts as
@@ -362,10 +381,10 @@ Then the pdf is
   p(\bm{x}) & =  p(\bm{z}) \big| \mathrm{det}(\bm{J}) |_{\bm{z}={\bm{f}}({\bm{x}})}\big| \nonumber\\
             &  = p(\bm{z}) \prod_{l=1}^L \abs{\det\left( \mathrm{diag}(\bm{m}_a(\bm{h}_{l,a}))]  \right)}.
 \end{align}
-[] describes a \textit{coupling} mapping between layers. Since the coupling has a partial identity mapping, direct concatenation of multiple such coupling mappings would result in a partial identity mapping of the whole neural network $\tilde{\bm{g}}$. Alternating the positions of identity mapping \cite{2016arXiv160508803D} or using $1\times1$ convolution operations \cite{2018arXiv180703039K} before each coupling mapping is used to treat the issue.
+[] describes a \textit{coupling} mapping between layers. Since the coupling has a partial identity mapping, direct concatenation of multiple such coupling mappings would result in a partial identity mapping of the whole neural network $\tilde{\bm{g}}$. Alternating the positions of identity mapping \cite{2016arXiv160508803D} or using $1\times1$ convolution operations \cite{kingma2018glow} before each coupling mapping is used to treat the issue.
 % \textcolor{blue}{Some reading problem in this sentence: Since the coupling has a partial identity mapping, alternating the positions of identity mapping \cite{2016arXiv160508803D} or using $1\times1$ convolution operations \cite{2018arXiv180703039K} when
 % concatenating multiple layers together were proposed to avoid the situation that a part of the output is equal to a part of the input.} %In addition, applying affine mapping does not affect its advantage of trivial inverse and determinate computation.
-Furthermore, \cite{2016arXiv160508803D}\cite{2018arXiv180703039K} split some hidden
+Furthermore, \cite{2016arXiv160508803D}\cite{kingma2018glow} split some hidden
 layer signal $\bm{h}$ and model a part of it directly as standard Gaussian to reduce computation and memory burden.
 % % \textcolor{blue}{Therefore the dimension
 % of latent signal $\bm{z}$ to model can be smaller than $N$.}
@@ -503,12 +522,12 @@ We summarize the optimization algorithm as:
     \STATE {\bfseries Input:}{
       Building $\bm{H}^{\mathrm{old}}, \bm{H} \in \Hh$ gives: \\
       $\bm{H}^{\mathrm{old}} = \{\Ss, \bm{q}^{\mathrm{old}}, A^{\mathrm{old}}, p(\bm{x}|s; \bm{\Phi}^{\mathrm{old}})\}$, $\bm{H} = \{\Ss, \bm{q}, A, p(\bm{x}|s; \bm{\Phi})\}$\\
-    Empirical distribution $\hat{p}(\bm{x})$ of dataset;} \\
+      Empirical distribution $\hat{p}(\bm{x})$ of dataset;} \\
     \STATE Initialize $\bm{H}$
     \STATE $\bm{H}^{\mathrm{old}} \gets \bm{H}$
     \STATE Set learning rate $\eta$, neural network optimization epochs $T$ per EM step.
     \FOR { $\bm{H}$ not converge}
-        \FOR {epoch $t < T$}
+    \FOR {epoch $t < T$}
     \STATE Sample a batch of data $\left\{ \ubmr{x}{r} \right\}_{r=1}^{R_b}$ from dataset $\hat{p}(\ubm{x})$
     
     \STATE Compute posterior $p(\smtr{s}{t}{r}, \smtr{\kappa}{t}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})$  
@@ -561,8 +580,8 @@ We summarize the optimization algorithm as:
   since
   \begin{align*}
     \Qq(\bm{H}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}) = &\Qq(\bm{q}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}) + \Qq(\bm{A}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}) \nonumber \\
-    &+ \Qq(\bm{\Pi}^{\mathrm{new}}; \bm{H}^{\mathrm{old}})
-    + \Qq(\bm{\Theta}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}).
+                                                        &+ \Qq(\bm{\Pi}^{\mathrm{new}}; \bm{H}^{\mathrm{old}})
+                                                          + \Qq(\bm{\Theta}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}).
   \end{align*}
   Therefore we have the inequality 
   \begin{align*}
@@ -571,7 +590,7 @@ We summarize the optimization algorithm as:
   \end{align*}
   Due to the fact that $KL(p(\ubm{s}, \ubm{\kappa}|\ubm{x}; \bm{H}^{\mathrm{old}})\|p(\ubm{s}, \ubm{\kappa}|\ubm{x}; \bm{H}^{\mathrm{old}}))=0$, we have
   \begin{align*}
-      &\EE_{\hat{p}(\ubm{x})}\left[ \log\,p(\ubm{x};\bm{H}^{\mathrm{new}}) \right] \nonumber \\
+    &\EE_{\hat{p}(\ubm{x})}\left[ \log\,p(\ubm{x};\bm{H}^{\mathrm{new}}) \right] \nonumber \\
     \geq & \EE_{\hat{p}(\ubm{x}),p(\ubm{s},\ubm{\kappa}| \ubm{x}; \bm{H}^{\mathrm{old}})}\left[ \log\,\frac{p(\ubm{x}, \ubm{s}, \ubm{\kappa}; \bm{H}^{\mathrm{old}})}{p(\ubm{s}, \ubm{\kappa}|\ubm{x}; \bm{H}^{\mathrm{old}})}\right] \nonumber \\
     = & \EE_{\hat{p}(\ubm{x})}\left[ \log\,p(\ubm{x};\bm{H}^{\mathrm{old}}) \right].
   \end{align*}
@@ -580,12 +599,12 @@ We summarize the optimization algorithm as:
     KL(\hat{p}(\ubm{x})\|p(\ubm{x};\bm{H}^{\mathrm{new}})) = &\EE_{\hat{p}(\ubm{x})}\left[ \log\,\frac{\hat{p}(\ubm{x})}{p(\ubm{x};\bm{H}^{\mathrm{new}})} \right] \nonumber \\
     \leq &\EE_{\hat{p}(\ubm{x})}\left[ \log\,\frac{\hat{p}(\ubm{x})}{p(\ubm{x};\bm{H}^{\mathrm{old}})} \right] \\
     = & KL(\hat{p}(\ubm{x})\|p(\ubm{x};\bm{H}^{\mathrm{old}})).
-    \end{align*}
+  \end{align*}
   Since KL divergence is non-negative and thus lower bounded, GenHMM will converge.
 \end{proof}
 
 \section{Experiments}
-test citing \cite{2018arXiv180703039K}
+
 
 For problem \eqref{eq:sub-gm} we are going to use our generative models to solve. I have the following consideration to revised our LatMM and GenMM for this application:
 \begin{itemize}
@@ -593,15 +612,10 @@ For problem \eqref{eq:sub-gm} we are going to use our generative models to solve
 \item Use full EM fashion instead of mini-batch fashion for training: store generative model as old for EM, there are always two neural networks working, one old for probability evaluation and one new for optimization.
 \end{itemize}
 
+\newpage
+
 \bibliography{myref}
 \bibliographystyle{aaai}
-
-% \bibliography{bibliography}
-
-
-% \appendix
-
-% \input{section/sec-appendixA}
 \end{document}
 
 
