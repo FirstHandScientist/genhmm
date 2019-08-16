@@ -116,7 +116,7 @@
 \section{introduction}
 Sequential data modeling is a challenging topic in pattern recognition and machine learning, since for many applications, the assumption of independent and identically distributed data points is too strong to model data properly. Hidden Markov model (HMM) is classic way to model sequential data. HMM has been widely used in different practical problems, and especially is known for applications in reinforcement learning \cite{ding2018reinforcementhmm,levine2018reinforcementReview}, natural language modeling \cite{khan2016survey,Hariyanti_2019}, biological sequence analysis such as proteins \cite{ASHWIN20172} and DNA \cite{ren2015dna}, etc.
 
-HMM provides an framework for sequential data modeling. But for ..., a probabilistic model is used to describe how each state of HMM should represent a part of sequential data. The typical way is to use a Gaussian mixture model (GMM) per state of HMM, where GMMs are used to represent the relationship between states of HMM and sequential data input. A large amount of research on GMM based HMM (GMM-HMM) has been carried out[] in literature.
+HMM provides an framework for sequential data modeling. To connect states of HMM with input data , a probabilistic model is used to describe how each state of HMM should represent a part of sequential data. The typical way is to use a Gaussian mixture model (GMM) per state of HMM\cite{juang1986maximum}, where GMMs are used to represent the relationship between states of HMM and sequential data input. GMM based HMM (GMM-HMM) has becomes a standard model for sequential data modeling, and employed widely for practical applications, especially in speech recognition \cite{gales2008application}.
 
 Given the success of GMM-HMM, it is not efficient for modeling data in nonlinear manifold. Research attempts of training HMM with neural networks have been done to boost the modeling capacity of HMM. A successful work is to bring restrictive Boltzmann machine (RBM) \cite{Hinton2012} into HMM learning \cite{hinton2012deepSpeech,li2013hybrid,Miao2013ImprovingLC}. In RBM based HMM, the hierarchical learning scheme is used: i) a stack of RBMs are trained in unsupervised fashion, ii) then a final softmax layer is added to the stack of RBMs to represent the posterior of state of HMM given data input, iii) a discriminative training is followed to do the final tuning of the model.
 
@@ -604,13 +604,18 @@ We summarize the optimization algorithm as:
 \end{proof}
 
 \section{Experiments}
+To show the validity of our model, we implement our model in PyTorch and test it with sequential data. The code is available at github repository\footnote{\textcolor{blue}{link}}. In the next subsection, we first discuss the experimental setups and the show the experimental results.
 
+\subsection{Experimental Setups}
+The dataset used for sequential data modeling and classification is TIMIT dataset where the speech is sampled at $16$kHz. For extraction of feature vectors, we use $25$ms frame length and $10$ms frame shift to convert sound track into standard Mel-frequency cepstral coefficients (MFCCs) features. The deltas and delta-deltas features are also concatenated and used in our experiments.
 
-For problem \eqref{eq:sub-gm} we are going to use our generative models to solve. I have the following consideration to revised our LatMM and GenMM for this application:
-\begin{itemize}
-\item Use factorized model instead of additive mixture model, to make likelihood computation logarithm domain compatible; 
-\item Use full EM fashion instead of mini-batch fashion for training: store generative model as old for EM, there are always two neural networks working, one old for probability evaluation and one new for optimization.
-\end{itemize}
+The TIMIT dataset consists of $5300$ phoneme-labeled speech utterances which are partitioned into two sets: \textcolor{blue}{a train set consists of $4620$ utterance, and a test set consists of $1680$ utterances.} There are totally $61$ different types of phones in TIMIT labels. Our experiments in this section is carried out in two different cases: i) full $61$-phoneme classification case, where both training and testing use the $61$-phoneme data; ii) $39$-phonme classification case, where $61$ phonemes are folded into $39$ phonemes as described in \cite{Perdigao11}.
+
+In all the following experiments, all generators $\left\{\bm{g}_{s,\kappa}|s\in \Ss, \kappa=1, 2, \cdots, K \right\}$ of GenHMM are implemented as flow models. To be more specific, our generator structure follows the structure of flow model in RealNVP \cite{2016arXiv160508803D}. The coupling layer shown as \eqref{eq-gl} maps a part of its input signal identically. The following coupling layer would alternate the input signal older such that after two consequential coupling layers, there is no signal remains the same any more. We term such two consequential coupling layers as a \textit{flow block}. In our experiments, a generator $\bm{g}_{s,\kappa}$ consists of four flow blocks. The latent source signal is assumed as standard Gaussian, i.e. $p_{s,\kappa}(\bm{z})$ is density function of standard Gaussian.
+
+In learning of GenHMM, the number of states is set as $|\Ss| \in \left\{ 3,4,5 \right\}$. The exact number of states for a phoneme is decided by computing the average length of MFCC frames per phone in training dataset, and clipping the average length into $\left\{ 3,4,5 \right\}$. Transition matrix $\bm{A}$ is initialized as upper triangular matrix for each GenHMM.
+
+\subsection{Experimental Results}
 
 \newpage
 
@@ -623,3 +628,4 @@ For problem \eqref{eq:sub-gm} we are going to use our generative models to solve
 %%% mode: latex
 %%% TeX-master: t
 %%% End:
+
