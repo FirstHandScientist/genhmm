@@ -36,7 +36,7 @@
 
 
 
-\usepackage{caption}
+
 \usepackage{bm}
 \newcommand{\ubar}[1]{\mkern2mu\underline{\mkern-2mu #1\mkern-2mu}\mkern2mu}
 % \allowdisplaybreaks
@@ -609,13 +609,75 @@ To show the validity of our model, we implement our model in PyTorch and test it
 \subsection{Experimental Setups}
 The dataset used for sequential data modeling and classification is TIMIT dataset where the speech is sampled at $16$kHz. For extraction of feature vectors, we use $25$ms frame length and $10$ms frame shift to convert sound track into standard Mel-frequency cepstral coefficients (MFCCs) features. The deltas and delta-deltas features are also concatenated and used in our experiments.
 
-The TIMIT dataset consists of $5300$ phoneme-labeled speech utterances which are partitioned into two sets: \textcolor{blue}{a train set consists of $4620$ utterance, and a test set consists of $1680$ utterances.} There are totally $61$ different types of phones in TIMIT labels. Our experiments in this section is carried out in two different cases: i) full $61$-phoneme classification case, where both training and testing use the $61$-phoneme data; ii) $39$-phonme classification case, where $61$ phonemes are folded into $39$ phonemes as described in \cite{Perdigao11}.
+The TIMIT dataset consists of $5300$ phoneme-labeled speech utterances which are partitioned into two sets: \textcolor{blue}{a train set consists of $4620$ utterance, and a test set consists of $1680$ utterances.} There are totally $61$ different types of phones in TIMIT labels. Our experiments in this section is carried out in two different cases: i) full $61$-phoneme classification case, where both training and testing use the $61$-phoneme data; ii) $39$-phonme classification case, where $61$ phonemes are folded into $39$ phonemes as described in \cite{Perdigao11}. \textcolor{blue}{The mapping table for the folding process is attached in appendix.}
 
 In all the following experiments, all generators $\left\{\bm{g}_{s,\kappa}|s\in \Ss, \kappa=1, 2, \cdots, K \right\}$ of GenHMM are implemented as flow models. To be more specific, our generator structure follows the structure of flow model in RealNVP \cite{2016arXiv160508803D}. The coupling layer shown as \eqref{eq-gl} maps a part of its input signal identically. The following coupling layer would alternate the input signal older such that after two consequential coupling layers, there is no signal remains the same any more. We term such two consequential coupling layers as a \textit{flow block}. In our experiments, a generator $\bm{g}_{s,\kappa}$ consists of four flow blocks. The latent source signal is assumed as standard Gaussian, i.e. $p_{s,\kappa}(\bm{z})$ is density function of standard Gaussian.
 
 In learning of GenHMM, the number of states is set as $|\Ss| \in \left\{ 3,4,5 \right\}$. The exact number of states for a phoneme is decided by computing the average length of MFCC frames per phone in training dataset, and clipping the average length into $\left\{ 3,4,5 \right\}$. Transition matrix $\bm{A}$ is initialized as upper triangular matrix for each GenHMM.
 
 \subsection{Experimental Results}
+
+\begin{table}
+  \caption{Test accuracy table for $39$ dimensional features }\label{tab:acc-classification39f}
+  \vspace{-0.3cm}
+  \centering
+  \subcaption{Folded $39$ Phonemes}\label{tab:acc-classification39f_a}
+  \centering  
+  \begin{tabular}{l|c|c|c}
+    \toprule
+    {Model} &  K=1 &  K=3 &  K=5  \\  \midrule
+    GMM-HMM & $62.30\%$ &  $68.06\%$ &  $68.73\%$  \\ \midrule
+    GenHMM & $76.78\%$ & $77.68\%$ &   \\ 
+    \bottomrule                                                                  
+  \end{tabular}
+  \bigskip
+  \subcaption{$61$ Phonemes}\label{tab:acc-classification39f_b}
+  % \centering  
+  \begin{tabular}{l|c|c|c} \toprule
+    {Model} &  K=1 &  K=3 &  K=5
+    \\ \midrule
+    GMM-HMM & $53.64\%$ &  $59.65\%$ & $61.98\%$  \\ \midrule
+    GenHMM & $69.51\%$ & $70.67\%$ & $70.78\%$   \\ 
+    \bottomrule
+  \end{tabular}
+  \vspace{0.3cm}
+\end{table}
+
+We firstly show the phoneme classification using 39 dimensional MFCC features (MFCC coefficients, deltas, and delta-deltas), to validate one possible usage of our proposed model. GMM-HMM is trained and tested as a reference model in our experiments. Training and testing of GMM-HMM is in the same condition as GenHMMs are trained and tested. Dataset usage for GenMM and GMM-HMM is the same, and number of states for GMM-HMM is the same as that for GenHMM in modeling each phoneme. Apart from setting the reference model, we also run the experiment comparisons with different total number of mixture components ($K$).
+
+Table \ref{tab:acc-classification39f} shows the results for this experiments, in which we tested both the folded $39$-phoneme classification case (the conventional way) in table \ref{tab:acc-classification39f_a} and also the $61$-phoneme classification case in table \ref{tab:acc-classification39f_b}. As shown in both $61$-phoneme and $39$-phoneme cases, GenHMM gets significant higher accuracy than GMM-HMM for the same number of mixture components. As our expectation, GenHMM should have better modeling capacity of sequential data since we bring in the neural network based generators into GenHMM, which should be able to represent complex relationship between states of HMM and sequential data. This is some increase of accuracy as total number of mixture components in GenHMM is increased from $K=1$ to $K=5$. The sequential dependency of data is modeled by HMM itself, while each state of HMM can have better representation using a mixture probabilistic model if data represented by the state is multi-mode. Comparing the results in $39$-phoneme and $61$-phoneme cases, GenHMM gets higher accuracy for $39$-phoneme classification than it does for $61$-phoneme classification. The total training dataset size remains the same as $61$ phonemes are folded into $39$ phonemes. There are less training data available and more classes to be recognized in the $61$-phoneme case, which makes the take more challenging.
+
+\begin{table}
+  \caption{Test accuracy table for $13$ dimensional features }
+  \label{tab:acc-classification13f}
+  \vspace{-0.3cm}
+  \centering
+  \subcaption{Folded $39$ Phonemes}
+  \centering  
+  \begin{tabular}{l|c|c|c}
+    \toprule
+    {Model} &  K=1 &  K=3 &  K=5  \\  \midrule
+    GMM-HMM & $48.59\%$ &  $51.26\%$ &  $52.40\%$  \\ \midrule
+    GenHMM & $\%$ & $\%$ &   \\ 
+    \bottomrule                                                                  
+  \end{tabular}
+  \bigskip
+  \subcaption{$61$ Phonemes}
+  \begin{tabular}{l|c|c|c}
+    \toprule
+    {Model} &  K=1 &  K=3 &  K=5
+    \\ \midrule
+    GMM-HMM & $37.15\%$ &  $40.65\%$ & $42.27\%$  \\ \midrule
+    GenHMM & $\%$ & $\%$ & $\%$   \\ 
+    \bottomrule
+  \end{tabular}
+  \vspace{0.3cm}
+\end{table}
+
+Similar experiments to that in table~\ref{tab:acc-classification13f} are carried out by using only the MFCC coefficients as feature input (excluding deltas and delta-deltas). The results are shown in table~\ref{tab:acc-classification13f}. The superior performance of GenHMM remains compared with reference model GMM-HMM. The gain by using mixture generators are also present in this set of experiments while the difference between $61$-phoneme and $39$-phoneme cases is also similar to the set of experiments in table~\ref{tab:acc-classification39f}.
+
+\section{Conclusion}
+
 
 \newpage
 
