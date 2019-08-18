@@ -11,8 +11,8 @@ import time
 import numpy as np
 
 if __name__ == "__main__":
-    usage = "bin/compute_accuracy_class.py exp/gaus/13feats/models/epoch2_class1.mdlc exp/gaus/13feats/data/train.13.pkl exp/gaus/13feats/data/test.13.pkl"
-    if len(sys.argv) != 4 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
+    usage = "bin/compute_accuracy_class.py exp/gaus/13feats/models/epoch2_class1.mdlc exp/gaus/13feats/data/train.13.pkl exp/gaus/13feats/data/test.13.pkl noise_std"
+    if len(sys.argv) < 4 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
         print(usage, file=sys.stderr)
         sys.exit(1)
 
@@ -28,18 +28,28 @@ if __name__ == "__main__":
     
     training_data_file = sys.argv[2]
     testing_data_file = sys.argv[3]
+    # Test for a forth parameter
+    try:
+        noise_std = float(sys.argv[4])
+    except IndexError:
+        noise_std = 0
+
 
     mdl_file = os.path.join(models_dir, "epoch{}.mdl".format(epoch))
     # Builds an array of string containing the train and test data sets for each class
     # size: nclass x 2 (train, test)
-    data_files = [append_class(training_data_file, iclass), append_class(testing_data_file, iclass)]
+    # if noise_std ==0, do standard testing of training and testing. If noise_std > 0, noise testing case
+    if noise_std==0:
+        data_files = [append_class(training_data_file, iclass), append_class(testing_data_file, iclass)]
+    elif noise_std > 0:
+        data_files = [append_class(testing_data_file, iclass)]
     # Load Model
     device = 'cpu'
     if model_type == 'gaus':
         with open(mdl_file, "rb") as handle:
             mdl = pkl.load(handle)
         mdl.device = 'cpu'
-        f = lambda x: accuracy_fun(x, mdl=mdl)
+        f = lambda x: accuracy_fun(x, mdl=mdl, noise_std=noise_std)
     elif model_type == 'gen':
         mdl = load_model(mdl_file)
         if torch.cuda.is_available():
@@ -64,7 +74,7 @@ if __name__ == "__main__":
         # set model into eval mode
         mdl.eval()
         
-        f = lambda x: accuracy_fun_torch(x, mdl=mdl, batch_size_=options["Train"]["eval_batch_size"])
+        f = lambda x: accuracy_fun_torch(x, mdl=mdl, batch_size_=options["Train"]["eval_batch_size"], noise_std=noise_std)
 
 
     # print("[Acc:] epoch:{}\tclass:{}\tPush model to {}. Done.".format(epoch,iclass, mdl.device), file=sys.stdout)
@@ -73,6 +83,8 @@ if __name__ == "__main__":
     #f = lambda x: divide(parse_(accuracy_fun(x, mdl=mdl)))
     
     results = list(map(f, data_files))
-
-    print("epoch: {} class: {} accc train: {} test: {}".format(epoch, iclass, results[0], results[1]), file=sys.stdout)
+    if noise_std==0:
+        print("epoch: {} class: {} accc train: {} test: {}".format(epoch, iclass, results[0], results[1]), file=sys.stdout)
+    elif noise_std>0:
+        print("epoch: {} class: {} accc train: {} test: {}".format(epoch, iclass, '0/1', results[0]), file=sys.stdout)
     sys.exit(0)

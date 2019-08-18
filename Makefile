@@ -32,7 +32,14 @@ endif
 ifndef exp_name
 	exp_name=default
 endif
+ifndef noise_std
+	noise_std=0
+endif
+ifndef tepoch
+	tepoch=1
+endif
 
+ROBUST=robust
 EXP=exp/$(model)
 EXP_DIR=$(EXP)/$(nfeats)feats/$(exp_name)
 
@@ -42,6 +49,7 @@ LOG=log
 init: MODELS=$(EXP_DIR)/models
 init: LOG=$(EXP_DIR)/log
 
+
 MODELS_INTERM=$(shell echo $(MODELS)/epoch{1..$(nepochs)})
 
 training_data=$(DATA)/train.$(nfeats).pkl
@@ -49,6 +57,8 @@ testing_data=$(DATA)/test.$(nfeats).pkl
 
 mdl_dep=$(shell echo $(MODELS)/%_class{1..$(nclasses)}.mdlc)
 acc_dep=$(shell echo $(MODELS)/%_class{1..$(nclasses)}.accc)
+rbst_dep=$(shell echo $(ROBUST)/epoch$(tepoch)_class{1..$(nclasses)}.accc)
+
 
 
 all: train
@@ -57,6 +67,7 @@ all: train
 test:
 	echo $(mdl_dep)
 	echo $(acc_dep)
+	echo ${rbst_dep}
 
 
 
@@ -99,6 +110,19 @@ $(MODELS)/%.mdlc:
 
 $(MODELS)/%.accc: $(MODELS)/%.mdlc
 	$(PYTHON) $(BIN)/compute_accuracy_class.py $^ $(training_data) $(testing_data) >> $@
+
+
+noise_test: 
+	$(MAKE) -j $(j) -s $(ROBUST)/epoch$(tepoch).acc
+
+
+$(ROBUST)/epoch$(tepoch).acc: $(rbst_dep)
+	$(PYTHON) $(BIN)/aggregate_accuracy.py $(training_data) $(testing_data) $^ > $@
+
+$(ROBUST)/%.accc:
+	@echo $(subst $(ROBUST),$(MODELS),$@)
+	$(PYTHON) $(BIN)/compute_accuracy_class.py $(subst .accc,.mdlc,$(subst $(ROBUST),$(MODELS),$@)) $(training_data) $(testing_data) $(noise_std) >> $@
+
 
 watch:
 	tail -f $(LOG)/class*.log

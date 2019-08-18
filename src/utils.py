@@ -7,15 +7,15 @@ import sys
 import pickle as pkl
 from parse import parse
 
-
-def accuracy_fun(data_file, mdl=None):
+def accuracy_fun(data_file, mdl=None, noise_std=0):
     X = pkl.load(open(data_file, "rb"))
     # Get the length of all the sequences
     l = [xx.shape[0] for xx in X]
     # zero pad data for batch training
 
     true_class = parse("{}_{}.pkl", os.path.basename(data_file))[1]
-    out_list = [mdl.forward(x_i[:,1:]) for x_i in X]
+    out_list = [mdl.forward(x_i[:,1:] + np.random.randn(*x_i[:,1:].shape) * noise_std ) for x_i in X]
+    
     out = np.array(out_list).transpose()
 
     # the out here should be the shape: data_size * nclasses
@@ -24,8 +24,16 @@ def accuracy_fun(data_file, mdl=None):
     print(data_file, "Done ...", "{}/{}".format(str(istrue.sum()), str(istrue.shape[0])), file=sys.stderr)
     return "{}/{}".format(str(istrue.sum()), str(istrue.shape[0]))
 
-def accuracy_fun_torch(data_file, mdl=None, batch_size_=128):
+def accuracy_fun_torch(data_file, mdl=None, batch_size_=128, noise_std=0):
     X = pkl.load(open(data_file, "rb"))
+    # if noise testing case, manipulate data input with noise
+    if noise_std>0:
+        X = []
+        for xx in X:
+            xx += np.random.randn(*xx.shape) * noise_std
+            xx[:, 0] = 0
+            X.append(xx)
+        X = np.array(X)
     # Get the length of all the sequences
     l = [xx.shape[0] for xx in X]
     # zero pad data for batch training
