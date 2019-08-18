@@ -28,12 +28,12 @@ def accuracy_fun_torch(data_file, mdl=None, batch_size_=128, noise_std=0):
     X = pkl.load(open(data_file, "rb"))
     # if noise testing case, manipulate data input with noise
     if noise_std>0:
-        X = []
+        Xlist = []
         for xx in X:
             xx += np.random.randn(*xx.shape) * noise_std
             xx[:, 0] = 0
-            X.append(xx)
-        X = np.array(X)
+            Xlist.append(xx)
+        X = np.array(Xlist)
     # Get the length of all the sequences
     l = [xx.shape[0] for xx in X]
     # zero pad data for batch training
