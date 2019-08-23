@@ -111,37 +111,37 @@
 
 \maketitle
 \begin{abstract}
-  Hidden Markov model (HMM) has been successfully used for sequential data modeling problems. In this work, we propose to power the modeling capacity of HMM by bringing in neural network based generative models. The proposed model is termed as GenHMM. In GenHMM, the hidden states of HMM and input data are related by neural network based generative model that provides exact likelihood computation. This is realized by a flow model. Apart from modeling itself, we also give learning algorithm for GenHMM in expectation-maximization framework. The convergence of learning GenHMM is analyzed. We demonstrate the efficiency of GenHMM by classification tasks on practical sequential data.
+  Hidden Markov model (HMM) has been successfully used for sequential data modeling problems. In this work, we propose to power the modeling capacity of HMM by bringing in neural network based generative models. The proposed model is termed as GenHMM. In GenHMM, the hidden states of HMM and input data are related by a neural network based generative model that has tractability of exact likelihood and provides efficient likelihood computation. This is realized by a flow model. A learning algorithm for GenHMM is proposed in expectation-maximization framework. The convergence of the learning GenHMM is analyzed. We demonstrate the efficiency of GenHMM by classification tasks on practical sequential data.
 \end{abstract}
 
 \section{introduction}
-Sequential data modeling is a challenging topic in pattern recognition and machine learning, since for many applications, the assumption of independent and identically distributed data points is too strong to model data properly. Hidden Markov model (HMM) is a classic way to model sequential data. HMM has been widely used in different practical problems, and especially is known for applications in reinforcement learning \cite{ding2018reinforcementhmm,levine2018reinforcementReview}, natural language modeling \cite{khan2016survey,Hariyanti_2019}, biological sequence analysis such as proteins \cite{ASHWIN20172} and DNA \cite{ren2015dna}, etc.
+Sequential data modeling is a challenging topic in pattern recognition and machine learning. For many applications, the assumption of independent and identically distributed data points is too strong to model data properly. Hidden Markov model (HMM) is a classic way to model sequential data. HMM has been widely used in different practical problems, and especially is known for applications in reinforcement learning \cite{ding2018reinforcementhmm,levine2018reinforcementReview}, natural language modeling \cite{khan2016survey,Hariyanti_2019}, biological sequence analysis such as proteins \cite{ASHWIN20172} and DNA \cite{ren2015dna}, etc.
 
-HMM provides an framework for sequential data modeling. To connect states of HMM with input data, a probabilistic model is used to describe how each state of HMM should represent a pattern of sequential data. The typical way is to use a Gaussian mixture model (GMM) per state of HMM \cite{juang1986maximum}, where GMMs are used to represent the relationship between states of HMM and sequential data input. GMM based HMM (GMM-HMM) has becomes a standard model for sequential data modeling, and employed widely for practical applications, especially in speech recognition \cite{gales2008application,chatterjee2011auditory}.
+HMM provides a framework for sequential data modeling. To connect states of HMM with input data, a probabilistic model is used to describe how each state of HMM should represent a pattern of sequential data. The typical way is to use a Gaussian mixture model (GMM) per state of HMM \cite{juang1986maximum}, where GMMs are used to represent the relationship between states of HMM and sequential data input. GMM based HMM (GMM-HMM) has becomes a standard model for sequential data modeling, and employed widely for practical applications, especially in speech recognition \cite{gales2008application,chatterjee2011auditory}.
 
 Given the success of GMM-HMM, it is not efficient for modeling data in nonlinear manifold. Research attempts of training HMM with neural networks have been made to boost the modeling capacity of HMM. A successful work is to bring restrictive Boltzmann machine (RBM) \cite{Hinton2012} into HMM based models \cite{hinton2012deepSpeech,li2013hybrid,Miao2013ImprovingLC}. In RBM based HMM, a hierarchical learning scheme is used: i) a stack of RBMs are trained one after another in unsupervised fashion, ii) then a final softmax layer is added to the stack of RBMs to represent the posterior of state of HMM given data input, iii) a discriminative training is followed to do the final tuning of the model.
 
-Another track of related work is hybrid method of temporal neural network models and HMM. In \cite{liu2019lstmHmmHyb,buys2018bridging,vik2016rnnHmm}, a long short-term memory (LSTM) model/recurrent neural network (RNN) is combined with HMM as hybridization. A hierarchical training is carried out by: i) training a HMM first, ii) and then doing modified training of LSTM using trained HMM. This training procedure is argued by the authors to use LSTM or RNN to fill in the gap where HMM can not learn.
+Another track of related work is hybrid method of temporal neural network models and HMM. In \cite{liu2019lstmHmmHyb,buys2018bridging,vik2016rnnHmm}, a long short-term memory (LSTM) model/recurrent neural network (RNN) is combined with HMM as hybridization. A hierarchical training is carried out by: i) training a HMM first, ii) and then doing modified training of LSTM using trained HMM. This hierarchical training procedure is motivated by the intuition of using LSTM or RNN to fill in the gap where HMM can not learn.
 
 % work of epfl fiting GMM with neural network...
 
-The above work help improve modeling capacity of HMM based models by bringing in neural networks. A softmax layer is usually used to represent probability whenever a conditional distribution is needed. These hierarchical schemes are built based on intuition of domain knowledge. Training of these hierarchical models usually need specific experience in relevant area to be able to proceed with the hierarchical procedure of training. 
+The above works help improve modeling capacity of HMM based models by bringing in neural networks. A softmax layer is usually used to represent probability whenever a conditional distribution is needed. These hierarchical schemes are built based on intuition of domain knowledge. Training of these hierarchical models usually need specific expertise in relevant areas to be able to proceed with the hierarchical procedure of training and application usage. 
 
 In this work, we propose a generator-mixed HMM model, termed as GenHMM, where generators are realized by neural networks to help the model gain high modeling capacity.
 Our proposed model, GenHMM:
 \begin{itemize}
   \item firstly has high modeling capacity of sequential data, due to the neural network based generators;
-\item has advantage of easy to do training, since GenHMM training employs expectation maximization (EM) framework. Training a GenHMM is as easy as training a GMM-HMM model, while configuration of GenHMM is flexible.
+\item has advantage of easy to do training. Training of GenHMM employs expectation maximization (EM) framework. Training a GenHMM is as easy as training a GMM-HMM model, while configuration of GenHMM is flexible.
 % \item has high modeling capability of sequence data, though its training and using are handy
 \item is able to compute loglikelihood exactly and efficiently.
 \end{itemize}
-Instead of using softmax for probability representation, our GenHMM is able to compute exact loglikelihood of given sequence data based on change of variable formula. To make the loglikelihood computation efficient, neural network based generators of GenHMM are implemented as flow models. 
+Instead of using softmax for probability representation, our GenHMM has tractability of exact loglikelihood of given sequential data, which is based on change of variable formula. To make the loglikelihood computation efficient, neural network based generators of GenHMM are implemented as flow models. 
 
 Our contributions in the paper are as follows:
 \begin{itemize}
 \item Proposing a neural network based HMM for sequential data modeling, i.e. GenHMM. The likelihood computation of sequential data under GenHMM can be computed exactly and efficiently.
 \item Designing practical algorithm for training GenHMM under EM framework. Stochastic gradient  search in batch fashion is embedded in this algorithm.
-\item Convergence analysis for GenHMM under the proposed learning algorithm.
+\item Giving convergence analysis for GenHMM under the proposed learning algorithm.
 \end{itemize}
 
 
@@ -183,15 +183,15 @@ Our contributions in the paper are as follows:
   \vspace{0.1cm}
 \end{figure}
 
-Our framework is a Hidden Markov Model (HMM). A HMM model $\bm{H}$ defined in a hypothesis space $\Hh$, i.e. $\bm{H} \in \Hh$, is capable to model time-span signal $\ubar{\bm{x}} = \left[ \bm{x}_1, \cdots, \bm{x}_T\right]^{\intercal}$, where $\bm{x}_t\in \RR^{N}$ is the signal at time $t$, $[\cdot]^{\intercal}$ means transpose, and $T$ denote the time length. Using HMM for signal representation or generating is illustrated in \ref{fig:hmm}. The assumption is that different instant signal of $\ubar{\bm{x}}$ is generated by different source, while the source selection is done by a discrete hidden markov process. We define the hypothesis set of HMM as $\Hh := \{\bm{H} | \{\Ss, \bm{q}, \bm{A}, p(\bm{x}|{s}; \bm{\Phi}_{s})\}$, where:
+Our framework is a Hidden Markov Model (HMM). A HMM model $\bm{H}$ defined in a hypothesis space $\Hh$, i.e. $\bm{H} \in \Hh$, is capable to model time-span signal $\ubar{\bm{x}} = \left[ \bm{x}_1, \cdots, \bm{x}_T\right]^{\intercal}$, where $\bm{x}_t\in \RR^{N}$ is the signal at time $t$, $[\cdot]^{\intercal}$ denotes transpose, and $T$ denotes the time length. Using HMM for signal representation is illustrated in Figure~\ref{fig:hmm}. The model assumption is that different instant signal of $\ubar{\bm{x}}$ is generated by a different signal source associated with a hidden state of HMM, while the source selection is done by a discrete hidden markov process. We define the hypothesis set of HMM as $\Hh := \{\bm{H} | \{\Ss, \bm{q}, \bm{A}, p(\bm{x}|{s}; \bm{\Phi}_{s})\}$, where:
 \begin{itemize}
-\item $\Ss$ is the set of states of HMM $\bm{H}$;
-\item $\bm{q} = \left[ q_1, q_2, \cdots, q_{|\Ss|}\right]^\intercal$ initial distribution of HMM $\bm{H}$ with $|\Ss|$ is cardinality of $\Ss$, $q_s = p(s;\bm{H})$ for random state variable $s$. In the following of this paper, we use $s_t$ to denote the state $s$ at time $t$.
-\item $\bm{A}$ is the transition matrix for the HMM $\bm{H}$ of size $|\Ss| \times |\Ss|$, $\bm{A}_{i,j} = p(s_{t+1}=j|s_{t}=i; \bm{H})$.
-\item For given hidden state $s$, the observable signal density function is $p({\bm{x}}|{s};\bm{\Phi}_{s})$, where $\bm{\Phi}_{s}$ is the parameter set that defines this conditional probabilistic model.
+\item $\Ss$ is the set of hidden states of HMM $\bm{H}$;
+\item $\bm{q} = \left[ q_1, q_2, \cdots, q_{|\Ss|}\right]^\intercal$ is initial distribution of HMM $\bm{H}$ with $|\Ss|$ as cardinality of $\Ss$. For a state $s$, $q_s = p(s;\bm{H})$. In the following of this paper, we use $s_t$ to denote the state $s$ at time $t$.
+\item $\bm{A}$ is the transition matrix for the HMM $\bm{H}$ of size $|\Ss| \times |\Ss|$ and $\bm{A}_{i,j} = p(s_{t+1}=j|s_{t}=i; \bm{H})$.
+\item For given hidden state $s$, the density function of observable signal is $p({\bm{x}}|{s};\bm{\Phi}_{s})$, where $\bm{\Phi}_{s}$ is the parameter set that defines this probabilistic model.
 \end{itemize}
 
-In the framework of HMM, at each time instance, signal $\bm{x}_t$ is generated by density $p(\bm{x}_t| s_t; \bm{\Phi}_{s_t})$, and $s_t$ is decided by the hidden markov process. This process gives us the probabilistic model $p(\ubm{x};\bm{H})$.
+In the framework of HMM, at each time instance, signal $\bm{x}_t$ is assumed to be generated by a distribution with density function $p(\bm{x}_t| s_t; \bm{\Phi}_{s_t})$, and $s_t$ is decided by the hidden markov process. This gives us the probabilistic model $p(\ubm{x};\bm{H})$.
 \subsection{Generative Model of GenHMM}
 
 \begin{figure}[!th]
@@ -223,11 +223,11 @@ In the framework of HMM, at each time instance, signal $\bm{x}_t$ is generated b
   \vspace{0.1cm}
 \end{figure}
 
-In this section, we introduce a neural network based generator-mixed HMM model. We term it as GenHMM. GenHMM has a hidden markov process as typical HMM, while the probabilistic model of GenHMM for each hidden state is induced by mixture of neural network based generators. For given state $s\in \Ss$, we define its probabilistic model in GenHMM as
+In this section, we introduce a neural network based generator-mixed HMM model. We term it as GenHMM. GenHMM has a hidden markov process as a typical HMM does, while the probabilistic model of GenHMM for each hidden state is induced by mixture of neural network based generators. For given state $s\in \Ss$, we define its probabilistic model in GenHMM as
 \begin{equation}
   p(\bm{x}| s; \bm{\Phi}_{s}) = \sum_{\kappa=1}^{K}\pi_{s, \kappa} p(\bm{x}| s, \kappa; \bm{\theta}_{s, \kappa}),
 \end{equation}
-where $\kappa$ is a random variable following a categorical distribution, and $\pi_{s, \kappa} = p(\kappa | s; \bm{H})$. Naturally $\sum_{\kappa = 1}^{K} \pi_{s, \kappa}= 1$. Denote $\bm{\pi}_{s} = [\pi_{s,1}, \pi_{s,2}, \cdots, \pi_{s,K}]$,
+where $\kappa$ is a random variable following a categorical distribution, with probability $\pi_{s, \kappa} = p(\kappa | s; \bm{H})$. Naturally $\sum_{\kappa = 1}^{K} \pi_{s, \kappa}= 1$. Denote $\bm{\pi}_{s} = [\pi_{s,1}, \pi_{s,2}, \cdots, \pi_{s,K}]^{\intercal}$,
 $\bm{\theta}_s = \left\{ \bm{\theta}_{s, \kappa}| \kappa = 1, 2, \cdots, K \right\}$. 
 We define $p(\bm{x}| s, \kappa; \bm{\theta}_{s, \kappa})$ as induced distribution by a generator $\bm{g}_{s,\kappa}: \RR^{N}\rightarrow\RR^{N}$, such that $\bm{x}=\bm{g}_{s, \kappa}(\bm{z})$, where $\bm{z}$ is a latent variable following a distribution with density function $p_{s,\kappa}(\bm{z})$. By change of variable, we have
 \begin{equation}\label{eq:changel-variable}
@@ -335,16 +335,6 @@ the feature $\bm{h}_l$ at the $l$'th layer has two subparts as
 $\bm{h}_l = [\bm{h}_{l,a}^{\intercal} \, , \, \bm{h}_{l,b}^{\intercal}]^{\intercal}$. The efficient invertible mapping of flow model comes from following forward and inverse relations between $(l-1)$'th and $l$'th layers:
 \begin{equation}\label{eq-gl}
   \begin{array}{l}
-    \bm{h}_{l-1} =
-    \begin{bmatrix}
-      \bm{h}_{l-1,a}\\
-      \bm{h}_{l-1,b}
-    \end{bmatrix}
-    =
-    \begin{bmatrix}
-      \bm{h}_{l,a}\\
-      \bm{m}_a(\bm{h}_{l,a})\odot \bm{h}_{l,b} + \bm{m}_b(\bm{h}_{l,a})
-    \end{bmatrix},\vspace{10pt}\\
     \bm{h}_{l} =
     \begin{bmatrix}
       \bm{h}_{l,a}\\
@@ -354,7 +344,17 @@ $\bm{h}_l = [\bm{h}_{l,a}^{\intercal} \, , \, \bm{h}_{l,b}^{\intercal}]^{\interc
     \begin{bmatrix}
       \bm{h}_{l-1,a}\\
       \left(  \bm{h}_{l-1,b} - \bm{m}_b(\bm{h}_{l-1,a}) \right)\oslash \bm{m}_a(\bm{h}_{l-1,a}) 
-    \end{bmatrix}, \\
+    \end{bmatrix}, \vspace{10pt} \\
+        \bm{h}_{l-1} =
+    \begin{bmatrix}
+      \bm{h}_{l-1,a}\\
+      \bm{h}_{l-1,b}
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+      \bm{h}_{l,a}\\
+      \bm{m}_a(\bm{h}_{l,a})\odot \bm{h}_{l,b} + \bm{m}_b(\bm{h}_{l,a})
+    \end{bmatrix},\\
   \end{array}  
 \end{equation}
 where $\odot$ denotes element-wise product, $\oslash$ denotes
@@ -561,7 +561,7 @@ In pursuit of representing a dataset by GenHMM, we are actually minimize a KL di
     \Qq(\bm{A}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}) &\geq \Qq(\bm{A}^{\mathrm{old}}; \bm{H}^{\mathrm{old}}),\nonumber \\
     \Qq(\bm{\Pi}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}) &\geq \Qq(\bm{\Pi}^{\mathrm{old}}; \bm{H}^{\mathrm{old}}).
   \end{align*}
-  For the learning w.r.t. neural network parameter set $\bm{\Theta}$, as long as the lose function does not decrease during EM iterations, i.e. $\Qq(\bm{\Theta}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}) \geq \Qq(\bm{\Theta}^{\mathrm{old}}; \bm{H}^{\mathrm{old}})$, we would have
+  For the learning w.r.t. neural network parameter set $\bm{\Theta}$, as long as the lose function does not decrease during EM iterations, we would have
   \begin{equation*}
     \Qq(\bm{H}^{\mathrm{new}}; \bm{H}^{\mathrm{old}}) \geq \Qq(\bm{H}^{\mathrm{old}}; \bm{H}^{\mathrm{old}}),
   \end{equation*}
@@ -592,7 +592,7 @@ In pursuit of representing a dataset by GenHMM, we are actually minimize a KL di
 \end{proof}
 
 \section{Experiments}
-To show the validity of our model, we implement our model in PyTorch and test it with sequential data. The code is available at github repository\footnote{\textcolor{blue}{link}}. In the next subsection, we first discuss the experimental setups and the show the experimental results.
+To show the validity of our model, we implement our model in PyTorch and test it with sequential data. The code is available at github repository\footnote{Due to double-blind review, the author's repository is not present here temporarily.}. In the next subsection, we first discuss the experimental setups and the show the experimental results.
 
 \subsection{Experimental Setups}
 The dataset used for sequential data modeling and classification is TIMIT dataset where the speech is sampled at $16$kHz. For extraction of feature vectors, we use $25$ms frame length and $10$ms frame shift to convert sound track into standard Mel-frequency cepstral coefficients (MFCCs) features. The deltas and delta-deltas features are also concatenated and used in our experiments.
@@ -614,8 +614,8 @@ In learning of GenHMM, the number of states is set as $|\Ss| \in \left\{ 3,4,5 \
   \begin{tabular}{l|c|c|c}
     \toprule
     {Model} &  K=1 &  K=3 &  K=5  \\  \midrule
-    GMM-HMM & $62.30\%$ &  $68.06\%$ &  $68.73\%$  \\ \midrule
-    GenHMM & $76.78\%$ & $77.77\%$ &  $\%$ \\ 
+    GMM-HMM & $62.3\%$ &  $68.0\%$ &  $68.7\%$  \\ \midrule
+    GenHMM & $76.7\%$ & $77.7\%$ &  $77.7\%$ \\ 
     \bottomrule                                                                  
   \end{tabular}
   \bigskip
@@ -624,8 +624,8 @@ In learning of GenHMM, the number of states is set as $|\Ss| \in \left\{ 3,4,5 \
   \begin{tabular}{l|c|c|c} \toprule
     {Model} &  K=1 &  K=3 &  K=5
     \\ \midrule
-    GMM-HMM & $53.64\%$ &  $59.65\%$ & $61.98\%$  \\ \midrule
-    GenHMM & $69.51\%$ & $70.67\%$ & $70.78\%$   \\ 
+    GMM-HMM & $53.6\%$ &  $59.6\%$ & $61.9\%$  \\ \midrule
+    GenHMM & $69.5\%$ & $70.6\%$ & $70.7\%$   \\ 
     \bottomrule
   \end{tabular}
   \vspace{0.3cm}
@@ -645,8 +645,8 @@ Table \ref{tab:acc-classification39f} shows the results for this experiments, in
   \begin{tabular}{l|c|c|c}
     \toprule
     {Model} &  K=1 &  K=3 &  K=5  \\  \midrule
-    GMM-HMM & $48.59\%$ &  $51.26\%$ &  $52.40\%$  \\ \midrule
-    GenHMM & $61.10\%$ & $\%$ &   \\ 
+    GMM-HMM & $48.5\%$ &  $51.2\%$ &  $52.4\%$  \\ \midrule
+    GenHMM & $61.1\%$ & $62.1\%$ & $62.1\%$   \\ 
     \bottomrule                                                                  
   \end{tabular}
   \bigskip
@@ -655,8 +655,8 @@ Table \ref{tab:acc-classification39f} shows the results for this experiments, in
     \toprule
     {Model} &  K=1 &  K=3 &  K=5
     \\ \midrule
-    GMM-HMM & $37.15\%$ &  $40.65\%$ & $42.27\%$  \\ \midrule
-    GenHMM & $50.33\%$ & $\%$ & $\%$   \\ 
+    GMM-HMM & $37.1\%$ &  $40.6\%$ & $42.2\%$  \\ \midrule
+    GenHMM & $50.3\%$ & $51.0\%$ & $52.3\%$   \\ 
     \bottomrule
   \end{tabular}
   \vspace{0.3cm}
