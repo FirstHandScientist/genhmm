@@ -121,17 +121,17 @@ HMM provides a framework for sequential data modeling. To connect states of HMM 
 
 Given the success of GMM-HMM, it is not efficient for modeling data in nonlinear manifold. Research attempts of training HMM with neural networks have been made to boost the modeling capacity of HMM. A successful work is to bring restrictive Boltzmann machine (RBM) \cite{Hinton2012} into HMM based models \cite{hinton2012deepSpeech,li2013hybrid,Miao2013ImprovingLC}. In RBM based HMM, a hierarchical learning scheme is used: i) a stack of RBMs are trained one after another in unsupervised fashion, ii) then a final softmax layer is added to the stack of RBMs to represent the posterior of state of HMM given data input, iii) a discriminative training is followed to do the final tuning of the model.
 
-Another track of related work is hybrid method of temporal neural network models and HMM. In \cite{liu2019lstmHmmHyb,buys2018bridging,vik2016rnnHmm}, a long short-term memory (LSTM) model/recurrent neural network (RNN) is combined with HMM as hybridization. A hierarchical training is carried out by: i) training a HMM first, ii) and then doing modified training of LSTM using trained HMM. This hierarchical training procedure is motivated by the intuition of using LSTM or RNN to fill in the gap where HMM can not learn.
+Another track of related work is hybrid method of temporal neural network models and HMM. In \cite{liu2019lstmHmmHyb,buys2018bridging,vik2016rnnHmm}, a long short-term memory (LSTM) model/recurrent neural network (RNN) is combined with HMM as hybrid. A hierarchical training is carried out by: i) training a HMM first, ii) and then doing modified training of LSTM using trained HMM. This hierarchical training procedure is motivated by the intuition of using LSTM or RNN to fill in the gap where HMM can not learn.
 
 % work of epfl fiting GMM with neural network...
 
 The above works help improve modeling capacity of HMM based models by bringing in neural networks. A softmax layer is usually used to represent probability whenever a conditional distribution is needed. These hierarchical schemes are built based on intuition of domain knowledge. Training of these hierarchical models usually need specific expertise in relevant areas to be able to proceed with the hierarchical procedure of training and application usage. 
 
-In this work, we propose a generator-mixed HMM model, termed as GenHMM, where generators are realized by neural networks to help the model gain high modeling capacity.
+In this work, we propose a generative model based HMM. Specifically, we propose a generator-mixed HMM, termed as GenHMM, where generators are realized by neural networks to help the model gain high modeling capacity.
 Our proposed model, GenHMM:
 \begin{itemize}
   \item firstly has high modeling capacity of sequential data, due to the neural network based generators;
-\item has advantage of easy to do training. Training of GenHMM employs expectation maximization (EM) framework. Training a GenHMM is as easy as training a GMM-HMM model, while configuration of GenHMM is flexible.
+\item has advantage of easy to do training. Training of GenHMM employs expectation maximization (EM) framework. Training a GenHMM is as easy as training a GMM-HMM model, while configuration of GenHMM is flexible;
 % \item has high modeling capability of sequence data, though its training and using are handy
 \item is able to compute loglikelihood exactly and efficiently.
 \end{itemize}
@@ -139,14 +139,15 @@ Instead of using softmax for probability representation, our GenHMM has tractabi
 
 Our contributions in the paper are as follows:
 \begin{itemize}
-\item Proposing a neural network based HMM for sequential data modeling, i.e. GenHMM. The likelihood computation of sequential data under GenHMM can be computed exactly and efficiently.
+\item Proposing a neural network based HMM for sequential data modeling, i.e. GenHMM. GenHMM has the tractability of exact likelihood.
 \item Designing practical algorithm for training GenHMM under EM framework. Stochastic gradient  search in batch fashion is embedded in this algorithm.
 \item Giving convergence analysis for GenHMM under the proposed learning algorithm.
+\item Verifying the efficiency of the proposed model on practical sequential data.
 \end{itemize}
 
 
 
-\section{Generator-mixed HMM}
+\section{Generator-mixed HMM (GenHMM)}
 
 \begin{figure}[!h]
   \centering
@@ -185,13 +186,14 @@ Our contributions in the paper are as follows:
 
 Our framework is a Hidden Markov Model (HMM). A HMM model $\bm{H}$ defined in a hypothesis space $\Hh$, i.e. $\bm{H} \in \Hh$, is capable to model time-span signal $\ubar{\bm{x}} = \left[ \bm{x}_1, \cdots, \bm{x}_T\right]^{\intercal}$, where $\bm{x}_t\in \RR^{N}$ is the signal at time $t$, $[\cdot]^{\intercal}$ denotes transpose, and $T$ denotes the time length\footnote{The length for difference sequential data can be different.}. Using HMM for signal representation is illustrated in Figure~\ref{fig:hmm}. The model assumption is that different instant signal of $\ubar{\bm{x}}$ is generated by a different signal source associated with a hidden state of HMM, while the source selection is done by a discrete hidden markov process. We define the hypothesis set of HMM as $\Hh := \{\bm{H} | \{\Ss, \bm{q}, \bm{A}, p(\bm{x}|{s}; \bm{\Phi}_{s})\}$, where:
 \begin{itemize}
-\item $\Ss$ is the set of hidden states of HMM $\bm{H}$;
+\item $\Ss$ is the set of hidden states of HMM $\bm{H}$.
 \item $\bm{q} = \left[ q_1, q_2, \cdots, q_{|\Ss|}\right]^\intercal$ is initial distribution of HMM $\bm{H}$ with $|\Ss|$ as cardinality of $\Ss$. For a state $s$, $q_s = p(s;\bm{H})$. In the following of this paper, we use $s_t$ to denote the state $s$ at time $t$.
 \item $\bm{A}$ is the transition matrix for the HMM $\bm{H}$ of size $|\Ss| \times |\Ss|$ and $\bm{A}_{i,j} = p(s_{t+1}=j|s_{t}=i; \bm{H})$.
-\item For given hidden state $s$, the density function of observable signal is $p({\bm{x}}|{s};\bm{\Phi}_{s})$, where $\bm{\Phi}_{s}$ is the parameter set that defines this probabilistic model.
+\item For given hidden state $s$, the density function of observable signal is $p({\bm{x}}|{s};\bm{\Phi}_{s})$, where $\bm{\Phi}_{s}$ is the parameter set that defines this probabilistic model. Denote $\bm{\Phi} = \left\{ \bm{\Phi}_{s}| s \in \Ss \right\}$.
 \end{itemize}
 
-In the framework of HMM, at each time instance, signal $\bm{x}_t$ is assumed to be generated by a distribution with density function $p(\bm{x}_t| s_t; \bm{\Phi}_{s_t})$, and $s_t$ is decided by the hidden markov process. This gives us the probabilistic model $p(\ubm{x};\bm{H})$.
+In the framework of HMM, at each time instance, signal $\bm{x}_t$ is assumed to be generated by a distribution with density function $p(\bm{x}_t| s_t; \bm{\Phi}_{s_t})$, and $s_t$ is decided by the hidden markov process. Putting these together gives us the probabilistic model $p(\ubm{x};\bm{H})$.
+
 \subsection{Generative Model of GenHMM}
 
 \begin{figure}[!th]
@@ -229,12 +231,12 @@ In this section, we introduce a neural network based generator-mixed HMM model. 
 \end{equation}
 where $\kappa$ is a random variable following a categorical distribution, with probability $\pi_{s, \kappa} = p(\kappa | s; \bm{H})$. Naturally $\sum_{\kappa = 1}^{K} \pi_{s, \kappa}= 1$. Denote $\bm{\pi}_{s} = [\pi_{s,1}, \pi_{s,2}, \cdots, \pi_{s,K}]^{\intercal}$,
 $\bm{\theta}_s = \left\{ \bm{\theta}_{s, \kappa}| \kappa = 1, 2, \cdots, K \right\}$. 
-We define $p(\bm{x}| s, \kappa; \bm{\theta}_{s, \kappa})$ as induced distribution by a generator $\bm{g}_{s,\kappa}: \RR^{N}\rightarrow\RR^{N}$, such that $\bm{x}=\bm{g}_{s, \kappa}(\bm{z})$, where $\bm{z}$ is a latent variable following a distribution with density function $p_{s,\kappa}(\bm{z})$. By change of variable, we have
+We define $p(\bm{x}| s, \kappa; \bm{\theta}_{s, \kappa})$ as induced distribution by a generator $\bm{g}_{s,\kappa}: \RR^{N}\rightarrow\RR^{N}$, such that $\bm{x}=\bm{g}_{s, \kappa}(\bm{z})$, where $\bm{z}$ is a latent variable following a distribution with density function $p_{s,\kappa}(\bm{z})$. Assuming $\bm{g}_{s, \kappa}$ is invertible, by change of variable, we have
 \begin{equation}\label{eq:changel-variable}
   p(\bm{x}| s, \kappa; \bm{\theta}_{s, \kappa}) = p_{s,\kappa}(\bm{z})\bigg| \det\left( \pd{\bm{g}_{s,\kappa}(\bm{z})}{\bm{z}} \right)\bigg|^{-1}.
 \end{equation}
 
-For a state $s$ of GenHMM, the induced probability distribution is illustrated in Figure~\ref{fig:gen-mix}.
+For a state $s$ of GenHMM, the induced probability distribution has the signal flow illustration as shown in Figure~\ref{fig:gen-mix}, in which the generator identity is up to the random variable $\kappa$.
 
 \subsection{Learning in EM framework}
 
@@ -248,7 +250,7 @@ The KL divergence problem can be boiled down to a maximizing a loglikelihood pro
   \uargmax{\bm{H} \in \Hh} \frac{1}{R}\sum_{r=1}^{R}\log\,p(\ubmr{x}{r}; \bm{H}).
 \end{equation}
 
-The first problem that we need to address is to deal with the hidden sequential variable $\ubm{s}$ and $\ubm{\kappa}$  in model $\bm{H}$. For a sequential observable variable $\ubm{x}$, $\ubm{s}$ is the hidden state sequence corresponding to $\ubm{x}$, and $\ubm{\kappa}$ is the hidden variable sequence representing the generator identity sequence that actually generates $\ubm{x}$.
+The first problem that we need to address is to deal with the hidden sequential variable $\ubm{s}$ and $\ubm{\kappa}$  in model $\bm{H}$, where $\ubm{s}=[ \bm{s}_1, \bm{s}_2, \cdots, \bm{s}_T ]^{\intercal}$ and $\ubm{\kappa} = [\bm{\kappa}_1, \bm{\kappa}_2, \cdots, \bm{\kappa}_T]^{\intercal}$. For a sequential observable variable $\ubm{x}$, $\ubm{s}$ is the hidden state sequence corresponding to $\ubm{x}$, and $\ubm{\kappa}$ is the hidden variable sequence representing the generator identity sequence that actually generates $\ubm{x}$.
 
 Since directly maximizing likelihood is not an option for our problem in \ref{eq:ml-of-hmm}, we address this problem in expectation maximization (EM) framework. This divides our problem into two steps: i) using the joint posterior of hidden variable sequences $\ubm{s}$ and $\ubm{\kappa}$ to obtain a ``expected likelihood'' of observable variable sequence $\ubm{x}$, i.e. the E-step; ii) maximizing the expected likelihood with regarding to (w.r.t.) the model $\bm{H}$, i.e. the M-step. We formulate these two steps as follows:
 \begin{itemize}
@@ -299,12 +301,12 @@ We would attempt these problems in the following section.
 \section{Practical Solution for GenHMM}
 
 In this section, we detail the solution for realizing and learning GenHMM. % We begin with introducing flow model that we are going to use to model our generators $\{\bm{g}_{s, \kappa}| s\in\Ss, \kappa=1,2,\cdots, K\}$ for efficient likelihood computation. The learning method of HMM is followed then. 
-The convergence analysis is discussed at the end of this section.
+The convergence of GenHMM is also discussed in this section.
 
 
 \subsection{Realizing $\bm{g}_{s,\kappa}$ by a Flow Model}
 We use a feed-forward neural network to implement each generator $\bm{g}_{s,\kappa}$.
-Define  $\bm{g}_{s,\kappa}$ as a $L$-layer neural network and we formulate its mapping by each layer's concatenation:
+Define  $\bm{g}_{s,\kappa}$ as a $L$-layer neural network and we formulate its mapping by layer-wise concatenation:
 $\bm{g}_{s,\kappa}=\bm{g}_{s,\kappa}^{[L]}\circ \bm{g}_{s,\kappa}^{[L-1]}\circ \cdots
 \circ \bm{g}_{s,\kappa}^{[1]}$, where superscipt $[l]$ denotes the $l$'s layer index and $\circ$ denotes mapping concatenation. Assume $\bm{g}_{s,\kappa}$ is invertible and denotes its inverse mapping as $\bm{f}_{s,\kappa}=\bm{g}_{s,\kappa}^{-1}$. For a latent variable $\bm{z}$ with density function $p_{s,\kappa}(\bm{z})$, the generated signal $\bm{x}$ follows an induced distribution with density function \eqref{eq:changel-variable}. We illustrate the signal flow between latent variable $\bm{z}$ and observable variable $\bm{x}$ as follows:
 \begin{equation*}
@@ -411,13 +413,13 @@ where
 \end{align}
 
 We firstly address the generator learning problem, i.e. $\umax{\bm{\Theta}} \Qq(\bm{\Theta}; \bm{H}^{\mathrm{old}})$. This is boiled down to maximizing the cost function of neural networks that can be formulated as
-\begin{align}\label{eq:obj-q-gen-mix}
+\begin{align}\label{eq:obj-q-gen-mix-log}
   &\Qq(\bm{\Theta}; \bm{H}^{\mathrm{old}}) \nonumber \\
   = &\frac{1}{R}\sum_{r=1}^{R}\sum_{\ubmr{s}{r}}\sum_{\ubmr{\kappa}{r}}{p(\ubmr{s}{r}, \ubmr{\kappa}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})} \sum_{t=1}^{{T}^{r}}\log\,p(\bmtr{x}{t}{r} | \smtr{s}{t}{r}, \smtr{\kappa}{t}{r}; \bm{H}) \nonumber \\
   =& \frac{1}{R}\sum_{r=1}^{R} \sum_{t=1}^{{T}^{r}} \sum_{\smtr{s}{t}{r}=1}^{|\Ss|}  \sum_{\smtr{\kappa}{t}{r}=1}^{K}p(\smtr{s}{t}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})p(\smtr{\kappa}{t}{r}|\smtr{s}{t}{r}, \ubmr{x}{r}; \bm{H}^{\mathrm{old}}) \nonumber\\
   &  \log\, p(\bmtr{x}{t}{r} | \smtr{s}{t}{r}, \smtr{\kappa}{t}{r}; \bm{H}), 
 \end{align}
-where $T^r$ is the length of the $r$-th sequential data. In \eqref{eq:obj-q-gen-mix}, the state posterior $p(s_t| \ubm{x}, \bm{H}^{\mathrm{old}})$ is computed by forward-backward algorithm. The posterior of $\kappa$ is:
+where $T^r$ is the length of the $r$-th sequential data. In \eqref{eq:obj-q-gen-mix-log}, the state posterior $p(s_t| \ubm{x}, \bm{H}^{\mathrm{old}})$ is computed by forward-backward algorithm. The posterior of $\kappa$ is:
 \begin{align}\label{eq:kappa-posterior}
   p(\kappa| s, \ubm{x}; \bm{H}^{\mathrm{old}})
   &=  \frac{p(\kappa, \ubm{x}| s; \bm{H}^{\mathrm{old}})}{p(\ubm{x}| s,\bm{H}^{\mathrm{old}})} \nonumber \\
@@ -425,7 +427,7 @@ where $T^r$ is the length of the $r$-th sequential data. In \eqref{eq:obj-q-gen-
 \end{align}
 where the last equation is due to the fact that $\bm{x}_t$ among sequence $\ubm{x}$ depends on $s_t, \kappa_t$ only. 
 
-By substituting \eqref{eq:changel-variable} and \eqref{eq:cat-jacobian} into \eqref{eq:obj-q-gen-mix}, we have cost function for neural networks as
+By substituting \eqref{eq:changel-variable} and \eqref{eq:cat-jacobian} into \eqref{eq:obj-q-gen-mix-log}, we have cost function for neural networks as
 \begin{align}\label{eq:obj-q-gen-mix}
   &\Qq(\bm{\Theta}; \bm{H}^{\mathrm{old}}) \nonumber \\
   =& \frac{1}{R}\hspace{-3pt}\sum_{r=1}^{R}\hspace{-3pt} \sum_{t=1}^{{T}^{r}}\hspace{-3pt} \sum_{\smtr{s}{t}{r}=1}^{|\Ss|} \hspace{-3pt} \sum_{\smtr{\kappa}{t}{r}=1}^{K}p(\smtr{s}{t}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})p(\smtr{\kappa}{t}{r}|\smtr{s}{t}{r}, \ubmr{x}{r}; \bm{H}^{\mathrm{old}}) \nonumber\\
@@ -469,7 +471,7 @@ Problem in \eqref{eq:init-distribution-update} can be reformulated as:
   & = \frac{1}{R}\sum_{r=1}^{R}\sum_{\smtr{s}{1}{r}=1}^{|\Ss|}{p(\smtr{s}{1}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})} \log\,p(\smtr{s}{1}{r};\bm{H}) 
 \end{align}
 
-$p(\smtr{s}{1}{r};\bm{H})$ is the probability of initial state of GenHMM for $r$-th sequential sample. Actually $q_i = p({s}_{1} =i) $, $i= 1, 2, \cdots, |\Ss|$ for $\bm{H}$. Solution to problem:
+$p(\smtr{s}{1}{r};\bm{H})$ is the probability of initial state of GenHMM for $r$-th sequential sample. Actually $q_i = p({s}_{1} =i;\bm{H}) $, $i= 1, 2, \cdots, |\Ss|$. Solution to problem:
 \begin{align}
   \bm{q} &= \uargmax{\bm{q}} \Qq(\bm{q}; \bm{H}^{\mathrm{old}}), \nonumber \\
          &\mathrm{s.t.} \sum_{i=1}^{ |\Ss| }q_i = 1, q_i \geq 0, \forall s.
@@ -561,7 +563,7 @@ In pursuit of representing a dataset by GenHMM,  we are interested if the learni
   % Since KL divergence is non-negative and thus lower bounded, GenHMM will converge.
 \end{proof}
 
-\subsection{Algorithm of GenHMM and Convergence Analysis}
+\subsection{Algorithm of GenHMM}
 
 To summarize the learning solution in subsection~\ref{subsec:optmGenHMM}, we wrap our algorithm into pseudocode as shown in Algorithm~\ref{algo:genhmm}. We use Adam \cite{DBLP:journals/corr/KingmaB14} optimizer for optimization w.r.t. the parameters of generators in GenHMM. As is shown from line $6$ to $12$ in Algorithm~\ref{algo:genhmm}, the batch-size stochastic gradient decent can be naturally embedded into the learning algorithm of GenHMM.
 
@@ -601,13 +603,13 @@ As described by the pseudocode in Algorithm~\ref{algo:genhmm}, the learning of G
 To show the validity of our model, we implement our model in PyTorch and test it with sequential data. The code is available at github repository\footnote{Due to double-blind review, the author's repository is not present here temporarily.}. In the next subsection, we first discuss the experimental setups and the show the experimental results.
 
 \subsection{Experimental Setups}
-The dataset used for sequential data modeling and classification is TIMIT dataset where the speech is sampled at $16$kHz. For extraction of feature vectors, we use $25$ms frame length and $10$ms frame shift to convert sound track into standard Mel-frequency cepstral coefficients (MFCCs) features. The deltas and delta-deltas features are also concatenated and used in our experiments.
+The dataset used for sequential data modeling and classification is TIMIT dataset where the speech signal is sampled at $16$kHz. For extraction of feature vectors, we use $25$ms frame length and $10$ms frame shift to convert sound track into standard Mel-frequency cepstral coefficients (MFCCs) features. The deltas and delta-deltas features are also concatenated and used in our experiments.
 
 The TIMIT dataset consists of $5300$ phoneme-labeled speech utterances which are partitioned into two sets: \textcolor{blue}{a train set consists of $4620$ utterance, and a test set consists of $1680$ utterances.} There are totally $61$ different types of phones in TIMIT labels. Our experiments in this section is carried out in two different cases: i) full $61$-phoneme classification case, where both training and testing use the $61$-phoneme data; ii) $39$-phonme classification case, where $61$ phonemes are folded into $39$ phonemes as described in \cite{Perdigao11}. \textcolor{blue}{The mapping table for the folding process is attached in appendix.}
 
-In all the following experiments, all generators $\left\{\bm{g}_{s,\kappa}|s\in \Ss, \kappa=1, 2, \cdots, K \right\}$ of GenHMM are implemented as flow models. To be more specific, our generator structure follows the structure of flow model in RealNVP \cite{2016arXiv160508803D}. The coupling layer shown as \eqref{eq-gl} maps a part of its input signal identically. The following coupling layer would alternate the input signal older such that after two consequential coupling layers, there is no signal remains the same any more. We term such two consequential coupling layers as a \textit{flow block}. In our experiments, a generator $\bm{g}_{s,\kappa}$ consists of four flow blocks. The latent source signal is assumed as standard Gaussian, i.e. $p_{s,\kappa}(\bm{z})$ is density function of standard Gaussian.
+In all the following experiments, all generators $\left\{\bm{g}_{s,\kappa}|s\in \Ss, \kappa=1, 2, \cdots, K \right\}$ of GenHMM are implemented as flow models. To be more specific, our generator structure follows the structure of flow model in RealNVP \cite{2016arXiv160508803D}. The coupling layer shown as \eqref{eq-gl} maps a part of its input signal identically. The following coupling layer would alternate the input signal order such that after two consequential coupling layers, there is no signal remains the same any more. We term such two consequential coupling layers as a \textit{flow block}. In our experiments, a generator $\bm{g}_{s,\kappa}$ consists of four flow blocks. The latent source signal is assumed as standard Gaussian, i.e. $p_{s,\kappa}(\bm{z})$ is density function of standard Gaussian.
 
-In learning of GenHMM, the number of states is set as $|\Ss| \in \left\{ 3,4,5 \right\}$. The exact number of states for a phoneme is decided by computing the average length of MFCC frames per phone in training dataset, and clipping the average length into $\left\{ 3,4,5 \right\}$. Transition matrix $\bm{A}$ is initialized as upper triangular matrix for each GenHMM.
+In learning of GenHMM, the number of states is set as $|\Ss| \in \left\{ 3,4,5 \right\}$. The exact number of states for a phoneme is decided by computing the average length of MFCC frames per phone in training dataset, and clipping the average length into $\left\{ 3,4,5 \right\}$. Transition matrix $\bm{A}$ is initialized as upper triangular matrix for GenHMM.
 
 \subsection{Experimental Results}
 
