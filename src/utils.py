@@ -142,7 +142,10 @@ def write_classmap(class2phn, folder):
 
 
 def accuracy_fun(data_file, mdl=None):
-    X = pkl.load(open(data_file, "rb"))
+    try:
+        X = pkl.load(open(data_file, "rb"))
+    except:
+        return "0/1"
     # Get the length of all the sequences
     l = [xx.shape[0] for xx in X]
     # zero pad data for batch training
