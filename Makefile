@@ -45,7 +45,12 @@ init: LOG=$(EXP_DIR)/log
 MODELS_INTERM=$(shell echo $(MODELS)/epoch{1..$(nepochs)})
 
 training_data=$(DATA)/train.$(nfeats).pkl
-testing_data=$(DATA)/test.$(nfeats).pkl
+ifndef noise
+	testing_data=$(DATA)/test.$(nfeats).pkl
+else
+	testing_data=$(DATA)/test.$(nfeats).$(noise).pkl
+endif
+
 
 mdl_dep=$(shell echo $(MODELS)/%_class{1..$(nclasses)}.mdlc)
 acc_dep=$(shell echo $(MODELS)/%_class{1..$(nclasses)}.accc)
