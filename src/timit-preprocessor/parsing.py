@@ -11,8 +11,8 @@ def main(args=None):
         target, ntype, snr = parse("{}.{}.{:d}dB", args.folder)
     except TypeError as e:
         target = args.folder
-        ntype="clean"
-        snr=0
+        ntype = "clean"
+        snr = 0
 
     target_folder = os.path.join(args.datapath, target.upper())
 
@@ -44,11 +44,14 @@ def main(args=None):
                     l.write('{}-{}-{} {}\n'.format(person, task, sentence, ','.join(phone_seq)))
             
 
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="parsing .wav.scp files for advanced use\ne.g. python3 parsing.py ~/Workspace/data/timit train", formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('datapath', metavar="<timit relative path>", type=str)
-    parser.add_argument('folder', metavar="<train|test>", type=str)
+    parser = argparse.ArgumentParser(
+        description="parsing .wav.scp files for advanced use\n"
+                    "e.g. python3 parsing.py ~/Workspace/data/timit train", formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('datapath',
+                        metavar="<timit relative path>", type=str)
+    parser.add_argument('folder',
+                        metavar="<train|test>", type=str)
 
     args = parser.parse_args()
 
