@@ -3,13 +3,27 @@
 import os
 import sys
 import argparse
+from parse import parse
 
-def main():
-    target_folder = os.path.join(args.datapath, args.folder.upper())
-    target = args.folder
 
-    features = '{}/{}.wav.scp'.format(MATERIAL_PATH, target)
-    labels = '{}/{}.lbl'.format(MATERIAL_PATH, target)
+def main(args=None):
+    try:
+        target, ntype, snr = parse("{}.{}.{:d}dB", args.folder)
+    except TypeError as e:
+        target = args.folder
+        ntype="clean"
+        snr=0
+
+    target_folder = os.path.join(args.datapath, target.upper())
+
+    #target = args.folder
+
+    features = '{}/{}.wav.scp'.format(MATERIAL_PATH, args.folder)
+    labels = '{}/{}.lbl'.format(MATERIAL_PATH, args.folder)
+    if ntype == "clean":
+        extension = ".WAV"
+    else:
+        extension = ".WAV.{}.{}dB".format(ntype, snr)
     
     with open(features, "w+") as f, open(labels, "w+") as l:
         for person in os.listdir(target_folder):
@@ -19,7 +33,7 @@ def main():
                 raw_sentences = [x.split('.')[0] for x in os.listdir(task_dir)]
                 sentences = list(set(raw_sentences))
                 for sentence in sentences:
-                    wav_file = os.path.join(task_dir, sentence + '.WAV')
+                    wav_file = os.path.join(task_dir, sentence + extension)
                     f.write('{}-{}-{} {}\n'.format(person, task, sentence, os.path.abspath(wav_file)))
 
                     phone_seq_file = os.path.join(task_dir, sentence+'.PHN')
@@ -35,10 +49,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="parsing .wav.scp files for advanced use\ne.g. python3 parsing.py ~/Workspace/data/timit train", formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('datapath', metavar="<timit relative path>", type=str)
     parser.add_argument('folder', metavar="<train|test>", type=str)
+
     args = parser.parse_args()
 
     MATERIAL_PATH = '.data/material'
     if not os.path.exists(MATERIAL_PATH):
         os.makedirs(MATERIAL_PATH)
 
-    main()
+    main(args)
