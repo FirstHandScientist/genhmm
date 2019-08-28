@@ -159,7 +159,11 @@ def accuracy_fun(data_file, mdl=None):
 
 
 def accuracy_fun_torch(data_file, mdl=None, batch_size_=128):
-    X = pkl.load(open(data_file, "rb"))
+    try:
+        X = pkl.load(open(data_file, "rb"))
+    except:
+        return "0/1"
+
     # Get the length of all the sequences
     l = [xx.shape[0] for xx in X]
     # zero pad data for batch training
@@ -169,7 +173,7 @@ def accuracy_fun_torch(data_file, mdl=None, batch_size_=128):
                                               lengths=l,
                                               device=mdl.hmms[0].device),
                            batch_size=batch_size_, shuffle=True)
-    
+
     true_class = parse("{}_{}.pkl", os.path.basename(data_file))[1]
     out_list = [mdl.forward(x) for x in batchdata]
     out = torch.cat(out_list, dim=1)
@@ -180,7 +184,7 @@ def accuracy_fun_torch(data_file, mdl=None, batch_size_=128):
 
     return acc_str(class_hat, true_class)
 
-def acc_str(class_hat,class_true):
+def acc_str(class_hat, class_true):
     istrue = class_hat == int(class_true)
     return "{}/{}".format(str(istrue.sum().cpu().numpy()), str(istrue.shape[0]))
 
@@ -191,11 +195,12 @@ def test_acc_str():
     assert( acc_str(class_hat, 1) == "1/2" )
     assert( acc_str(class_hat, 2) == "1/2" )
 
-    class_hat = torch.FloatTensor([1,2,3,4,5,6,7,8,9,10])
+    class_hat = torch.FloatTensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     assert( acc_str(class_hat, 1) == "1/10")
 
     class_hat = torch.FloatTensor([1, 2, 3, 4, 5, 6, 7, 8, 1, 10])
     assert (acc_str(class_hat, 1) == "2/10")
+
 
 def append_class(data_file, iclass):
     return data_file.replace(".pkl", "_" + str(iclass)+".pkl")
@@ -203,7 +208,6 @@ def append_class(data_file, iclass):
 
 def divide(res_int):
     return res_int[0] / res_int[1]
-
 
 
 def parse_(res_str):
