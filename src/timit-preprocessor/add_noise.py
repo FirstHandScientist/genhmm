@@ -3,14 +3,26 @@ from multiprocessing.dummy import Pool
 from scipy.io import wavfile
 import argparse
 from glob import glob
-import os,sys
+import os, sys
 import numpy as np
 
 
-def gen_noise(n, type, sigma):
+def gen_noise(n, type, sigma, noise_folder="../../data/NoiseDB/NoiseX_16kHz"):
     """Generate noise of a certain type and std."""
+
     if type == "white":
-        raw_noise = np.random.randn(n)
+        noise_filename = os.path.join(noise_folder, "{}_16kHz.wav".format(type))
+        _, loaded_noise = wavfile.read(noise_filename)
+        try:
+            assert(n < loaded_noise.shape[0])
+
+        except AssertionError as e:
+            print("Noise file: {} is too short.".format(noise_filename), file=sys.stderr)
+
+        # Find a random section in file.
+        istart = np.random.randint(loaded_noise.shape[0] - n)
+        raw_noise = loaded_noise[istart:istart+n]
+
     else:
         print("Unknown {} noise".format(type), file=sys.stderr)
         raw_noise = 0
@@ -23,16 +35,19 @@ def new_filename(file, type, snr):
     return file.replace(".WAV", ".WAV.{}.{}dB".format(type, snr))
 
 
-def corrupt_wav(file, type=None, snr=None):
-    """Corrupt a wav file with noise and write to a new file."""
-    rate, s = wavfile.read(file)
-    dtype = s.dtype
-
+def corrupt_data(s, type, snr):
+    """Corrupt a signal with a particular noise."""
     s_std = np.std(s)
     n_std = 10 ** (- snr / 10) * s_std
     n = gen_noise(s.shape[0], type, n_std)
-    sn = (s + n).astype(dtype)
+    sn = (s + n).astype(s.dtype)
+    return sn
 
+
+def corrupt_wav(file, type=None, snr=None):
+    """Corrupt a wav file with noise and write to a new file."""
+    rate, s = wavfile.read(file)
+    sn = corrupt_data(s, type, snr)
     wavfile.write(new_filename(file, type, snr), rate, sn)
     return 0
 
@@ -52,9 +67,7 @@ if __name__ == "__main__":
 
     wavs = glob(os.path.join(args.i, "**" , "*.WAV"), recursive=True)
     f = partial(corrupt_wav, type=args.type, snr=args.snr)
-
     f(wavs[1])
-
     with Pool(args.j) as pool:
         pool.map(f, wavs)
 
