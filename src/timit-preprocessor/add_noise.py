@@ -29,7 +29,7 @@ def gen_noise(n, type, sigma, noise_folder="../../data/NoiseDB/NoiseX_16kHz"):
         print("Unknown {} noise".format(type), file=sys.stderr)
         raw_noise = 0
 
-    return raw_noise * sigma
+    return raw_noise / raw_noise.std() * sigma
 
 
 def new_filename(file, ntype, snr):
@@ -40,7 +40,7 @@ def new_filename(file, ntype, snr):
 def corrupt_data(s, ntype, snr):
     """Corrupt a signal with a particular noise."""
     s_std = np.std(s)
-    n_std = 10 ** (- snr / 10) * s_std
+    n_std = 10 ** (- snr / 20) * s_std
     n = gen_noise(s.shape[0], ntype, n_std)
     sn = (s + n).astype(s.dtype)
     return sn
@@ -69,11 +69,9 @@ if __name__ == "__main__":
         print("No noise to be added with option: {}.\nExit.".format(args.opt),file=sys.stderr)
         sys.exit(0)
 
-
     if dset == "test":
         wavs = glob(os.path.join(args.timit, "TEST", "**" , "*.WAV"), recursive=True)
         f = partial(corrupt_wav, ntype=ntype, snr=snr)
-
         with Pool(args.j) as pool:
             pool.map(f, wavs)
 
