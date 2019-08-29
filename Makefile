@@ -33,6 +33,7 @@ ifndef exp_name
 	exp_name=default
 endif
 
+ROBUST=robust
 EXP=exp/$(model)
 EXP_DIR=$(EXP)/$(nfeats)feats/$(exp_name)
 
@@ -54,7 +55,7 @@ endif
 
 mdl_dep=$(shell echo $(MODELS)/%_class{1..$(nclasses)}.mdlc)
 acc_dep=$(shell echo $(MODELS)/%_class{1..$(nclasses)}.accc)
-
+rbst_dep=$(shell echo $(ROBUST)/epoch$(tepoch)_class{1..$(nclasses)}.accc)
 
 all: train
 
@@ -104,6 +105,30 @@ $(MODELS)/%.mdlc:
 
 $(MODELS)/%.accc: $(MODELS)/%.mdlc
 	$(PYTHON) $(BIN)/compute_accuracy_class.py $^ $(training_data) $(testing_data) >> $@
+
+# testing part only
+# test one checkpoint
+test_one: 
+	$(MAKE) -j $(j) -s $(ROBUST)/epoch$(tepoch).acc
+
+# test multiple check points
+test_all:
+	TEST_INTERM=$(shell echo $(ROBUST)/epoch{1..$(nepochs)})
+	echo $(TEST_INTERM)
+	for i in $(TEST_INTERM); do \
+		$(MAKE) -j $(j) -s $$i.acc; \
+		sleep 2;\
+	done
+
+
+$(ROBUST)/epoch$(tepoch).acc: $(rbst_dep)
+	$(PYTHON) $(BIN)/aggregate_accuracy.py $(training_data) $(testing_data) $^ > $@
+
+$(ROBUST)/%.accc:
+	@echo $(subst $(ROBUST),$(MODELS),$@)
+# 	string replacement such compute_acccuracy_class can recognize
+	$(PYTHON) $(BIN)/compute_accuracy_class.py $(subst .accc,.mdlc,$(subst $(ROBUST),$(MODELS),$@)) $(training_data) $(testing_data) >> $@
+
 
 watch:
 	tail -f $(LOG)/class*.log
