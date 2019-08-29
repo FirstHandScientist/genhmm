@@ -123,6 +123,7 @@ test_all:
 
 $(ROBUST)/epoch$(tepoch).acc: $(rbst_dep)
 	$(PYTHON) $(BIN)/aggregate_accuracy.py $(training_data) $(testing_data) $^ > $@
+	cat $@ >> $(LOG)/class_all.log
 
 $(ROBUST)/%.accc:
 	@echo $(subst $(ROBUST),$(MODELS),$@)
