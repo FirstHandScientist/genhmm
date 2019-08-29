@@ -44,6 +44,7 @@ init: MODELS=$(EXP_DIR)/models
 init: LOG=$(EXP_DIR)/log
 
 MODELS_INTERM=$(shell echo $(MODELS)/epoch{1..$(nepochs)})
+TEST_INTERM=$(shell echo {1..$(nepochs)})
 
 training_data=$(DATA)/train.$(nfeats).pkl
 ifndef noise
@@ -113,15 +114,14 @@ test_one:
 
 # test multiple check points
 test_all:
-	TEST_INTERM=$(shell echo $(ROBUST)/epoch{1..$(nepochs)})
 	echo $(TEST_INTERM)
 	for i in $(TEST_INTERM); do \
-		$(MAKE) -j $(j) -s $$i.acc; \
+		$(MAKE) -j $(j) -s $(ROBUST)/epoch$$i.acc tepoch=$$i; \
 		sleep 2;\
 	done
 
 
-$(ROBUST)/epoch$(tepoch).acc: $(rbst_dep)
+$(ROBUST)/epoch%.acc: $(rbst_dep)
 	$(PYTHON) $(BIN)/aggregate_accuracy.py $(training_data) $(testing_data) $^ > $@
 	cat $@ >> $(LOG)/class_all.log
 
