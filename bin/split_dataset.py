@@ -1,8 +1,10 @@
 from parse import parse
+import sys
 import argparse
 import os
 import pickle as pkl
-from gm_hmm.src.utils import read_classmap,to_phoneme_level,flip, phn61_to_phn39,remove_label, getsubset, normalize
+from gm_hmm.src.utils import read_classmap, to_phoneme_level,\
+    flip, phn61_to_phn39, remove_label, getsubset, normalize
 from functools import partial
 
 if __name__ == "__main__":
@@ -17,8 +19,8 @@ if __name__ == "__main__":
     fname_dtrain = os.path.join(os.path.dirname(fname_dtest), "train.{}.pkl".format(nfeats))
 
     cmap = read_classmap(os.path.dirname(args.classmap))
-    te_DATA, te_keys, te_lengths, phn2int_61, te_PHN = pkl.load(open(fname_dtest, "rb"))
 
+    te_DATA, te_keys, te_lengths, phn2int_61, te_PHN = pkl.load(open(fname_dtest, "rb"))
     tr_DATA, tr_keys, tr_lengths, tr_PHN = pkl.load(open(fname_dtrain, "rb"))
 
     data_te, label_te = to_phoneme_level(te_DATA)
@@ -26,10 +28,12 @@ if __name__ == "__main__":
     phn2int = phn2int_61
     if args.totclass == 39:
         f = partial(phn61_to_phn39, int2phn_61=flip(phn2int_61), data_folder=os.path.dirname(fname_dtest))
-        label_tr, phn2int_39 = f(label_te)
+        label_tr, phn2int_39 = f(label_tr)
         label_te, _ = f(label_te, phn2int_39=phn2int_39)
 
         data_te, label_te = remove_label(data_te, label_te, phn2int_39)
+        data_tr, label_tr = remove_label(data_tr, label_tr, phn2int_39)
+
         phn2int_39.pop('-', None)
         phn2int = phn2int_39
 
@@ -50,4 +54,4 @@ if __name__ == "__main__":
         xtest_c = xtest[ytest == ic]
         pkl.dump(xtest_c, open(test_outfiles[i], "wb"))
 
-    print("here")
+    sys.exit(0)
