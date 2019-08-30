@@ -1,4 +1,5 @@
 from parse import parse
+import sys
 import argparse
 import os
 import pickle as pkl
@@ -26,10 +27,12 @@ if __name__ == "__main__":
     phn2int = phn2int_61
     if args.totclass == 39:
         f = partial(phn61_to_phn39, int2phn_61=flip(phn2int_61), data_folder=os.path.dirname(fname_dtest))
-        label_tr, phn2int_39 = f(label_te)
+        label_tr, phn2int_39 = f(label_tr)
         label_te, _ = f(label_te, phn2int_39=phn2int_39)
 
         data_te, label_te = remove_label(data_te, label_te, phn2int_39)
+        data_te, label_te = remove_label(data_te, label_te, phn2int_39)
+
         phn2int_39.pop('-', None)
         phn2int = phn2int_39
 
@@ -50,4 +53,5 @@ if __name__ == "__main__":
         xtest_c = xtest[ytest == ic]
         pkl.dump(xtest_c, open(test_outfiles[i], "wb"))
 
-    print("here")
+    
+    sys.exit(0)
