@@ -11,7 +11,8 @@ import time
 import numpy as np
 
 if __name__ == "__main__":
-    usage = "bin/compute_accuracy_class.py exp/gaus/13feats/models/epoch2_class1.mdlc exp/gaus/13feats/data/train.13.pkl exp/gaus/13feats/data/test.13.pkl"
+    usage = "Usage:\n" \
+            "bin/compute_accuracy_class.py exp/gaus/13feats/models/epoch2_class1.mdlc exp/gaus/13feats/data/train.13.pkl exp/gaus/13feats/data/test.13.pkl"
     if len(sys.argv) != 4 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
         print(usage, file=sys.stderr)
         sys.exit(1)
@@ -33,6 +34,7 @@ if __name__ == "__main__":
     # Builds an array of string containing the train and test data sets for each class
     # size: nclass x 2 (train, test)
     data_files = [append_class(training_data_file, iclass), append_class(testing_data_file, iclass)]
+
     # Load Model
     device = 'cpu'
     if model_type == 'gaus':
@@ -40,6 +42,7 @@ if __name__ == "__main__":
             mdl = pkl.load(handle)
         mdl.device = 'cpu'
         f = lambda x: accuracy_fun(x, mdl=mdl)
+
     elif model_type == 'gen':
         mdl = load_model(mdl_file)
         if torch.cuda.is_available():
@@ -68,9 +71,7 @@ if __name__ == "__main__":
 
 
     # print("[Acc:] epoch:{}\tclass:{}\tPush model to {}. Done.".format(epoch,iclass, mdl.device), file=sys.stdout)
-    
-   
-    #f = lambda x: divide(parse_(accuracy_fun(x, mdl=mdl)))
+    # f = lambda x: divide(parse_(accuracy_fun(x, mdl=mdl)))
     
     results = list(map(f, data_files))
 
