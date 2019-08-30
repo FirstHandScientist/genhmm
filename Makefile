@@ -119,6 +119,8 @@ clean:
 clean-data:
 	rm -f $(DATA)/*_*.pkl $(DATA)/class_map.json
 
+clean-exp:
+	rm -rf $(EXP_DIR)
 
 .SECONDARY: 
 
