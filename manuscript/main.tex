@@ -63,7 +63,6 @@
 % \newcommand{\theHalgorithm}{\arabic{algorithm}}
 
 
-\graphicspath{{./images/}}
 
 
 % \hypersetup{  
@@ -89,11 +88,16 @@
 % command to correct it. You may not alter the value below 2.5 in
 
 \title{Powering Hidden Markov Model by Neural Network based Generative Models}
+% \author{
+%   Dong Liu$^{\dagger}$, Antoine Honoré$^{\ast \dagger}$, Saikat Chatterjee$^{\dagger}$, and Lars~K. Rasmussen$^{\dagger}$\\
+%   $^{\dagger}$KTH Royal Institute of Technology, Stockholm, Sweden \\
+%   $^{\ast}$Karolinska Institute, Stockholm, Sweden \\
+%   E-mail: \{doli, honore, sach, lkra\}@kth.se}
 \author{
-  Dong Liu$^{\dagger}$, Antoine Honoré$^{\ast \dagger}$, Saikat Chatterjee$^{\dagger}$, and Lars~K. Rasmussen$^{\dagger}$\\
-  $^{\dagger}$KTH Royal Institute of Technology, Stockholm, Sweden \\
-  $^{\ast}$Karolinska Institute, Stockholm, Sweden \\
-  E-mail: \{doli, honore, sach, lkra\}@kth.se}
+  Author1, Author2, Author3, and Author4\\
+  Institute 1\\
+  Institute 2 \\
+  E-mail: emails}
 
 
 % \name{
@@ -701,7 +705,7 @@ Similar experiments in table~\ref{tab:acc-classification13f} are carried out by 
   \vspace{0.3cm}
 \end{table}
 
-Apart from standard classification testing, we also test the robustness of our model to noise perturbations. We train GenHMM with $K=3$ by clean TIMIT training data in the case of folded $39$ phonemes with $39$ dimensional features. The testing dataset is perturbed by either the same type of noise with different signal-to-noise ratio (SNR) as shown in table~\ref{tab:acc-classification39f_noise_snr}, or different type of noises with the same SNR as shown in table~\ref{tab:acc-classification39f_noise_type}. The noise data is from NoiseX database. The baseline of these two sets of experiments is the accuracy testing of GenHMM and GMM-HMM on clean testing data in the same experimental condition, where GenHMM has $77.7\%$ and GMM-HMM gets $68.8\%$ as shown in table~\ref{tab:acc-classification39f}. It is shown in table~\ref{tab:acc-classification39f_noise_snr} that GMM-HMM's performance degenerates more than GenHMM's performance at them same level of noise perturbation, though the accuracy of both models increases along the increase of SNR. Especially, for SNR=$30$dB, the accuracy of GenHMM drops only about $3\%$ (from $77.7\%$ to $74.3\%$), while GMM-HMM encounters more than $10\%$ decrease (from $68.0\%$ to $57.1\%$) due to the noise perturbation. In table~\ref{tab:acc-classification39f_noise_type}, the SNR remains constant and GenHMM is tested with perturbation of different noise types. It is shown that GenHMM still has higher accuracy at different types of noise perturbations than GMM-HMM. Among these four types of noise, white noise shows most significant impact to GenHMM while the impact of volvo noise is negligible.
+Apart from standard classification testing, we also test the robustness of our model to noise perturbations. We train GenHMM with $K=3$ by clean TIMIT training data in the case of folded $39$ phonemes with $39$ dimensional features. The testing dataset is perturbed by either the same type of noise with different signal-to-noise ratio (SNR) as shown in table~\ref{tab:acc-classification39f_noise_snr}, or different type of noises with the same SNR as shown in table~\ref{tab:acc-classification39f_noise_type}. The noise data is from NOISEX-92 database. The baseline of these two sets of experiments is the accuracy testing of GenHMM and GMM-HMM on clean testing data in the same experimental condition, where GenHMM has $77.7\%$ and GMM-HMM gets $68.8\%$ as shown in table~\ref{tab:acc-classification39f}. It is shown in table~\ref{tab:acc-classification39f_noise_snr} that GMM-HMM's performance degenerates more than GenHMM's performance at them same level of noise perturbation, though the accuracy of both models increases along the increase of SNR. Especially, for SNR=$30$dB, the accuracy of GenHMM drops only about $3\%$ (from $77.7\%$ to $74.3\%$), while GMM-HMM encounters more than $10\%$ decrease (from $68.0\%$ to $57.1\%$) due to the noise perturbation. In table~\ref{tab:acc-classification39f_noise_type}, the SNR remains constant and GenHMM is tested with perturbation of different noise types. It is shown that GenHMM still has higher accuracy at different types of noise perturbations than GMM-HMM. Among these four types of noise, white noise shows most significant impact to GenHMM while the impact of volvo noise is negligible.
 
 
 \section{Conclusion}
