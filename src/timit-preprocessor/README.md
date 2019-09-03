@@ -45,11 +45,12 @@ $ make convert
 $ make -j 4
 ```
 Note 1: noisy `.wav` files will be created alongside timit clean ones.
+
 Note 2: In case of errors, display the remaining steps:
 ```bash
 $ make -n
 ```
-and run them one by one.
+and debug them one by one.
 For serious problems you can always contact us in the issue section.
 
 ### License
