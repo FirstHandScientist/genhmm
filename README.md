@@ -38,6 +38,10 @@ Built for x86_64-pc-linux-gnu
 
 ## Getting Started
 
+## Dataset preparation
+See [README.md](https://github.com/FirstHandScientist/gm_hmm/tree/master/src/timit-preprocessor/README.md) in `src/timit-preprocessor`
+
+## Training
 Start by creating the necessary experimental folders for using model "GenHMM" and data feature length of 39,  with:
 
 ```bash
@@ -61,6 +65,4 @@ $ make watch
 
 - Note 1: epochs are here Expectation Maximization steps.
 
-## Dataset preparation
-See [README.md](https://github.com/FirstHandScientist/gm_hmm/tree/master/src/timit-preprocessor/README.md) in `src/timit-preprocessor`
 
