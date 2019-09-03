@@ -28,14 +28,14 @@ After running the scripts instructed by `INSTALL` in `tools/`, there will be rem
 ## Preprocessing
 ### Steps
 First, edit the default of variables `KALDI_ROOT`, `TIMIT_ROOT`, `DATA_OUT` in the [Makefile](https://github.com/FirstHandScientist/gm_hmm/tree/master/src/timit-preprocessor/Makefile) to match your installation.
-You can also leave the default as is and use `make` with arguments.
+You can also leave the default as is and use `make` with *location arguments*.
 
-`make` with arguments:
+`make` with *location arguments*:
 ```bash
 $ make KALDI_ROOT=abc/kaldi  TIMIT_ROOT=abc/timit DATA_OUT=abc/out ...
 ```
 
-Then run the following commands (here without arguments for locations specification):
+Then run the following commands (here without *location arguments*):
 ```bash
 $ make convert
 $ make -j 4
