@@ -623,16 +623,27 @@ As described by the pseudocode in Algorithm~\ref{algo:genhmm}, the learning of G
 
 
 \section{Experiments}
-To show the validity of our model, we implement our model in PyTorch and test it with sequential data. The code is available at github repository\footnote{Due to double-blind review, the author's repository is not present here temporarily.}. In the next subsection, we first discuss the experimental setups and then show the experimental results.
+To show the validity of our model, we implement our model in PyTorch and test it with sequential data. The code is available at github repository\footnote{Due to double-blind review, the code is submitted in supplementary file.}. We first discuss the experimental setups and then show the experimental results.
 
 \subsection{Experimental Setups}
-The dataset used for sequential data modeling and classification is TIMIT dataset where the speech signal is sampled at $16$kHz. For extraction of feature vectors, we use $25$ms frame length and $10$ms frame shift to convert sound track into standard Mel-frequency cepstral coefficients (MFCCs) features. The deltas and delta-deltas features are also concatenated and used in our experiments.
+The dataset used for sequential data modeling and classification is TIMIT where the speech signal is sampled at $16$kHz.
+The TIMIT dataset consists of $5300$ phoneme-labeled speech utterances which are partitioned into two sets: {a train set consists of $4620$ utterance, and a test set consists of $1680$ utterances.} There are totally $61$ different types of phones in TIMIT.
+We performed experiments in two cases: i) full $61$-phoneme classification case; ii) $39$-phonme classification case, where $61$ phonemes are folded onto $39$ phonemes as described in \cite{Perdigao11}.
 
-The TIMIT dataset consists of $5300$ phoneme-labeled speech utterances which are partitioned into two sets: {a train set consists of $4620$ utterance, and a test set consists of $1680$ utterances.} There are totally $61$ different types of phones in TIMIT labels. Our experiments in this section are carried out in two different cases: i) full $61$-phoneme classification case, where both training and testing use the $61$-phoneme data; ii) $39$-phonme classification case, where $61$ phonemes are folded into $39$ phonemes as described in \cite{Perdigao11}.
+For extraction of feature vectors, we use $25$ms frame length and $10$ms frame shift to convert sound track into standard Mel-frequency cepstral coefficients (MFCCs) features. Experiments using the deltas and delta-deltas of the features are also carried out.
 
-In all the following experiments, all generators $\left\{\bm{g}_{s,\kappa}|s\in \Ss, \kappa=1, 2, \cdots, K \right\}$ of GenHMM are implemented as flow models. To be more specific, our generator structure follows the structure of flow model in RealNVP \cite{2016arXiv160508803D}. The coupling layer shown as \eqref{eq-gl} maps a part of its input signal identically. The following coupling layer would alternate the input signal order such that after two consequential coupling layers, there is no signal remains the same any more. We term such two consequential coupling layers as a \textit{flow block}. In our experiments, a generator $\bm{g}_{s,\kappa}$ consists of four flow blocks. The latent source signal is assumed as standard Gaussian, i.e. $p_{s,\kappa}(\bm{z})$ is density function of standard Gaussian.
 
-In learning of GenHMM, the number of states is set as $|\Ss| \in \left\{ 3,4,5 \right\}$. The exact number of states for a phoneme is decided by computing the average length of MFCC frames per phone in training dataset, and clipping the average length into $\left\{ 3,4,5 \right\}$. Transition matrix $\bm{A}$ is initialized as upper triangular matrix for GenHMM.
+Our experiments are performed for: i) standard classification tasks (table~\ref{tab:acc-classification39f},\ref{tab:acc-classification13f}), ii) classification under noise perturbation (table~\ref{tab:acc-classification39f_noise_snr}, \ref{tab:acc-classification39f_noise_type}).
+In all experiments, generators $\left\{\bm{g}_{s,\kappa}|s\in \Ss, \kappa=1, 2, \cdots, K \right\}$ of GenHMM are implemented as flow models. Specifically, our generator structure follows that of a RealNVP described in \cite{2016arXiv160508803D}.
+As discussed, the coupling layer shown in \eqref{eq-gl} maps a part of its input signal identically.
+The implementation is such that layer $l+1$ would alternate the input signal order of layer $l$ such that no signal remains the same after two consecutive coupling layers.
+We term such a pair of consecutive coupling layers as a \textit{flow block}.
+In our experiments, each generator $\bm{g}_{s,\kappa}$ consists of four \textit{flow blocks}.
+The density of samples in the latent space is defined as Normal, i.e. $p_{s,\kappa}(\bm{z})$ is the density function of standard Gaussian.
+
+For each GenHMM, the number of states is adapted to the training dataset.
+The exact number of states is decided by computing the average length of MFCC frames per phone in training dataset, and clipping the average length into $\left\{ 3,4,5 \right\}$.
+Transition matrix $\bm{A}$ is initialized as upper triangular matrix for GenHMM.
 
 \subsection{Experimental Results}
 
@@ -673,7 +684,7 @@ Table \ref{tab:acc-classification39f} shows the results for this experiments, in
   \label{tab:acc-classification13f}
   \vspace{-0.3cm}
   \centering
-  \subcaption{Folded $39$ Phonemes}
+  \subcaption{Folded $39$ Phonemes}\label{tab:acc-classification13f_a}
   \vspace{-0.1cm}
   \centering  
   \begin{tabular}{l|c|c|c}
@@ -684,7 +695,7 @@ Table \ref{tab:acc-classification39f} shows the results for this experiments, in
     \bottomrule                                                                  
   \end{tabular}
   \vspace{0.1cm}
-  \subcaption{$61$ Phonemes}
+  \subcaption{$61$ Phonemes}\label{tab:acc-classification13f_b}
   \vspace{-0.1cm}
   \begin{tabular}{l|c|c|c}
     \toprule
