@@ -247,18 +247,21 @@ In the framework of HMM, at each time instance $t$, signal $\bm{x}_t$ is assumed
   \vspace{0.3cm}
 \end{figure}
 
-In this section, we introduce a neural network based generator-mixed HMM model, i.e. GenHMM. GenHMM has a hidden markov process as a typical HMM does, while the probabilistic model of GenHMM for each hidden state is induced by mixture of neural network based generators. For a given state $s\in \Ss$, we define its probabilistic model in GenHMM as
-\begin{equation}
+In this section, we introduce the neural network based state probabilistic model of our GenHMM.
+Recall that $\bm{x}\in\mathbb{R}^N$.
+The probabilistic model of GenHMM for each hidden state is a mixture of $K$ neural network based generators, where $K$ standards for positive integer.
+The probabilistic model of a state $s\in\Ss$ is then given by
+\begin{equation}\label{eq:state-prob-model}
   p(\bm{x}| s; \bm{\Phi}_{s}) = \sum_{\kappa=1}^{K}\pi_{s, \kappa} p(\bm{x}| s, \kappa; \bm{\theta}_{s, \kappa}),
 \end{equation}
-where $\kappa$ is a random variable following a categorical distribution, with probability $\pi_{s, \kappa} = p(\kappa | s; \bm{H})$. Naturally $\sum_{\kappa = 1}^{K} \pi_{s, \kappa}= 1$. Denote $\bm{\pi}_{s} = [\pi_{s,1}, \pi_{s,2}, \cdots, \pi_{s,K}]^{\intercal}$,
-$\bm{\theta}_s = \left\{ \bm{\theta}_{s, \kappa}| \kappa = 1, 2, \cdots, K \right\}$. 
-We define $p(\bm{x}| s, \kappa; \bm{\theta}_{s, \kappa})$ as induced distribution by a generator $\bm{g}_{s,\kappa}: \RR^{N}\rightarrow\RR^{N}$, such that $\bm{x}=\bm{g}_{s, \kappa}(\bm{z})$, where $\bm{z}$ is a latent variable following a distribution with density function $p_{s,\kappa}(\bm{z})$. Assuming $\bm{g}_{s, \kappa}$ is invertible, by change of variable, we have
+where $\kappa$ is a random variable following a categorical distribution, with probability $\pi_{s, \kappa} = p(\kappa | s; \bm{H})$.
+Naturally $\sum_{\kappa = 1}^{K} \pi_{s, \kappa}= 1$. Denote $\bm{\pi}_{s} = [\pi_{s,1}, \pi_{s,2}, \cdots, \pi_{s,K}]^{\intercal}$. 
+In \eqref{eq:state-prob-model}, $p(\bm{x}| s, \kappa; \bm{\theta}_{s, \kappa})$ is defined as induced distribution by a generator $\bm{g}_{s,\kappa}: \RR^{N}\rightarrow\RR^{N}$, such that $\bm{x}=\bm{g}_{s, \kappa}(\bm{z})$, where $\bm{z}$ is a latent variable following a distribution with density function $p_{s,\kappa}(\bm{z})$. Generator $\bm{g}_{s,\kappa}$ is parameterized by $\bm{\theta}_{s, \kappa}$. Let us denote the collection of the parameter sets of generators for state $s$ as $\bm{\theta}_s = \left\{ \bm{\theta}_{s, \kappa}| \kappa = 1, 2, \cdots, K \right\}$. Assuming $\bm{g}_{s, \kappa}$ is invertible, by change of variable, we have
 \begin{equation}\label{eq:changel-variable}
   p(\bm{x}| s, \kappa; \bm{\theta}_{s, \kappa}) = p_{s,\kappa}(\bm{z})\bigg| \det\left( \pd{\bm{g}_{s,\kappa}(\bm{z})}{\bm{z}} \right)\bigg|^{-1}.
 \end{equation}
 
-For a state $s$ of GenHMM, the induced probability distribution has the signal flow illustration as shown in Figure~\ref{fig:gen-mix}, in which the generator identity is up to the random variable $\kappa$.
+The signal flow of the probability distribution for a state $s$ of GenHMM is shown in Figure~\ref{fig:gen-mix}, in which the generator identity is up to the random variable $\kappa$.
 
 \subsection{Learning in EM framework}
 
