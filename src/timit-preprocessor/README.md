@@ -43,14 +43,16 @@ $ make KALDI_ROOT=abc/kaldi  TIMIT_ROOT=abc/timit DATA_OUT=abc/out ...
 $ make convert
 $ make -j 4
 ```
+
 Note 1: noisy `.wav` files will be created alongside timit clean ones.
 
 Note 2: In case of errors, display the remaining steps:
 ```bash
 $ make -n
 ```
-and debug them one by one.
-For serious problems you can always contact us in the issue section.
+and try to debug them one by one.
+
+Note 3: For serious problems you can always contact us in the [issues](https://github.com/FirstHandScientist/gm_hmm/issues) section.
 
 ### License
 BSD 3-Clause License (2017), Jun-You Liu
