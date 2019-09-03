@@ -17,15 +17,15 @@ mkdir -p $path
 
 fname=$(basename "$target_file")
 fname_trunk="${fname%.*}"
-target=(${fname_trunk//./ })
-
 
 log=$path/$target.extract.log
 if [[ $fname == *".13."* ]]; then
+	target=(${fname_trunk//.13})
 	${kaldi}/src/featbin/compute-mfcc-feats --verbose=2 $options scp:.data/material/$target.wav.scp ark,t,scp:$path/$target.13.ark,$target_file 2> $log
 fi
 
 if [[ $fname == *".39."* ]]; then
+	target=(${fname_trunk//.39})
 	${kaldi}/src/featbin/compute-mfcc-feats --verbose=2 $options scp:.data/material/$target.wav.scp ark,t,scp:$path/$target.13.ark,$target_file 2> $log
 	${kaldi}/src/featbin/add-deltas ark:$path/$target.13.ark ark,t:$path/$target.13_deltas.ark
 	${kaldi}/src/featbin/compute-cmvn-stats ark:$path/$target.13_deltas.ark ark,t:$path/$target.cmvn_results.ark
