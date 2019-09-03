@@ -115,7 +115,21 @@
 
 \maketitle
 \begin{abstract}
-  Hidden Markov model (HMM) has been successfully used for sequential data modeling problems. In this work, we propose to power the modeling capacity of HMM by bringing in neural network based generative models. The proposed model is termed as GenHMM. In GenHMM, the hidden states of HMM and input data are related by a neural network based generative model that has tractability of exact likelihood and provides efficient likelihood computation. This is realized by a flow model. A learning algorithm for GenHMM is proposed in expectation-maximization framework. The convergence of the learning GenHMM is analyzed. We demonstrate the efficiency of GenHMM by classification tasks on practical sequential data.
+Hidden Markov model (HMM) has been successfully used for sequential
+data modeling problems.
+In this work, we propose to power the modeling capacity of HMM by
+bringing in neural network based generative models.
+The proposed model is termed as GenHMM.
+In the proposed GenHMM, each HMM hidden state is associated with a
+neural network based generative model that has
+tractability of exact likelihood and provides efficient likelihood
+computation.
+A generative model in GenHMM consists of mixture of generators
+that are realized by flow models.
+A learning algorithm for GenHMM is proposed in
+expectation-maximization framework.
+The convergence of the learning GenHMM is analyzed.
+We demonstrate the efficiency of GenHMM by classification tasks on practical sequential data.
 \end{abstract}
 
 \section{introduction}
