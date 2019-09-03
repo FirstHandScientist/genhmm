@@ -89,7 +89,7 @@
 
 \title{Powering Hidden Markov Model by Neural Network based Generative Models}
 % \author{
-%   Dong Liu$^{\dagger}$, Antoine HonorÈ$^{\ast \dagger}$, Saikat Chatterjee$^{\dagger}$, and Lars~K. Rasmussen$^{\dagger}$\\
+%   Dong Liu$^{\dagger}$, Antoine Honor√©$^{\ast \dagger}$, Saikat Chatterjee$^{\dagger}$, and Lars~K. Rasmussen$^{\dagger}$\\
 %   $^{\dagger}$KTH Royal Institute of Technology, Stockholm, Sweden \\
 %   $^{\ast}$Karolinska Institute, Stockholm, Sweden \\
 %   E-mail: \{doli, honore, sach, lkra\}@kth.se}
@@ -102,7 +102,7 @@
 
 % \name{
 % Dong Liu,
-% Minh Th‡nh Vu,
+% Minh Th√†nh Vu,
 % Saikat Chatterjee,
 % and Lars~K. Rasmussen
 % }
@@ -133,27 +133,29 @@ We demonstrate the efficiency of GenHMM by classification tasks on practical seq
 \end{abstract}
 
 \section{introduction}
-Sequential data modeling is a challenging topic in pattern recognition and machine learning. For many applications, the assumption of independent and identically distributed data points is too strong to model data properly. Hidden Markov model (HMM) is a classic way to model sequential data. HMM has been widely used in different practical problems, and especially is known for applications in reinforcement learning \cite{ding2018reinforcementhmm,levine2018reinforcementReview}, natural language modeling \cite{khan2016survey,Hariyanti_2019}, biological sequence analysis such as proteins \cite{ASHWIN20172} and DNA \cite{ren2015dna}, etc.
+Sequential data modeling is a challenging topic in pattern recognition and machine learning. For many applications, the assumption of independent and identically distributed (i.i.d.) data points is too strong to model data properly. Hidden Markov model (HMM) is a classic way to model sequential data without the i.i.d. assumption. HMM has been widely used in different practical problems, including applications in reinforcement learning \cite{ding2018reinforcementhmm,levine2018reinforcementReview}, natural language modeling \cite{khan2016survey,Hariyanti_2019}, biological sequence analysis such as proteins \cite{ASHWIN20172} and DNA \cite{ren2015dna}, etc.
 
-HMM provides a framework for sequential data modeling. To connect states of HMM with input data, a probabilistic model is used to describe how each state of HMM represents a pattern of sequential data. The typical way is to use a Gaussian mixture model (GMM) per state of HMM \cite{juang1986maximum}, where GMMs are used to represent the relationship between states of HMM and sequential data input. GMM based HMM (GMM-HMM) has become a standard model for sequential data modeling, and been employed widely for practical applications, especially in speech recognition \cite{gales2008application,chatterjee2011auditory}.
+A HMM is a statistical representation of sequential data generating process.
+Each state of a HMM is associated with a probabilistic model.
+The probabilistic model is used to represent the relationship between a state of HMM and sequential data input. The typical way is to use a Gaussian mixture model (GMM) per state of HMM \cite{juang1986maximum}, where GMMs are used to connect states of HMM to sequential data input. GMM based HMM (GMM-HMM) has become a standard model for sequential data modeling, and been employed widely for practical applications, especially in speech recognition \cite{gales2008application,chatterjee2011auditory}.
 
-Given the success of GMM-HMM, it is not efficient for modeling data in nonlinear manifold. Research attempts of training HMM with neural networks have been made to boost the modeling capacity of HMM. A successful work is to bring restrictive Boltzmann machine (RBM) \cite{Hinton2012} into HMM based models \cite{hinton2012deepSpeech,li2013hybrid,Miao2013ImprovingLC}. In RBM based HMM, a hierarchical learning scheme is used: i) a stack of RBMs are trained one after another in unsupervised fashion, ii) then a final softmax layer is added to the stack of RBMs to represent the posterior of state of HMM given data input, iii) a discriminative training is followed to do the final tuning of the model.
+Given the success of GMM-HMM, it is not efficient for modeling data in nonlinear manifold. Research attempts at training HMM with neural networks have been made to boost the modeling capacity of HMM. A successful work has brought restrictive Boltzmann machine (RBM) \cite{Hinton2012} into HMM based models \cite{hinton2012deepSpeech,li2013hybrid,Miao2013ImprovingLC}. In RBM based HMM, a hierarchical learning scheme is used: i) RBMs are trained one after the other in unsupervised fashion, and are stacked together as one model, ii) then a final softmax layer is added to the stack of RBMs to represent the probability of a HMM state given a data input, iii) a discriminative training is performed for the final tuning of the model.
 
 Another track of related work is hybrid method of temporal neural network models and HMM. In \cite{liu2019lstmHmmHyb,buys2018bridging,vik2016rnnHmm}, a long short-term memory (LSTM) model/recurrent neural network (RNN) is combined with HMM as hybrid. A hierarchical training is carried out by: i) training a HMM first, ii) then doing modified training of LSTM using trained HMM. This hierarchical training procedure is motivated by the intuition of using LSTM or RNN to fill in the gap where HMM can not learn.
 
 % work of epfl fiting GMM with neural network...
 
-The above works help improve modeling capacity of HMM based models by bringing in neural networks. A softmax layer is usually used to represent probability whenever a conditional distribution is needed. These hierarchical schemes are built based on intuition of domain knowledge. Training of these hierarchical models usually need specific expertise in relevant areas to be able to proceed with the hierarchical procedure of training and application usage. 
+The above works help improve modeling capacity of HMM based models by bringing in neural networks. A softmax layer is usually used to represent probability whenever a conditional distribution is needed. These hierarchical schemes are built based on intuition of domain knowledge. Training of these hierarchical models usually requires expertise in specific areas to be able to proceed with the hierarchical procedure of training and application usage. 
 
-In this work, we propose a generative model based HMM. Specifically, we propose a generator-mixed HMM, termed as GenHMM, where generators are realized by neural networks to help the model gain high modeling capacity.
+In this work, we propose a generative model based HMM, termed as GenHMM. Specifically, a generative model in our GenHMM is generator-mixed, where a generator is realized by a neural network to help the model gain high modeling capacity.
 Our proposed model, GenHMM:
 \begin{itemize}
   \item has high modeling capacity of sequential data, due to the neural network based generators;
-\item has advantage of easy training. Training of GenHMM employs expectation maximization (EM) framework. Training a GenHMM is as easy as training a GMM-HMM model, while configuration of GenHMM is flexible;
+\item is easy to train. Training of GenHMM employs expectation maximization (EM) framework. Therefore, training a GenHMM is as easy as training a GMM-HMM model, while configuration of GenHMM is flexible;
 % \item has high modeling capability of sequence data, though its training and using are handy
 \item is able to compute loglikelihood exactly and efficiently.
 \end{itemize}
-Instead of using softmax for probability representation, our GenHMM has tractability of exact loglikelihood of given sequential data, which is based on change of variable formula. To make the loglikelihood computation efficient, neural network based generators of GenHMM are implemented as flow models. 
+Instead of using softmax for probability representation, our GenHMM has tractability of exact loglikelihood of given sequential data, which is based on change of variable formula. To make the loglikelihood computation efficient, neural network based generators of GenHMM are realized as flow models. 
 
 Our contributions in the paper are as follows:
 \begin{itemize}
