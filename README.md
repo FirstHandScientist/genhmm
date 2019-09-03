@@ -62,18 +62,5 @@ $ make watch
 - Note 1: epochs are here Expectation Maximization steps.
 
 ## Dataset preparation
-### Dependencies
-You must have downloaded the [TIMIT](https://catalog.ldc.upenn.edu/LDC93S1) dataset.
-You must have a compiled version of [Kaldi](https://github.com/kaldi-asr/kaldi).
-This data preparation has been borrowed from [timit-preprocessor](https://github.com/orbxball/timit-preprocessor).
-`make_dataset.py` relies on [kaldi-io-for-python](https://github.com/vesis84/kaldi-io-for-python)
+See README.md in `src/timit-preprocessor`
 
-### Steps
-First edit the variables `KALDI_ROOT`, `TIMIT_ROOT`, `DATA_OUT` in `src/timit-preprecessor/Makefile`.
-Replace the values with the location of kaldi, timit and the place you wish to have the datasets created.
-
-```bash
-$ cd src/timit-preprocessor
-$ make convert
-$ make -j 4
-```
