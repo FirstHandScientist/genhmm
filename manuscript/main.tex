@@ -270,14 +270,14 @@ Assume the sequential signal $\ubm{x}$ follows an unknown distribution $p(\ubm{x
   \umin{\bm{H}\in \Hh} KL({p}(\ubm{x})\| p(\ubm{x};\bm{H})),
 \end{equation}
 where $KL(\cdot\|\cdot)$ denotes the Kullback-Leibler divergence. For practical consideration, we only have access to the samples of $p(\ubm{x})$, i.e. the dataset of this distribution. For the given dataset, we denote its empirical distribution by $\hat{p}(\ubm{x}) = \frac{1}{R}\sum_{r=1}^{R} \delta_{\ubmr{x}{r}}(\ubm{x})$, where superscipt $(\cdot)^{r}$ denotes the index of sequential signal. 
-The KL divergence problem can be boiled down to a maximizing loglikelihood problem
+The KL divergence minimization problem can be reduced to a likelihood maximization problem
 \begin{equation}\label{eq:ml-of-hmm}
   \uargmax{\bm{H} \in \Hh} \frac{1}{R}\sum_{r=1}^{R}\log\,p(\ubmr{x}{r}; \bm{H}).
 \end{equation}
 
-The first problem that we need to address is to deal with the hidden sequential variable $\ubm{s}$ and $\ubm{\kappa}$  in model $\bm{H}$, where $\ubm{s}=[ \bm{s}_1, \bm{s}_2, \cdots, \bm{s}_T ]^{\intercal}$ and $\ubm{\kappa} = [\bm{\kappa}_1, \bm{\kappa}_2, \cdots, \bm{\kappa}_T]^{\intercal}$. For a sequential observable variable $\ubm{x}$, $\ubm{s}$ is the hidden state sequence corresponding to $\ubm{x}$, and $\ubm{\kappa}$ is the hidden variable sequence representing the generator identity sequence that actually generates $\ubm{x}$.
+For the likelihood maximization, the first problem that we need to address is to deal with the hidden sequential variables of model $\bm{H}$, namely $\ubm{s}=[ \bm{s}_1, \bm{s}_2, \cdots, \bm{s}_T ]^{\intercal}$ and $\ubm{\kappa} = [\bm{\kappa}_1, \bm{\kappa}_2, \cdots, \bm{\kappa}_T]^{\intercal}$. For a sequential observable variable $\ubm{x}$, $\ubm{s}$ is the hidden state sequence corresponding to $\ubm{x}$, and $\ubm{\kappa}$ is the hidden variable sequence representing the generator identity sequence that actually generates $\ubm{x}$.
 
-Since directly maximizing likelihood is not an option for our problem in \ref{eq:ml-of-hmm}, we address this problem in expectation maximization (EM) framework. This divides our problem into two steps: i) using the joint posterior of hidden variable sequences $\ubm{s}$ and $\ubm{\kappa}$ to obtain an ``expected likelihood'' of the observable variable sequence $\ubm{x}$, i.e. the E-step; ii) maximizing the expected likelihood with regard to (w.r.t.) the model $\bm{H}$, i.e. the M-step. We formulate these two steps as follows:
+Since directly maximizing likelihood is not an option for our problem in \ref{eq:ml-of-hmm}, we address this problem in expectation maximization (EM) framework. This divides our problem into  two iterative steps: i) using the joint posterior of hidden variable sequences $\ubm{s}$ and $\ubm{\kappa}$ to obtain an ``expected likelihood'' of the observable variable sequence $\ubm{x}$, i.e. the E-step; ii) maximizing the expected likelihood with regard to (w.r.t.) the model $\bm{H}$, i.e. the M-step. Assume model $\bm{H}$ is at a configuration of $\bm{H}^{\mathrm{old}}$, we formulate these two steps as follows:
 \begin{itemize}
 \item E-step: % the posterior probability of $\ubm{s}$:
   % \begin{equation}
@@ -316,10 +316,10 @@ We can see that the solution of $\bm{H}$ depends on the posterior probability $p
 With such a solution framework ready for GenHMM, there are still remaining problems to address before it can be employed for practical usage, including
 \begin{itemize}
 \item how to realize GenHMM by neural network based generators such that likelihoond of their induced distributions can be computed explicitly and exactly?
-\item how to train GenHMM to sovle problem in \eqref{eq:ml-of-hmm} using practical algorithm?
+\item how to train GenHMM to solve problem in \eqref{eq:ml-of-hmm} using practical algorithm?
 \item would the training of GenHMM converge?
 \end{itemize}
-We would attempt these problems in the following section.
+We tackle these problems in the following section.
 
 
 
