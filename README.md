@@ -8,7 +8,7 @@ $ git clone https://github.com/FirstHandScientist/gm_hmm.git
 ```
 
 ### Virtual environment
-Create a virtual environment with a python3 interpreter, inside a folder called `gm_hmm/` folder for instance
+Create a virtual environment with a python3 interpreter, in the newly created `gm_hmm/` directory.
 ```bash
 $ cd gm_hmm
 $ virtualenv -p python3.6 pyenv
