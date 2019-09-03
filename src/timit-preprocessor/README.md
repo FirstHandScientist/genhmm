@@ -34,24 +34,23 @@ $ source ../../pyenv/bin/activate
 
 2. Edit the default of variables `KALDI_ROOT`, `TIMIT_ROOT`, `DATA_OUT` in the [Makefile](https://github.com/FirstHandScientist/gm_hmm/tree/master/src/timit-preprocessor/Makefile) to match your installation.
 You can also leave the default as is and use `make` with *location arguments*.
-
 `make` with *location arguments*:
 ```bash
 $ make KALDI_ROOT=abc/kaldi  TIMIT_ROOT=abc/timit DATA_OUT=abc/out ...
 ```
 
-Then run the following commands (here without *location arguments*):
+3. Run the following commands (here without *location arguments*):
 ```bash
 $ make convert
 $ make -j 4
 ```
-
-In case of errors, display the remaining steps:
+Note 1: noisy `.wav` files will be created alongside timit clean ones.
+Note 2: In case of errors, display the remaining steps:
 ```bash
 $ make -n
 ```
 and run them one by one.
-In case of serious problems you can contact us.
+For serious problems you can always contact us in the issue section.
 
 ### License
 BSD 3-Clause License (2017), Jun-You Liu
