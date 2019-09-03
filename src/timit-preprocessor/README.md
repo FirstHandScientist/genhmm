@@ -27,7 +27,12 @@ After running the scripts instructed by `INSTALL` in `tools/`, there will be rem
 
 ## Preprocessing
 ### Steps
-First, edit the default of variables `KALDI_ROOT`, `TIMIT_ROOT`, `DATA_OUT` in the [Makefile](https://github.com/FirstHandScientist/gm_hmm/tree/master/src/timit-preprocessor/Makefile) to match your installation.
+1. source the python interpreter matching the [requirement.txt](https://github.com/FirstHandScientist/gm_hmm/tree/master/requirements.txt) file.
+```bash
+$ source ../../pyenv/bin/activate
+```
+
+2. Edit the default of variables `KALDI_ROOT`, `TIMIT_ROOT`, `DATA_OUT` in the [Makefile](https://github.com/FirstHandScientist/gm_hmm/tree/master/src/timit-preprocessor/Makefile) to match your installation.
 You can also leave the default as is and use `make` with *location arguments*.
 
 `make` with *location arguments*:
