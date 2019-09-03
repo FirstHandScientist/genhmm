@@ -1,15 +1,18 @@
 #/bin/bash
 SHELL=/bin/bash
 
-######
-
 ifndef PROJECT_ROOT
 	PROJECT_ROOT=.
 endif
-KALDI_ROOT=$(PROJECT_ROOT)/kaldi
-DATA_OUT=$(PROJECT_ROOT)/gm_hmm/data
-TIMIT_ROOT=$(DATA_OUT)/TIMIT
-#####
+ifndef KALDI_ROOT
+	KALDI_ROOT=$(PROJECT_ROOT)/kaldi
+endif
+ifndef DATA_OUT
+	DATA_OUT=$(PROJECT_ROOT)/gm_hmm/data
+endif
+ifndef
+	TIMIT_ROOT=$(DATA_OUT)/TIMIT
+endif
 
 ifndef ntype
 	ntype=clean

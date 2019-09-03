@@ -27,13 +27,25 @@ After running the scripts instructed by `INSTALL` in `tools/`, there will be rem
 
 ## Preprocessing
 ### Steps
-First edit the variables `KALDI_ROOT`, `TIMIT_ROOT`, `DATA_OUT` in `src/timit-preprocessor/Makefile`.
-Replace the values with the location of kaldi, timit and the place you wish to have the datasets created.
+First, edit the default of variables `KALDI_ROOT`, `TIMIT_ROOT`, `DATA_OUT` in the [Makefile](https://github.com/FirstHandScientist/gm_hmm/tree/master/src/timit-preprocessor/Makefile) to match your installation.
+You can also leave the default as is and use `make` with arguments.
+`make` with arguments:
+```bash
+$ make KALDI_ROOT=abc/kaldi  TIMIT_ROOT=abc/timit DATA_OUT=abc/out ...
+```
 
+Then run the following commands (here without arguments for locations specification):
 ```bash
 $ make convert
 $ make -j 4
 ```
+
+In case of errors, display the remaining steps:
+```bash
+$ make -n
+```
+and run them one by one.
+In case of serious problems you can contact us.
 
 ### License
 BSD 3-Clause License (2017), Jun-You Liu
