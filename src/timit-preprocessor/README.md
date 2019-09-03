@@ -54,5 +54,5 @@ and try to debug them one by one.
 
 Note 3: For serious problems you can always contact us in the [issues](https://github.com/FirstHandScientist/gm_hmm/issues) section.
 
-### License
-BSD 3-Clause License (2017), Jun-You Liu
+### Acknowledgment
+Some codes of the TIMIT Preprocessor are from the following repo: [TIMIT Preprocessor](https://github.com/orbxball/timit-preprocessor)

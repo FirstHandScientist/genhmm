@@ -63,6 +63,6 @@ The logs appear in `log/class...`. you can follow the training with:
 $ make watch
 ```
 
-- Note 1: epochs are here Expectation Maximization steps.
+- Note 1: number of epochs is here number of checkpoints. One checkpoint consist of multiple expectation maximization steps, which you can configure at default.json.
 
 
