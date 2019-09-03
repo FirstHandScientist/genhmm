@@ -330,8 +330,8 @@ The convergence of GenHMM is also discussed in this section.
 
 
 \subsection{Realizing $\bm{g}_{s,\kappa}$ by a Flow Model}
-We use a feed-forward neural network to implement each generator $\bm{g}_{s,\kappa}$.
-Define  $\bm{g}_{s,\kappa}$ as a $L$-layer neural network and we formulate its mapping by layer-wise concatenation:
+Each generator $\bm{g}_{s,\kappa}$ is realized as a feed-forward neural netowrk.
+We define $\bm{g}_{s,\kappa}$ as a $L$-layer neural network and formulate its mapping by layer-wise concatenation:
 $\bm{g}_{s,\kappa}=\bm{g}_{s,\kappa}^{[L]}\circ \bm{g}_{s,\kappa}^{[L-1]}\circ \cdots
 \circ \bm{g}_{s,\kappa}^{[1]}$, where superscript $[l]$ denotes the layer index and $\circ$ denotes mapping concatenation. Assume $\bm{g}_{s,\kappa}$ is invertible and denote its inverse mapping as $\bm{f}_{s,\kappa}=\bm{g}_{s,\kappa}^{-1}$. For a latent variable $\bm{z}$ with density function $p_{s,\kappa}(\bm{z})$, the generated signal $\bm{x}$ follows an induced distribution with density function \eqref{eq:changel-variable}. We illustrate the signal flow between latent variable $\bm{z}$ and observable variable $\bm{x}$ as 
 \begin{equation*}
@@ -392,7 +392,7 @@ For the flow model, the determinant of Jacobian matrix is
     \mathrm{det}(\nabla{\bm{f}_{s,\kappa}}) & = \prod_{l=1}^L \det (\nabla{\bm{f}_{s,\kappa}^{[l]}}),
   \end{array}
 \end{equation}
-where $\nabla{f_{s,\kappa}^{[l]}}$ is the Jacobian of the mapping from the $l$-th layer to the $(l-1)$-th layer, i.e., the inverse transformation. We compute the determinant of the Jacobian matrix as
+where $\nabla{\bm{f}_{s,\kappa}^{[l]}}$ is the Jacobian of the mapping from the $l$-th layer to the $(l-1)$-th layer, i.e., the inverse transformation. We compute the determinant of the Jacobian matrix as
 \begin{align}\label{eq-hl-determinate}
   \det (\nabla{f_{s,\kappa}^{[l]}})& = \det \left[  \pd{\bm{h}_{l-1}}{\bm{h}_l} \right] \nonumber\\
                                    & = \det
@@ -402,7 +402,7 @@ where $\nabla{f_{s,\kappa}^{[l]}}$ is the Jacobian of the mapping from the $l$-t
                                      \end{bmatrix}\nonumber\\
                                    &= \det \left( \mathrm{diag}(\bm{m}_a(\bm{h}_{l,a})) \right),
 \end{align}
-where $\bm{I}_a$ is identity matrix and $\mathrm{diag}(\cdot)$ returns a square matrix with the elements of $(\cdot)$ on the main diagnal.
+where $\bm{I}_a$ is identity matrix and $\mathrm{diag}(\cdot)$ returns a square matrix with the elements of $\cdot$ on the main diagnal.
 % \textcolor{red}{do I still need this?}
 % Then the pdf is
 % \begin{align}
@@ -423,7 +423,7 @@ where $\bm{I}_a$ is identity matrix and $\mathrm{diag}(\cdot)$ returns a square 
 \subsection{Learning of GenHMM}\label{subsec:optmGenHMM}
 In this subsection, we address the problem of learning GenHMM.
 \subsubsection{Generative Model Learning}
-The generative model learning is actually to solve the problem in \eqref{eq:generative-model-update}, which can be further divided into two subproblems: i) generator learning; ii) weights of generators learning. Let us define notations:
+The generative model learning is actually to solve the problem in \eqref{eq:generative-model-update}, which can be further divided into two subproblems: i) generator learning; ii) mixture weights of generators learning. Let us define notations:
 $\bm{\Pi} = \left\{  \bm{\pi}_{s}| s\in \Ss \right\}$, $\bm{\Theta}=\left\{ \bm{\theta}_s| s\in \Ss \right\}$. 
 Then the problem in \eqref{eq:generative-model-update} becomes
 \begin{align}\label{eq:sub-gm}
@@ -456,7 +456,7 @@ By substituting \eqref{eq:changel-variable} and \eqref{eq:cat-jacobian} into \eq
   =& \frac{1}{R}\hspace{-3pt}\sum_{r=1}^{R}\hspace{-3pt} \sum_{t=1}^{{T}^{r}}\hspace{-3pt} \sum_{\smtr{s}{t}{r}=1}^{|\Ss|} \hspace{-3pt} \sum_{\smtr{\kappa}{t}{r}=1}^{K}p(\smtr{s}{t}{r}| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})p(\smtr{\kappa}{t}{r}|\smtr{s}{t}{r}, \ubmr{x}{r}; \bm{H}^{\mathrm{old}}) \nonumber\\
   &\left[ \log\, p_{\smtr{s}{t}{r}, \smtr{\kappa}{t}{r}}(\bm{f}_{\smtr{s}{t}{r}, \smtr{\kappa}{t}{r}}(\bmtr{x}{t}{r})) + \sum_{l=1}^{L}\log\,| \det (\nabla{\bm{f}_{s,\kappa}^{[l]}})|\right].
 \end{align}
-The generators of GenHMM can simply use standard Gaussian distribution for latent variables $\bm{z} \sim p_{s,\kappa}(\bm{z})$. It is straightforward to employ batch-size stochastic gradient decent to maximize $\Qq(\bm{\Theta; \bm{H}^{\mathrm{old}}})$ w.r.t. parameters of generators, i.e. $\bm{\Phi}$, since the dataset represented by $\hat{p}(\ubm{x})$ can be too large to do whole-dataset iterations.
+The generators of GenHMM simply use standard Gaussian distribution for latent variables $\bm{z} \sim p_{s,\kappa}(\bm{z})$. Since the dataset represented by $\hat{p}(\ubm{x})$ can be too large to do whole-dataset iterations, batch-size stochastic gradient decent can be used to maximize $\Qq(\bm{\Theta; \bm{H}^{\mathrm{old}}})$ w.r.t. parameters of generators.
 
 In what follows we address the problem $\max_{\bm{\Pi}} \Qq(\bm{\Pi}; \bm{H}^{\mathrm{old}})$ in our generative model learning. The conditional distribution of hidden variable $\kappa$, $\pi_{s, \kappa} = p(\kappa | s; \bm{H})$, is obtained by solving the following problem
 \begin{align}\label{opm:pi}
@@ -526,7 +526,7 @@ where
   \bar{\xi}_{i,j} = \sum_{r= 1}^{R} \sum_{t= 1}^{T^{r}-1}{p(\smtr{s}{t}{r}=i, \smtr{s}{t+1}{r}=j| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})}.
 \end{equation}
 \subsection{On Convergence of GenHMM}
-In pursuit of representing a dataset by GenHMM,  we are interested if the learning solution discussed in subsection~\ref{subsec:optmGenHMM} would convergence. The properties on GenHMM's convergence is analyzed as follows.
+In pursuit of representing a dataset by GenHMM,  we are interested if the learning solution discussed in subsection~\ref{subsec:optmGenHMM} would convergence. The properties on GenHMM's convergence are analyzed as follows.
 
 \begin{prop}\label{proposition1}
   Assume that parameter $\bm{\Theta} = \left\{ \bm{\theta}_{s,\kappa}| s\in \Ss, \kappa=1, 2, \cdots, K \right\}$ is in a compact set,  $\bm{f}_{s,\kappa}$ and  ${\nabla\bm{f}_{s,\kappa}}$ are continuous w.r.t. ${\bm\theta}_{s,\kappa}$ in GenHMM. Then GenHMM converges.
@@ -591,10 +591,10 @@ In pursuit of representing a dataset by GenHMM,  we are interested if the learni
   \caption{Learning of GenHMM}\label{algo:genhmm}
   \begin{algorithmic}[1]
     \STATE {\bfseries Input:}{
+      Empirical distribution $\hat{p}(\bm{x})$ of dataset\\
       Initializing $\bm{H}^{\mathrm{old}}, \bm{H} \in \Hh$ gives: \\
-      $\bm{H}^{\mathrm{old}} = \{\Ss, \bm{q}^{\mathrm{old}}, A^{\mathrm{old}}, p(\bm{x}|s; \bm{\Phi}^{\mathrm{old}})\}$, $\bm{H} = \{\Ss, \bm{q}, A, p(\bm{x}|s; \bm{\Phi})\}$,\\
-      empirical distribution $\hat{p}(\bm{x})$ of dataset;} \\
-    \STATE Initialize $\bm{H}$
+      $\bm{H}^{\mathrm{old}} = \{\Ss, \bm{q}^{\mathrm{old}}, A^{\mathrm{old}}, p(\bm{x}|s; \bm{\Phi}_{s}^{\mathrm{old}})\}$ \\
+      $\bm{H} = \{\Ss, \bm{q}, A, p(\bm{x}|s; \bm{\Phi}_{s})\}$} \\
     \STATE $\bm{H}^{\mathrm{old}} \gets \bm{H}$
     \STATE Set learning rate $\eta$, neural network optimization batches $N$ per EM step
     \FOR { $\bm{H}$ not converge}
