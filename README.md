@@ -62,5 +62,5 @@ $ make watch
 - Note 1: epochs are here Expectation Maximization steps.
 
 ## Dataset preparation
-See README.md in `src/timit-preprocessor`
+See [README.md](https://github.com/FirstHandScientist/gm_hmm/tree/master/src/timit-preprocessor/README.md) in `src/timit-preprocessor`
 
