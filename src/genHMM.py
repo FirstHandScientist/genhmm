@@ -340,7 +340,7 @@ class GenHMM(torch.nn.Module):
 
  #       print(loglh_sk.shape, self.n_states, self.n_prob_components)
         # max_loglh = torch.max(torch.max(loglh_sk, dim=1)[0],dim=1)[0]
-        ### dong: original update here was not correct
+        
 
         local_loglh_sk = loglh_sk
         max_loglh = torch.max(local_loglh_sk, dim=3, keepdim=True)[0]
