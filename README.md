@@ -1,12 +1,5 @@
 # Powering HMM by Generative Models
 
-## Installation
-
-First clone the repository:
-```bash
-$ git clone https://github.com/FirstHandScientist/gm_hmm.git
-```
-
 ### Virtual environment
 Create a virtual environment with a python3 interpreter, in the newly created `gm_hmm/` directory.
 ```bash
@@ -39,7 +32,7 @@ Built for x86_64-pc-linux-gnu
 ## Getting Started
 
 ## Dataset preparation
-See [README.md](https://github.com/FirstHandScientist/gm_hmm/tree/master/src/timit-preprocessor/README.md) in `src/timit-preprocessor`
+See [README.md](src/timit-preprocessor/README.md) in `src/timit-preprocessor`
 
 ## Training
 Start by creating the necessary experimental folders for using model "GenHMM" and data feature length of 39,  with:
