@@ -1,0 +1,89 @@
+# GenerativeModel-HMM implementation
+
+SHELL=/bin/bash
+PYTHON=python
+
+SRC=src
+BIN=bin
+
+ifndef nepochs
+	nepochs=10
+endif
+
+ifndef nclasses
+	nclasses=2
+endif
+
+ifndef j
+	j=2
+endif
+
+ifndef modelname
+	model=gaus
+endif
+
+ifndef model_out
+	model_out=models
+endif
+
+ifndef training_data
+	training_data=data/train.13.pkl
+endif
+
+ifndef testing_data
+	testing_data=data/test.13.pkl
+endif
+
+ifndef LOG
+	LOG=log
+endif
+
+
+
+MODELS_INTERM=$(shell echo $(model_out)/epoch{1..$(nepochs)})
+TEST_INTERM=$(shell echo {1..$(nepochs)})
+
+mdl_dep=$(shell echo $(model_out)/%_class{1..$(nclasses)}.mdlc)
+acc_dep=$(shell echo $(model_out)/%_class{1..$(nclasses)}.accc)
+
+all: train
+
+train: 
+	for i in $(MODELS_INTERM); do \
+		if [[ `echo $${i%.*}_class*.mdlc | wc -w` != $(nclasses) ]]; then rm -f $$i.{mdl,acc}; fi; \
+		$(MAKE) -j $(j) -s $$i.mdl; \
+	 	$(MAKE) -j $(j) -s $$i.acc; \
+	done
+
+
+$(model_out)/%.mdl: $(mdl_dep)
+	$(PYTHON) $(BIN)/aggregate_models.py $@
+
+$(model_out)/%.acc: $(acc_dep)
+	$(PYTHON) $(BIN)/aggregate_accuracy.py $(training_data) $(testing_data) $^ > $@
+	cat $@ >> $(LOG)/class_all.log
+
+$(model_out)/%.mdlc:
+	$(eval logfile=$(LOG)/`basename $@ | sed -e 's/^.*\(class\)/\1/g' -e 's/.mdlc/.log'/g`)
+	echo `date` ":" $(PYTHON) $(BIN)/train_class_$(modelname).py $(training_data) $@ >> $(logfile)
+	$(PYTHON) $(BIN)/train_class_$(modelname).py $(training_data) $@ >> $(logfile)
+
+$(model_out)/%.accc: $(MODELS)/%.mdlc
+	$(PYTHON) $(BIN)/compute_accuracy_class.py $^ $(training_data) $(testing_data) >> $@
+
+watch:
+	tail -f $(LOG)/class*.log
+
+clean:
+	rm -f $(model_out)/epoch*.{mdl,acc} 
+	rm -f $(model_out)/epoch*_class*.{mdlc,accc}
+	rm -f $(LOG)/class*.log
+
+clean-data:
+	rm -f $(shell dirname $(training_data))/*_*.pkl $(shell dirname $(training_data))/class_map.json
+	rm -f $(shell dirname $(testing_data))/*_*.pkl $(shell dirname $(testing_data))/class_map.json
+
+
+.SECONDARY: 
+
+.PRECIOUS:
