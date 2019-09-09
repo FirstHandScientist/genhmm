@@ -19,13 +19,15 @@ ifndef j
 endif
 
 ifndef modelname
-	model=gaus
+	model=gmmhmm
 endif
 
 ifndef model_out
 	model_out=models
 endif
-
+ifndef model_filename
+	modelname_filename=$(model_out)/$(model)
+endif
 ifndef training_data
 	training_data=data/train.13.pkl
 endif
@@ -37,7 +39,6 @@ endif
 ifndef LOG
 	LOG=log
 endif
-
 
 
 MODELS_INTERM=$(shell echo $(model_out)/epoch{1..$(nepochs)})
