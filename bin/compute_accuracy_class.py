@@ -17,15 +17,24 @@ if __name__ == "__main__":
         sys.exit(1)
 
     models_dir, epoch, iclass = parse("{}/epoch{:d}_class{:d}.mdlc", sys.argv[1])
+
     # read the model type, 'gen' or 'gaus'
-    model_type = parse("{}/exp/{}/{:d}feats/{}", os.getcwd())[1]
+    model_type_ = parse("{}/models/{}", models_dir)[1]
+
+    if "gaus" in model_type_:
+        model_type = "gaus"
+    elif "gen" in model_type_:
+        model_type = "gen"
+    else:
+        print("No known model type found in {}".format(models_dir),file=sys.stderr)
+        sys.exit(1)
+
     
     # Todo: maybe give choice here
     # load the parameters
     with open("default.json") as f_in:
         options = json.load(f_in)
 
-    
     training_data_file = sys.argv[2]
     testing_data_file = sys.argv[3]
 
@@ -68,11 +77,13 @@ if __name__ == "__main__":
 
 
     # print("[Acc:] epoch:{}\tclass:{}\tPush model to {}. Done.".format(epoch,iclass, mdl.device), file=sys.stdout)
+    # f = lambda x: divide(parse_(accuracy_fun(x, mdl=mdl)))
     
-   
-    #f = lambda x: divide(parse_(accuracy_fun(x, mdl=mdl)))
-    
-    results = list(map(f, data_files))
+    results_ = list(map(f, data_files))
+    results = [r[0] for r in results_]
+    userdata = [r[1] for r in results_]
 
     print("epoch: {} class: {} accc train: {} test: {}".format(epoch, iclass, results[0], results[1]), file=sys.stdout)
+    print("epoch: {} class: {} llh train: {} test: {}".format(epoch, iclass, userdata[0], userdata[1]), file=sys.stdout)
+
     sys.exit(0)
