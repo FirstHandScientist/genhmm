@@ -3,7 +3,7 @@ import sys
 from parse import parse
 import pickle as pkl
 from gm_hmm.src.genHMM import GenHMM, save_model, load_model
-from gm_hmm.src.utils import pad_data, TheDataset, get_freer_gpu
+from gm_hmm.src.utils import pad_data, TheDataset, get_freer_gpu, data_read_parse
 import torch
 from torch.utils.data import DataLoader
 import json
@@ -31,8 +31,12 @@ if __name__ == "__main__":
     train_class_inputfile = train_inputfile.replace(".pkl", "_class{}.pkl".format(iclass_str))
 
     #  Load data
-    
-    xtrain = pkl.load(open(train_class_inputfile, "rb"))
+
+    #  Load data
+    xtrain_ = data_read_parse(train_class_inputfile)
+
+    xtrain = np.concatenate(xtrain_, axis=0)
+
     #xtrain = xtrain[:100]
     # Get the length of all the sequences
     l = [x.shape[0] for x in xtrain]
@@ -45,6 +49,7 @@ if __name__ == "__main__":
     options["Net"]["n_states"] = np.clip(int(np.floor(np.mean(l)/2)),
                                          options["Train"]["n_states_min"],
                                          options["Train"]["n_states_max"])
+
     #  Load or create model
     if epoch_str == '1':
         mdl = GenHMM(**options["Net"])

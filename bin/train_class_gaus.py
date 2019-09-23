@@ -7,6 +7,8 @@ import numpy as np
 import time
 
 from gm_hmm.src.ref_hmm import Gaussian_HMM, GMM_HMM, ConvgMonitor
+from gm_hmm.src.utils import data_read_parse
+
 from sklearn.mixture import GaussianMixture
 from sklearn.utils import check_random_state
 
@@ -31,16 +33,10 @@ if __name__ == "__main__":
     train_class_inputfile = train_inputfile.replace(".pkl", "_class{}.pkl".format(iclass_str))
 
     #  Load data
-    xtrain_ = pkl.load(open(train_class_inputfile, "rb"))
-    if (isinstance(xtrain_, tuple) or isinstance(xtrain_,list)) and len(xtrain_) == 1:
-        xtrain_ = xtrain_[0]
-    if isinstance(xtrain_[0], list):
-        xtrain_ = [np.array(x).T for x in xtrain_]
-    else:
-        xtrain = [x[:, 1:] for x in xtrain_]
+    xtrain_ = data_read_parse(train_class_inputfile)
 
     xtrain = np.concatenate(xtrain_, axis=0)
-    #xtrain = xtrain[:100]
+
     # Get the length of all the sequences
     l = [x.shape[0] for x in xtrain_]
     
@@ -74,12 +70,12 @@ if __name__ == "__main__":
     
     print("epoch:{}\tclass:{}\t.".format(epoch_str, iclass_str), file=sys.stdout)
     
-    # zero pad data for batch training
-    # niter counts the number of em steps before saving a model checkpoint
+    # Zero pad data for batch training
+    # Niter counts the number of em steps before saving a model checkpoint
     niter = options["Train"]["niter"]
     
-    # add number of training data in model
-    # mdl.number_training_data = len(xtrain)
+    # Add number of training data in model
+    # Mdl.number_training_data = len(xtrain)
     
     mdl.n_iter = niter
     mdl.fit(xtrain, lengths=l)
