@@ -19,6 +19,7 @@ def data_read_parse(fname):
     if isinstance(xtrain_[0], list):
         xtrain_ = [np.array(x).T for x in xtrain_]
 
+
     return xtrain_
 
 
@@ -158,7 +159,7 @@ def accuracy_fun(data_file, mdl=None):
         X = data_read_parse(data_file)
     except:
         return "0/1"
-    
+
     mode, _, iclass_str = parse("{}.{}_class{}.pkl", os.path.basename(data_file))
     # Get the length of all the sequences
     l = [xx.shape[0] for xx in X]
@@ -209,6 +210,7 @@ def accuracy_fun_torch(data_file, mdl=None, batch_size_=128):
 
     return acc_str(class_hat, true_class),format_out_list(out_list)
 
+
 def acc_str(class_hat, class_true):
     istrue = class_hat == int(class_true)
     return "{}/{}".format(str(istrue.sum().cpu().numpy()), str(istrue.shape[0]))
@@ -240,6 +242,7 @@ def parse_(res_str):
     res_int = [int(x) for x in res_str_split]
     return res_int
 
+
 class TheDataset(Dataset):
     """Wrapper for DataLoader input."""
     def __init__(self, xtrain, lengths, device='cpu'):
@@ -264,12 +267,11 @@ def pad_data(x, length):
             length : integer, common target length of sequences.
     output: list,  all input sequences zero-padded.
     """
-
     d = x[0].shape[1]
-    return [np.concatenate((xx, np.zeros((length - xx.shape[0] + 1, d)))) for xx in x]
+    return [np.concatenate((xx, np.zeros((length - xx.shape[0], d)))) for xx in x]
 
 
-def norm_prob(x,axis=None):
+def norm_prob(x, axis=None):
     coef_ = x.sum(axis)
     if axis==0:
         coef_ = coef_.reshape(1,-1)
