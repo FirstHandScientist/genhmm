@@ -616,6 +616,7 @@ class GenHMM(torch.nn.Module):
         # set global_step
         self.global_step += 1
 
+
 class wrapper(torch.nn.Module):
     def __init__(self, mdl):
         super(wrapper, self).__init__()
