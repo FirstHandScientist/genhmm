@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
 
     epoch_str, iclass_str = parse('epoch{}_class{}.mdlc',os.path.basename(out_mdl))
-    train_class_inputfile = train_inputfile.replace(".pkl", "_{}.pkl".format(iclass_str))
+    train_class_inputfile = train_inputfile.replace(".pkl", "_class{}.pkl".format(iclass_str))
 
     #  Load data
     
