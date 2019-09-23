@@ -10,6 +10,18 @@ import json
 from functools import partial
 
 
+def data_read_parse(fname):
+    xtrain_ = pkl.load(open(fname, "rb"))
+
+    if (isinstance(xtrain_, tuple) or isinstance(xtrain_, list)) and len(xtrain_) == 1:
+        xtrain_ = xtrain_[0]
+
+    if isinstance(xtrain_[0], list):
+        xtrain_ = [np.array(x).T for x in xtrain_]
+
+    return xtrain_
+
+
 def test_norm_minmax():
     x = np.array([[1, 3], [2, 2]])
     min_ = x.min(0)
@@ -143,27 +155,37 @@ def write_classmap(class2phn, folder):
 
 def accuracy_fun(data_file, mdl=None):
     try:
-        X = pkl.load(open(data_file, "rb"))
+        X = data_read_parse(data_file)
     except:
         return "0/1"
+    
+    mode, _, iclass_str = parse("{}.{}_class{}.pkl", os.path.basename(data_file))
     # Get the length of all the sequences
     l = [xx.shape[0] for xx in X]
     # zero pad data for batch training
 
-    true_class = parse("{}_{}.pkl", os.path.basename(data_file))[1]
-    out_list = [mdl.forward(x_i[:,1:]) for x_i in X]
+    true_class = parse("{}_class{}.pkl", os.path.basename(data_file))[1]
+    out_list = [mdl.forward(x_i) for x_i in X]
     out = np.array(out_list).transpose()
 
     # the out here should be the shape: data_size * nclasses
     class_hat = np.argmax(out, axis=0) + 1
     istrue = class_hat == int(true_class)
     print(data_file, "Done ...", "{}/{}".format(str(istrue.sum()), str(istrue.shape[0])), file=sys.stderr)
-    return "{}/{}".format(str(istrue.sum()), str(istrue.shape[0]))
+    return "{}/{}".format(str(istrue.sum()), str(istrue.shape[0])), format_out_list(out_list)
+
+
+def parse_out_list(out_list_str):
+    return [list(map(np.float64, x.split(","))) for x in out_list_str.split(";")]
+
+
+def format_out_list(out_list):
+    return ";".join([",".join(list(map(str, o))) for o in out_list])
 
 
 def accuracy_fun_torch(data_file, mdl=None, batch_size_=128):
     try:
-        X = pkl.load(open(data_file, "rb"))
+        X = data_read_parse(data_file)
     except:
         return "0/1"
 
@@ -177,7 +199,7 @@ def accuracy_fun_torch(data_file, mdl=None, batch_size_=128):
                                               device=mdl.hmms[0].device),
                            batch_size=batch_size_, shuffle=True)
 
-    true_class = parse("{}_{}.pkl", os.path.basename(data_file))[1]
+    true_class = parse("{}_class{}.pkl", os.path.basename(data_file))[1]
     out_list = [mdl.forward(x) for x in batchdata]
     out = torch.cat(out_list, dim=1)
 
@@ -185,7 +207,7 @@ def accuracy_fun_torch(data_file, mdl=None, batch_size_=128):
     class_hat = torch.argmax(out, dim=0) + 1
     print(data_file, "Done ...", "{}".format(acc_str(class_hat, true_class)), file=sys.stderr)
 
-    return acc_str(class_hat, true_class)
+    return acc_str(class_hat, true_class),format_out_list(out_list)
 
 def acc_str(class_hat, class_true):
     istrue = class_hat == int(class_true)
@@ -206,7 +228,7 @@ def test_acc_str():
 
 
 def append_class(data_file, iclass):
-    return data_file.replace(".pkl", "_" + str(iclass)+".pkl")
+    return data_file.replace(".pkl", "_class" + str(iclass)+".pkl")
 
 
 def divide(res_int):
