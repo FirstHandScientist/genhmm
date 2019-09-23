@@ -3,8 +3,8 @@
     "Train":
     {
         "niter": 4,
-        "batch_size": 512,
-        "eval_batch_size": 512,
+        "batch_size": 256,
+        "eval_batch_size": 256,
         "n_states_min": 3,
         "n_states_max": 5
     },
@@ -15,7 +15,7 @@
         "em_skip": 5,
         "device": "cpu",
         "lr": 0.004,
-        "net_H": 24,
+        "net_H": 8,
         "net_D": 40,
         "net_nchain": 4,
         "p_drop": 0,
