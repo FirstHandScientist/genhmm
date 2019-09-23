@@ -30,14 +30,13 @@ if __name__ == "__main__":
     epoch_str, iclass_str = parse('epoch{}_class{}.mdlc',os.path.basename(out_mdl))
     train_class_inputfile = train_inputfile.replace(".pkl", "_class{}.pkl".format(iclass_str))
 
-    #  Load data
 
     #  Load data
-    xtrain_ = data_read_parse(train_class_inputfile)
+    xtrain = data_read_parse(train_class_inputfile)
+    if xtrain[0].shape[1] % 2 != 0:
+        xtrain = [np.concatenate([x, np.zeros((x.shape[0], 1))], axis=1) for x in xtrain]
 
-    xtrain = np.concatenate(xtrain_, axis=0)
-
-    #xtrain = xtrain[:100]
+    # xtrain = xtrain[:100]
     # Get the length of all the sequences
     l = [x.shape[0] for x in xtrain]
 
@@ -50,6 +49,7 @@ if __name__ == "__main__":
                                          options["Train"]["n_states_min"],
                                          options["Train"]["n_states_max"])
 
+    options["Net"]["net_D"] = xtrain[0].shape[1]
     #  Load or create model
     if epoch_str == '1':
         mdl = GenHMM(**options["Net"])
