@@ -6,7 +6,7 @@ import pickle as pkl
 from gm_hmm.src.ref_hmm import GaussianHMMclassifier
 import numpy as np
 from parse import parse
-from gm_hmm.src.utils import divide, acc_str, append_class, parse_, accuracy_fun
+from gm_hmm.src.utils import divide, acc_str, append_class, parse_, accuracy_fun, parse_out_list
 
 import torch
 from torch.utils.data import DataLoader
@@ -46,24 +46,38 @@ if __name__ == "__main__":
     testing_data_file = sys.argv[2]
     accc_files = sys.argv[3:]
 
-    models_dir, epoch, _ = parse("{}/epoch{}_{}",accc_files[0])
+    models_dir, epoch, _ = parse("{}/epoch{}_class{}", accc_files[0])
     nclasses = len(accc_files)
 
     # Parse argument
 
     # rebuild information
-    mdl_file = os.path.join(models_dir,"epoch{}.mdl".format(epoch))
+    mdl_file = os.path.join(models_dir, "epoch{}.mdl".format(epoch))
     data_files = np.array([[append_class(training_data_file, iclass+1), append_class(testing_data_file, iclass+1)]
                    for iclass in range(nclasses)])
 
     # Read results
     def file2str(fname):
-        with open(fname,"r") as f:
-            line = f.read().strip().split("\n")[0]
-        _, train_res, test_res = parse("{}accc train: {} test: {}", line)
-        return train_res, test_res
+        with open(fname, "r") as f:
+            lines = f.read().strip().split("\n")
+        _, train_res, test_res = parse("{}accc train: {} test: {}", lines[0])
+        _, raw_train, raw_test = parse("{}llh train: {} test:{}", lines[1])
+        return train_res, test_res, parse_out_list(raw_train), parse_out_list(raw_test)
 
-    results = np.array([list(file2str(x)) for x in accc_files])
+    mdl = pkl.load(open(mdl_file, "rb"))
+    out = [list(file2str(x)) for x in accc_files]
+    userdata = [o[2:] for o in out]
+
+    mdl.userdata = {"xtrain_hat": np.concatenate([np.array(userdata[i][0]) for i in range(nclasses)]),
+             "ttrain": np.concatenate([i*np.ones(len(userdata[i][0])) for i in range(nclasses)]),
+             "xtest_hat": np.concatenate([np.array(userdata[i][1]) for i in range(nclasses)]),
+             "ttest": np.concatenate([i * np.ones(len(userdata[i][1])) for i in range(nclasses)]),
+             }
+
+    results = np.array([o[:2] for o in out])
+
+    with open(mdl_file, "wb") as fp:
+        pkl.dump(mdl, fp)
 
     print_results(mdl_file, data_files, results)
     sys.exit(0)
