@@ -27,15 +27,19 @@ if __name__ == "__main__":
     except IndexError:
         param_file = "default.json"
 
-
     epoch_str, iclass_str = parse('epoch{}_class{}.mdlc', os.path.basename(out_mdl))
     train_class_inputfile = train_inputfile.replace(".pkl", "_class{}.pkl".format(iclass_str))
 
     #  Load data
-    
     xtrain_ = pkl.load(open(train_class_inputfile, "rb"))
-    xtrain = [x[:, 1:] for x in xtrain_]
-    xtrain = np.concatenate(xtrain, axis=0)
+    if (isinstance(xtrain_, tuple) or isinstance(xtrain_,list)) and len(xtrain_) == 1:
+        xtrain_ = xtrain_[0]
+    if isinstance(xtrain_[0], list):
+        xtrain_ = [np.array(x).T for x in xtrain_]
+    else:
+        xtrain = [x[:, 1:] for x in xtrain_]
+
+    xtrain = np.concatenate(xtrain_, axis=0)
     #xtrain = xtrain[:100]
     # Get the length of all the sequences
     l = [x.shape[0] for x in xtrain_]
