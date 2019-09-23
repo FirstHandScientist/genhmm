@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
 
     mdl.device = 'cpu'
-    if torch.cuda.is_available():
+    if 0 and torch.cuda.is_available():
         if not options["Mul_gpu"]:
             # default case, only one gpu
             device = torch.device('cuda')
