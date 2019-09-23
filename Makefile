@@ -32,21 +32,21 @@ ifndef DATA
 endif
 
 ifndef MODELS
-	MODELS=$(EXP)/models/$(model)
+	MODELS=$(EXP)/models/$(model).$(dataname_trunk)
 endif
 
 ifndef LOG
-	LOG=$(EXP)/log/$(model)
+	LOG=$(EXP)/log/$(model).$(dataname_trunk)
 endif
 ifndef dataname_trunk
-	dataname_trunk=.39
+	dataname_trunk=39
 endif
 ifndef training_data
-	training_data=$(DATA)/train$(dataname_trunk).pkl
+	training_data=$(DATA)/train.$(dataname_trunk).pkl
 endif
 
 ifndef testing_data
-	testing_data=$(DATA)/test$(dataname_trunk).pkl
+	testing_data=$(DATA)/test.$(dataname_trunk).pkl
 endif
 
 MODELS_INTERM=$(shell echo $(MODELS)/epoch{1..$(nepochs)})
@@ -67,8 +67,8 @@ test:
 train: init
 	for i in $(MODELS_INTERM); do \
 		if [[ `echo $${i%.*}_class*.mdlc | wc -w` != $(nclasses) ]]; then rm -f $$i.{mdl,acc}; fi; \
-		$(MAKE) -j $(j) -s $$i.mdl; \
-	 	$(MAKE) -j $(j) -s $$i.acc; \
+		$(MAKE) -j $(j) $$i.mdl; \
+	 	$(MAKE) -j $(j) $$i.acc; \
 	 	sleep 2;\
 	done
 
