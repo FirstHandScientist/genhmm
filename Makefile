@@ -2,7 +2,7 @@
 #
 #
 SHELL=/bin/bash
-PYTHON=python
+PYTHON=pyasr/bin/python
 
 SRC=src
 BIN=bin
