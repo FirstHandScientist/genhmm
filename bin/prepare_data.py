@@ -87,8 +87,8 @@ if __name__ == "__main__":
     train_inputfile = sys.argv[2]
     test_inputfile = sys.argv[3]
     # 
-    train_outfiles = [train_inputfile.replace(".pkl", "_" + str(i+1) + ".pkl") for i in range(nclasses)]
-    test_outfiles = [test_inputfile.replace(".pkl", "_" + str(i+1) + ".pkl") for i in range(nclasses)]
+    train_outfiles = [train_inputfile.replace(".pkl", "_class" + str(i+1) + ".pkl") for i in range(nclasses)]
+    test_outfiles = [test_inputfile.replace(".pkl", "_class" + str(i+1) + ".pkl") for i in range(nclasses)]
     data_folder = os.path.dirname(test_inputfile)
 
     classmap = read_classmap(data_folder)
