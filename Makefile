@@ -1,95 +1,76 @@
 # GenerativeModel-HMM implementation
 #
-#
+
 SHELL=/bin/bash
-PYTHON=python
+PYTHON=$(abspath /home/antoineh/pypkg/pyasr/bin/python)
 
 SRC=src
-BIN=bin
-DATA_tmp=data
-MODELS_tmp=models
-
-ifndef totclasses
-	totclasses=61
-endif
+BIN=$(abspath bin)
 
 ifndef nepochs
 	nepochs=10
 endif
+
 ifndef nclasses
 	nclasses=2
 endif
-ifndef nfeats
-	nfeats=39
-endif
+
 ifndef j
 	j=2
+endif
+
+ifndef EXP
+	EXP=exp
 endif
 
 ifndef model
 	model=gaus
 endif
-ifndef exp_name
-	exp_name=default
+
+ifndef DATA
+	DATA=$(abspath $(EXP)/data)
 endif
 
-ROBUST=robust
-EXP=exp/$(model)
-EXP_DIR=$(EXP)/$(nfeats)feats/$(exp_name)
+ifndef MODELS
+	MODELS=$(EXP)/models/$(model)
+endif
 
-MODELS=models
-DATA=data
-LOG=log
-init: MODELS=$(EXP_DIR)/models
-init: LOG=$(EXP_DIR)/log
+ifndef LOG
+	LOG=$(EXP)/log/$(model)
+endif
+ifndef dataname_trunk
+	dataname_trunk=.39
+endif
+ifndef training_data
+	training_data=$(DATA)/train$(dataname_trunk).pkl
+endif
+
+ifndef testing_data
+	testing_data=$(DATA)/test$(dataname_trunk).pkl
+endif
 
 MODELS_INTERM=$(shell echo $(MODELS)/epoch{1..$(nepochs)})
-TEST_INTERM=$(shell echo {1..$(nepochs)})
-
-training_data=$(DATA)/train.$(nfeats).pkl
-ifndef noise
-	testing_data=$(DATA)/test.$(nfeats).pkl
-else
-	testing_data=$(DATA)/test.$(nfeats).$(noise).pkl
-endif
 
 
 mdl_dep=$(shell echo $(MODELS)/%_class{1..$(nclasses)}.mdlc)
 acc_dep=$(shell echo $(MODELS)/%_class{1..$(nclasses)}.accc)
-rbst_dep=$(shell echo $(ROBUST)/epoch$(tepoch)_class{1..$(nclasses)}.accc)
 
 all: train
 
+init:
+	mkdir -p $(EXP) $(MODELS) $(LOG)
 
 test:
 	echo $(mdl_dep)
 	echo $(acc_dep)
 
-
-
-init:
-	mkdir -p $(MODELS) $(LOG)
-	ln -s $(realpath data) $(EXP_DIR)/data
-	ln -s $(realpath bin) $(EXP_DIR)/bin
-	ln -s $(realpath src) $(EXP_DIR)/src
-	cp default.json $(EXP_DIR)
-	sed -e 's/model=.*/model=$(model)/' -e 's/nfeats=.*/nfeats=${nfeats}/' -e 's/totclasses=.*/totclasses=$(totclasses)/' Makefile > $(EXP_DIR)/Makefile
-
-
-prepare_data: $(training_data) $(testing_data)
-	$(PYTHON) $(BIN)/prepare_data.py "$(nclasses)/$(totclasses)" $^
-
-train: prepare_data
-	echo $(DATA) $(MODELS) $(LOG)
-	echo $(MODELS_INTERM)
+train: init
 	for i in $(MODELS_INTERM); do \
 		if [[ `echo $${i%.*}_class*.mdlc | wc -w` != $(nclasses) ]]; then rm -f $$i.{mdl,acc}; fi; \
 		$(MAKE) -j $(j) -s $$i.mdl; \
 	 	$(MAKE) -j $(j) -s $$i.acc; \
 	 	sleep 2;\
 	done
-#	echo "Done" > $^
-
 
 $(MODELS)/%.mdl: $(mdl_dep)
 	$(PYTHON) $(BIN)/aggregate_models.py $@
@@ -109,27 +90,6 @@ $(MODELS)/%.accc: $(MODELS)/%.mdlc
 
 # testing part only
 # test one checkpoint
-test_one: 
-	$(MAKE) -j $(j) -s $(ROBUST)/epoch$(tepoch).acc
-
-# test multiple check points
-test_all:
-	echo $(TEST_INTERM)
-	for i in $(TEST_INTERM); do \
-		$(MAKE) -j $(j) -s $(ROBUST)/epoch$$i.acc tepoch=$$i; \
-		sleep 2;\
-	done
-
-
-$(ROBUST)/epoch%.acc: $(rbst_dep)
-	$(PYTHON) $(BIN)/aggregate_accuracy.py $(training_data) $(testing_data) $^ > $@
-	cat $@ >> $(LOG)/class_all.log
-
-$(ROBUST)/%.accc:
-	@echo $(subst $(ROBUST),$(MODELS),$@)
-# 	string replacement such compute_acccuracy_class can recognize
-	$(PYTHON) $(BIN)/compute_accuracy_class.py $(subst .accc,.mdlc,$(subst $(ROBUST),$(MODELS),$@)) $(training_data) $(testing_data) >> $@
-
 
 watch:
 	tail -f $(LOG)/class*.log
