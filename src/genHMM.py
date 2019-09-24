@@ -1,13 +1,13 @@
 # file genHMM.py
 
-import os
 import sys
 import numpy as np
 from gm_hmm.src.realnvp import RealNVP
 import torch
 from torch import nn, distributions
 from gm_hmm.src._torch_hmmc import _compute_log_xi_sum, _forward, _backward
-from gm_hmm.src.utils import step_learning_rate_decay
+from gm_hmm.src.utils import step_learning_rate_decay, load_model
+
 
 class GenHMMclassifier(nn.Module):
     def __init__(self, mdlc_files=None, **options):
@@ -622,16 +622,6 @@ class wrapper(torch.nn.Module):
         super(wrapper, self).__init__()
         self.userdata = mdl
 
-
-def save_model(mdl, fname=None):
-    torch.save(wrapper(mdl), fname)
-    return 0
-
-
-def load_model(fname):
-    """Loads a model on CPU by default."""
-    savable = torch.load(fname, map_location='cpu')
-    return savable.userdata
 
 
 def normalize(a, axis=None):

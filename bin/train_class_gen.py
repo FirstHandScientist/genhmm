@@ -1,9 +1,8 @@
 import os
 import sys
 from parse import parse
-import pickle as pkl
-from gm_hmm.src.genHMM import GenHMM, save_model, load_model
-from gm_hmm.src.utils import pad_data, TheDataset, get_freer_gpu, data_read_parse
+from gm_hmm.src.genHMM import GenHMM
+from gm_hmm.src.utils import pad_data, TheDataset, get_freer_gpu, data_read_parse,save_model, load_model
 import torch
 from torch.utils.data import DataLoader
 import json
@@ -104,6 +103,8 @@ if __name__ == "__main__":
 
     # Push back to cpu for compatibility when GPU unavailable.
     mdl.pushto('cpu')
+    #with open(out_mdl, "wb") as fp:
+    #    pkl.dump(mdl, fp)
     save_model(mdl, fname=out_mdl)
     sys.exit(0)
 

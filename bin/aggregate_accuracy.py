@@ -6,7 +6,7 @@ import pickle as pkl
 from gm_hmm.src.ref_hmm import GaussianHMMclassifier
 import numpy as np
 from parse import parse
-from gm_hmm.src.utils import divide, acc_str, append_class, parse_, accuracy_fun, parse_out_list
+from gm_hmm.src.utils import divide, append_class, parse_, parse_out_list, load_model, save_model
 
 import torch
 from torch.utils.data import DataLoader
@@ -64,7 +64,7 @@ if __name__ == "__main__":
         _, raw_train, raw_test = parse("{}llh train: {} test:{}", lines[1])
         return train_res, test_res, parse_out_list(raw_train), parse_out_list(raw_test)
 
-    mdl = pkl.load(open(mdl_file, "rb"))
+    mdl = load_model(mdl_file)
     out = [list(file2str(x)) for x in accc_files]
     userdata = [o[2:] for o in out]
 
@@ -75,9 +75,7 @@ if __name__ == "__main__":
              }
 
     results = np.array([o[:2] for o in out])
-
-    with open(mdl_file, "wb") as fp:
-        pkl.dump(mdl, fp)
+    save_model(mdl, mdl_file)
 
     print_results(mdl_file, data_files, results)
     sys.exit(0)
