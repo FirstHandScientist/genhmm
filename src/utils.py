@@ -211,7 +211,7 @@ def accuracy_fun_torch(data_file, mdl=None, batch_size_=128):
     class_hat = torch.argmax(out, dim=0) + 1
     print(data_file, "Done ...", "{}".format(acc_str(class_hat, true_class)), file=sys.stderr)
 
-    return acc_str(class_hat, true_class), format_out_list(out.numpy().T.tolist())
+    return acc_str(class_hat, true_class), format_out_list(out.cpu().numpy().T.tolist())
 
 
 def save_model(mdl, fname=None):
