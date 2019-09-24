@@ -192,6 +192,9 @@ def accuracy_fun_torch(data_file, mdl=None, batch_size_=128):
 
     # Get the length of all the sequences
     l = [xx.shape[0] for xx in X]
+    if X[0].shape[1] % 2 != 0:
+        X = [np.concatenate([x, np.zeros((x.shape[0], 1))], axis=1) for x in X]
+
     # zero pad data for batch training
     max_len_ = max([xx.shape[0] for xx in X])
     x_padded = pad_data(X, max_len_)
