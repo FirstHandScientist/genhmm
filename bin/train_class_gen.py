@@ -32,7 +32,6 @@ if __name__ == "__main__":
 
     #  Load data
     xtrain = data_read_parse(train_class_inputfile)
-    xtrain = xtrain[:10]
     if xtrain[0].shape[1] % 2 != 0:
         xtrain = [np.concatenate([x, np.zeros((x.shape[0], 1))], axis=1) for x in xtrain]
 
