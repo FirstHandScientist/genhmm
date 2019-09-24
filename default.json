@@ -1,6 +1,6 @@
 {
     "Mul_gpu": true,
-    "use_gpu":false,
+    "use_gpu": true,
     "Train":
     {
         "niter": 4,
