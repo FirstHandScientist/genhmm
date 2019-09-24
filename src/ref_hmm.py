@@ -4,8 +4,8 @@ import pickle as pkl
 from hmmlearn.base import ConvergenceMonitor
 from hmmlearn.utils import iter_from_X_lengths, normalize
 from sklearn.utils import check_array
-
 from hmmlearn import hmm
+from gm_hmm.src.utils import load_model
 
 class ConvgMonitor(ConvergenceMonitor):
     def report(self, logprob):
@@ -43,7 +43,7 @@ class GaussianHMMclassifier():
             
 
         else:
-            self.hmms = [pkl.load(open(fname, 'rb')) for fname in mdlc_files]
+            self.hmms = [load_model(fname) for fname in mdlc_files]
         
 
     ### consider do linear training based on GenHMMs

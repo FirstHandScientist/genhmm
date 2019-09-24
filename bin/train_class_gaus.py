@@ -7,7 +7,7 @@ import numpy as np
 import time
 
 from gm_hmm.src.ref_hmm import Gaussian_HMM, GMM_HMM, ConvgMonitor
-from gm_hmm.src.utils import data_read_parse
+from gm_hmm.src.utils import data_read_parse, load_model,save_model
 
 from sklearn.mixture import GaussianMixture
 from sklearn.utils import check_random_state
@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
     else:
         # Load previous model
-        mdl = pkl.load(open(out_mdl.replace("epoch" + epoch_str, "epoch" + str(int(epoch_str)-1)), "rb"))
+        mdl = load_model(out_mdl.replace("epoch" + epoch_str, "epoch" + str(int(epoch_str)-1)))
 
     mdl.iepoch = epoch_str
     mdl.iclass = iclass_str
@@ -81,6 +81,5 @@ if __name__ == "__main__":
     mdl.fit(xtrain, lengths=l)
 
     # Push back to cpu for compatibility when GPU unavailable.
-    with open(out_mdl, "wb") as handle:
-        pkl.dump(mdl, handle)
+    save_model(mdl, fname=out_mdl)
     sys.exit(0)

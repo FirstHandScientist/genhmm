@@ -3,8 +3,9 @@ import pickle as pkl
 import os
 import glob
 from parse import parse
-from gm_hmm.src.genHMM import GenHMMclassifier, save_model
+from gm_hmm.src.genHMM import GenHMMclassifier
 from gm_hmm.src.ref_hmm import GaussianHMMclassifier
+from gm_hmm.src.utils import save_model
 
 if __name__ == "__main__":
     usage = "Aggregate models from several classes.\n" \
@@ -34,12 +35,15 @@ if __name__ == "__main__":
     in_mdlc_files = sorted(glob.glob(out_mdl_file.replace(".mdl", "_class*.mdlc")), key=get_sort_key)
     if model_type == 'gaus':
         mdl = GaussianHMMclassifier(mdlc_files=in_mdlc_files)
-        assert(all([int(h.iclass) == int(i)+1 for i,h in enumerate(mdl.hmms)]))
-        with open(out_mdl_file, "wb") as handle:
-            pkl.dump(mdl, handle)
+        assert(all([int(h.iclass) == int(i)+1 for i, h in enumerate(mdl.hmms)]))
     
     elif model_type == 'gen':
         mdl = GenHMMclassifier(mdlc_files=in_mdlc_files)
-        assert(all([int(h.iclass) == int(i)+1 for i,h in enumerate(mdl.hmms)]))
-        save_model(mdl, out_mdl_file)
+        assert(all([int(h.iclass) == int(i)+1 for i, h in enumerate(mdl.hmms)]))
+
+    else:
+        print("(should have been caught earlier) Unknown model type: {}".format(model_type), file=sys.stderr)
+        sys.exit(1)
+
+    save_model(mdl, out_mdl_file)
     sys.exit(0)
