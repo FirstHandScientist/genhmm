@@ -51,7 +51,7 @@ if __name__ == "__main__":
         f = lambda x: accuracy_fun(x, mdl=mdl)
     elif model_type == 'gen':
         mdl = load_model(mdl_file)
-        if torch.cuda.is_available():
+        if torch.cuda.is_available() and options["use_gpu"]:
             if not options["Mul_gpu"]:
                 # default case, only one gpu
                 device = torch.device('cuda')

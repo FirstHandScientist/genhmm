@@ -1,5 +1,6 @@
 {
     "Mul_gpu": true,
+    "use_gpu":false,
     "Train":
     {
         "niter": 4,
@@ -16,7 +17,7 @@
         "device": "cpu",
         "lr": 0.004,
         "net_H": 8,
-        "net_D": 40,
+        "net_D": 4,
         "net_nchain": 4,
         "p_drop": 0,
         "mask_type": "cross",
