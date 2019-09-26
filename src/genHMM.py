@@ -23,9 +23,8 @@ class GenHMMclassifier(nn.Module):
             self.hmms = [load_model(fname) for fname in mdlc_files]
             self.pclass = torch.FloatTensor([h.number_training_data for h in self.hmms])
             self.pclass = (self.pclass / self.pclass.sum())
-        
 
-    ### consider do linear training based on GenHMMs
+    # consider do linear training based on GenHMMs
     def forward(self, x, weigthed=False):
         """compute likelihood of data under each GenHMM
         INPUT:
@@ -46,7 +45,7 @@ class GenHMMclassifier(nn.Module):
         data = [data_read_parse(genhmm.train_data_fname, dim_zero_padding=True) for genhmm in self.hmms]
         lengths = [[x.shape[0] for x in xtrain_class] for xtrain_class in data]
         data = [pad_data(xtrain, max([x.shape[0] for x in xtrain])) for xtrain in data]
-        Y = np.concatenate([(int(g.iclass) - 1)*np.ones(len(classdata)) for g, classdata in zip(self.hmms,data)])
+        Y = np.concatenate([(int(g.iclass) - 1)*np.ones(len(classdata)) for g, classdata in zip(self.hmms, data)])
         Y = torch.ByteTensor(Y)
         train_data = DataLoader(dataset=TheDataset(sum(data, []),
                                                    ytrain=Y,

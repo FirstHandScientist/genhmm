@@ -7,6 +7,10 @@ PYTHON=pyasr/bin/python
 SRC=src
 BIN=$(abspath bin)
 
+ifndef paramfile
+	paramfile=default.json
+endif
+
 ifndef nepochs
 	nepochs=10
 endif
@@ -73,7 +77,7 @@ train: init
 	done
 
 $(MODELS)/%.mdl: $(mdl_dep)
-	$(PYTHON) $(BIN)/aggregate_models.py $@
+	$(PYTHON) $(BIN)/aggregate_models.py $@ $(paramfile)
 
 $(MODELS)/%.acc: $(acc_dep)
 	$(PYTHON) $(BIN)/aggregate_accuracy.py $(training_data) $(testing_data) $^ > $@
@@ -82,8 +86,8 @@ $(MODELS)/%.acc: $(acc_dep)
 
 $(MODELS)/%.mdlc:
 	$(eval logfile=$(LOG)/`basename $@ | sed -e 's/^.*\(class\)/\1/g' -e 's/.mdlc/.log'/g`)
-	echo `date` ":" $(PYTHON) $(BIN)/train_class_$(model).py $(training_data) $@ >> $(logfile)
-	$(PYTHON) $(BIN)/train_class_$(model).py $(training_data) $@ >> $(logfile)
+	@echo `date` ":" $(PYTHON) $(BIN)/train_class_$(model).py $(training_data) $@ $(paramfile)>> $(logfile)
+	$(PYTHON) $(BIN)/train_class_$(model).py $(training_data) $@ $(paramfile) >> $(logfile)
 
 $(MODELS)/%.accc: $(MODELS)/%.mdlc
 	$(PYTHON) $(BIN)/compute_accuracy_class.py $^ $(training_data) $(testing_data) >> $@
