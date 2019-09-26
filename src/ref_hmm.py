@@ -1,6 +1,5 @@
 import sys
 import numpy as np
-import pickle as pkl
 from hmmlearn.base import ConvergenceMonitor
 from hmmlearn.utils import iter_from_X_lengths, normalize
 from sklearn.utils import check_array
