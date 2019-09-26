@@ -67,7 +67,8 @@ if __name__ == "__main__":
 
     mdl.iepoch = epoch_str
     mdl.iclass = iclass_str
-    
+    mdl.train_data_fname = train_class_inputfile
+
     print("epoch:{}\tclass:{}\t.".format(epoch_str, iclass_str), file=sys.stdout)
     
     # Zero pad data for batch training

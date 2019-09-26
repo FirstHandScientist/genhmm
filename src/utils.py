@@ -1,16 +1,16 @@
 import numpy as np
 import os
 import torch
-from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset,DataLoader
 import sys
 import pickle as pkl
 from parse import parse
 import json
 from functools import partial
+import time
 
 
-def data_read_parse(fname):
+def data_read_parse(fname, dim_zero_padding=False):
     xtrain_ = pkl.load(open(fname, "rb"))
 
     if (isinstance(xtrain_, tuple) or isinstance(xtrain_, list)) and len(xtrain_) == 1:
@@ -18,6 +18,9 @@ def data_read_parse(fname):
 
     if isinstance(xtrain_[0], list):
         xtrain_ = [np.array(x).T for x in xtrain_]
+
+    if dim_zero_padding and xtrain_[0].shape[1] % 2 != 0:
+        xtrain_ = [np.concatenate([x, np.zeros((x.shape[0], 1))], axis=1) for x in xtrain_]
 
 
     return xtrain_
@@ -78,6 +81,29 @@ def test_find_change_loc():
     assert((out2 == np.array([1, 0, 2])).all())
     assert((out == np.array([[0, 2], [2, 4], [4, 6]])).all())
 
+
+def to_device(mdl, use_gpu=False, Mul_gpu=False):
+    if use_gpu and torch.cuda.is_available():
+        if not Mul_gpu:
+            # default case, only one gpu
+            device = torch.device('cuda')
+            mdl.device = device
+            mdl.pushto(mdl.device)
+
+        else:
+            for i in range(4):
+                try:
+                    time.sleep(np.random.randint(20))
+                    device = torch.device('cuda:{}'.format(int(get_freer_gpu())))
+                    print("Try to push to device: {}".format(device))
+                    mdl.device = device
+                    mdl.pushto(mdl.device)
+                    break
+                except:
+                    # if push error (maybe memory overflow, try again)
+                    print("Push to device cuda:{} fail, try again ...")
+                    continue
+    return mdl
 
 def to_phoneme_level(DATA):
     n_sequences = len(DATA)
@@ -259,8 +285,11 @@ def parse_(res_str):
 
 class TheDataset(Dataset):
     """Wrapper for DataLoader input."""
-    def __init__(self, xtrain, lengths, device='cpu'):
+    def __init__(self, xtrain,  lengths, ytrain=None, device='cpu'):
         self.data = [torch.FloatTensor(x).to(device) for x in xtrain]
+        if not (ytrain is None):
+            self.y = ytrain
+            assert(ytrain.shape[0] == len(self.data))
         self.lengths = lengths
         max_len_ = self.data[0].shape[0]
         self.mask = [torch.cat((torch.ones(l, dtype=torch.uint8), \
@@ -269,7 +298,7 @@ class TheDataset(Dataset):
         self.len = len(self.data)
 
     def __getitem__(self, index):
-        return (self.data[index], self.mask[index])
+        return (self.data[index], self.mask[index],self.y[index])
 
     def __len__(self):
         return self.len

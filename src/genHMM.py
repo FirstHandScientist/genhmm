@@ -6,8 +6,8 @@ from gm_hmm.src.realnvp import RealNVP
 import torch
 from torch import nn, distributions
 from gm_hmm.src._torch_hmmc import _compute_log_xi_sum, _forward, _backward
-from gm_hmm.src.utils import step_learning_rate_decay, load_model
-
+from gm_hmm.src.utils import step_learning_rate_decay, load_model, save_model, to_device, data_read_parse,pad_data,TheDataset
+from torch.utils.data import DataLoader
 
 class GenHMMclassifier(nn.Module):
     def __init__(self, mdlc_files=None, **options):
@@ -20,12 +20,12 @@ class GenHMMclassifier(nn.Module):
             self.pclass = torch.ones(len(self.hmms))
 
         else:
+            self.mdlc_files = mdlc_files
             self.hmms = [load_model(fname) for fname in mdlc_files]
             self.pclass = torch.FloatTensor([h.number_training_data for h in self.hmms])
             self.pclass = (self.pclass / self.pclass.sum())
-        
 
-    ### consider do linear training based on GenHMMs
+    # consider do linear training based on GenHMMs
     def forward(self, x, weigthed=False):
         """compute likelihood of data under each GenHMM
         INPUT:
@@ -35,14 +35,72 @@ class GenHMMclassifier(nn.Module):
         
         OUTPUT: tensor of likelihood, shape: data_size * ncl
         """
-
         if weigthed:
             batch_llh = [classHMM.pred_score(x) / classHMM.latestNLL for classHMM in self.hmms]
         else:
             batch_llh = [classHMM.pred_score(x) for classHMM in self.hmms]
-
         return torch.stack(batch_llh)
 
+    def fine_tune(self, use_gpu=False, Mul_gpu=False, batch_size=64):
+        self.hmms = [to_device(genhmm.train(), use_gpu=use_gpu, Mul_gpu=Mul_gpu) for genhmm in self.hmms]
+        data = [data_read_parse(genhmm.train_data_fname, dim_zero_padding=True)[:10] for genhmm in self.hmms]
+        lengths = [[x.shape[0] for x in xtrain_class] for xtrain_class in data]
+        data = [pad_data(xtrain, max([x.shape[0] for x in xtrain])) for xtrain in data]
+        Y = np.concatenate([(int(g.iclass) - 1)*np.ones(len(classdata)) for g, classdata in zip(self.hmms, data)])
+        Y = torch.ByteTensor(Y)
+        train_data = DataLoader(dataset=TheDataset(sum(data, []),
+                                                   ytrain=Y,
+                                                   lengths=sum(lengths, []),
+                                                   device='cpu'),
+                                 batch_size=batch_size,
+                                 shuffle=True)
+
+        for i, genhmm in enumerate(self.hmms):
+            self.hmms[i].optimizer = torch.optim.Adam(
+                sum([[p for p in flow.parameters() if p.requires_grad == True] for flow in
+                     self.hmms[i].networks.reshape(-1).tolist()], []), lr=self.hmms[i].lr)
+            ada_lr = step_learning_rate_decay(init_lr=self.hmms[i].lr,
+                                          global_step=self.hmms[i].global_step,
+                                          minimum=1e-4,
+                                          anneal_rate=0.98)
+
+            for j, param_group in enumerate(self.hmms[i].optimizer.param_groups):
+                self.hmms[i].optimizer.param_groups[j]['lr'] = ada_lr
+
+            self.hmms[i].optimizer.load_state_dict(self.hmms[i].optimizer.state_dict())
+
+        with torch.enable_grad():
+            for b in train_data:
+                for genhmm in self.hmms:
+                    genhmm.optimizer.zero_grad()
+
+                llh = torch.stack([genhmm.get_logprob(genhmm.networks, b[:-1]) for genhmm in self.hmms]).squeeze()
+
+                # llh = [[genhmm._getllh(genhmm.networks, b) for b in train_data] for genhmm in self.hmms]
+
+                denom = llh.sum(0)
+                # yy = (data[-1].long() - 1).byte()
+                y = torch.stack([~b[-1], b[-1]])
+                num = llh[y]
+                loss = (num - denom).sum()/float(batch_size)
+                loss.backward()
+
+                for genhmm in self.hmms:
+                    genhmm.optimizer.step()
+
+        for genhmm in self.hmms:
+            genhmm._update_old_networks()
+            genhmm.old_eval()
+            genhmm.eval()
+            genhmm.pushto("cpu")
+
+        print("here")
+        return self
+
+    def save_members(self):
+        for genhmm, out_mdl in zip(self.hmms, self.mdlc_files):
+            save_model(genhmm, fname=out_mdl)
+        return self
 
     def pushto(self, device):
         self.hmms = [h.pushto(device) for h in self.hmms]
@@ -69,8 +127,8 @@ class GenHMM(torch.nn.Module):
         self.dtype = dtype
         self.n_prob_components = n_prob_components
  
-        self.device=device
-        self.dtype=dtype
+        self.device = device
+        self.dtype = dtype
         self.EPS = EPS
         self.lr = lr
         self.em_skip = em_skip
@@ -193,7 +251,7 @@ class GenHMM(torch.nn.Module):
         """load the parameters in self.networks (the one being optimized), into self.old_networks"""
         for i in range(self.n_states):
             for j in range(self.n_prob_components):
-                self.old_networks[i,j].load_state_dict( self.networks[i,j].state_dict() )
+                self.old_networks[i, j].load_state_dict(self.networks[i, j].state_dict())
         return self
 
     def _affirm_networks_update(self):
@@ -426,7 +484,17 @@ class GenHMM(torch.nn.Module):
         # X = self.dtype(X[None,:]).to(self.device)
         logprob = self.forward(X, testing=True)
         return logprob
-    
+
+    def get_logprob(self, networks, batch):
+        x, x_mask = batch
+        batch_size = x.shape[0]
+        n_samples = x.shape[1]
+
+        llh, _ = self._getllh(networks, batch)
+        llh[~x_mask] = 0
+        logprob, _ = self._do_forward_pass(llh, x_mask)
+        return logprob
+
     def _getllh(self, networks, batch):
         """Computing the llh and loglh_sk"""
         x, x_mask = batch
@@ -441,11 +509,10 @@ class GenHMM(torch.nn.Module):
 
         # TODO: some parallelization here...
         for s in range(self.n_states):
-
             loglh_sk = [networks[s, k].log_prob(x, x_mask)/x.size(2) for k in range(self.n_prob_components)]
-            ll = torch.stack(loglh_sk).permute(1,2,0)
+            ll = torch.stack(loglh_sk).permute(1, 2, 0)
             local_loglh_sk[:, :, s, :] = ll
-            llh[:, :, s] = torch.logsumexp((self.logPIk_s[s].reshape(1, 1, self.n_prob_components) + ll).detach(), dim=2)
+            llh[:, :, s] = torch.logsumexp((self.logPIk_s[s].reshape(1, 1, self.n_prob_components) + ll), dim=2)
         return llh, local_loglh_sk
 
 
@@ -642,5 +709,3 @@ def normalize(a, axis=None):
     a_sum = a.sum(axis, keepdim=True)
     a_sum[a_sum==0] = 1
     a /= a_sum
-
-
