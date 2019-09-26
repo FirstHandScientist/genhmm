@@ -6,8 +6,8 @@ from gm_hmm.src.realnvp import RealNVP
 import torch
 from torch import nn, distributions
 from gm_hmm.src._torch_hmmc import _compute_log_xi_sum, _forward, _backward
-from gm_hmm.src.utils import step_learning_rate_decay, load_model
-
+from gm_hmm.src.utils import step_learning_rate_decay, load_model, to_device, data_read_parse,pad_data,TheDataset
+from torch.utils.data import DataLoader
 
 class GenHMMclassifier(nn.Module):
     def __init__(self, mdlc_files=None, **options):
@@ -35,13 +35,24 @@ class GenHMMclassifier(nn.Module):
         
         OUTPUT: tensor of likelihood, shape: data_size * ncl
         """
-
         if weigthed:
             batch_llh = [classHMM.pred_score(x) / classHMM.latestNLL for classHMM in self.hmms]
         else:
             batch_llh = [classHMM.pred_score(x) for classHMM in self.hmms]
-
         return torch.stack(batch_llh)
+
+    def fine_tune(self, use_gpu=False, Mul_gpu=False, batch_size=256):
+        self.hmms = [to_device(genhmm, use_gpu=use_gpu, Mul_gpu=Mul_gpu) for genhmm in self.hmms]
+        data = [data_read_parse(genhmm.train_data_fname, dim_zero_padding=True) for genhmm in self.hmms]
+        lengths = [[x.shape[0] for x in xtrain_class] for xtrain_class in data]
+        data = [pad_data(xtrain, max([x.shape[0] for x in xtrain])) for xtrain in data]
+        t = np.concatenate([(int(g.iclass) - 1)*np.ones(len(classdata)) for g, classdata in zip(self.hmms,data)])
+
+        train_data = DataLoader(dataset=TheDataset(sum(data, []), ytrain=torch.LongTensor(t), lengths=sum(lengths, []), device='cpu'),
+                                 batch_size=batch_size,
+                                 shuffle=True)
+
+        print("here")
 
 
     def pushto(self, device):
