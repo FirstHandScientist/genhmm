@@ -42,15 +42,28 @@ class GenHMMclassifier(nn.Module):
         return torch.stack(batch_llh)
 
     def fine_tune(self, use_gpu=False, Mul_gpu=False, batch_size=256):
-        self.hmms = [to_device(genhmm, use_gpu=use_gpu, Mul_gpu=Mul_gpu) for genhmm in self.hmms]
-        data = [data_read_parse(genhmm.train_data_fname, dim_zero_padding=True) for genhmm in self.hmms]
+        self.hmms = [to_device(genhmm.train(), use_gpu=use_gpu, Mul_gpu=Mul_gpu) for genhmm in self.hmms]
+        data = [data_read_parse(genhmm.train_data_fname, dim_zero_padding=True)[:10] for genhmm in self.hmms]
         lengths = [[x.shape[0] for x in xtrain_class] for xtrain_class in data]
         data = [pad_data(xtrain, max([x.shape[0] for x in xtrain])) for xtrain in data]
-        t = np.concatenate([(int(g.iclass) - 1)*np.ones(len(classdata)) for g, classdata in zip(self.hmms,data)])
-
-        train_data = DataLoader(dataset=TheDataset(sum(data, []), ytrain=torch.LongTensor(t), lengths=sum(lengths, []), device='cpu'),
+        yy = np.concatenate([(int(g.iclass) - 1)*np.ones(len(classdata)) for g, classdata in zip(self.hmms,data)])
+        yy = torch.ByteTensor(yy)
+        train_data = DataLoader(dataset=TheDataset(sum(data, []),
+                                                   ytrain=yy,
+                                                   lengths=sum(lengths, []),
+                                                   device='cpu'),
                                  batch_size=batch_size,
                                  shuffle=True)
+
+        llh = [[genhmm._getllh(genhmm.networks, b) for b in train_data] for genhmm in self.hmms]
+
+        # llh = [[genhmm._getllh(genhmm.networks, b) for b in train_data] for genhmm in self.hmms]
+
+        denom = llh.sum(0)
+        # yy = (data[-1].long() - 1).byte()
+        y = torch.stack([~yy, yy])
+        num = llh[y]
+        loss = (num - denom).sum()
 
         print("here")
 
