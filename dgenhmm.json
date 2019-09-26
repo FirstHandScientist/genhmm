@@ -1,0 +1,35 @@
+{
+    "Mul_gpu": true,
+    "use_gpu": true,
+    "Train":
+    {
+	"fine_tune": true,
+        "niter": 10,
+        "batch_size": 256,
+        "eval_batch_size": 256,
+        "n_states_min": 3,
+        "n_states_max": 5
+    },
+    "Net":
+    {
+        "n_states": 3,
+        "n_prob_components": 2,
+        "em_skip": 5,
+        "device": "cpu",
+        "lr": 0.004,
+        "net_H": 8,
+        "net_D": 4,
+        "net_nchain": 4,
+        "p_drop": 0,
+        "mask_type": "cross",
+        "startprob_type": "first",
+        "transmat_type": "triangular"
+    },
+    "GMM":
+    {
+        "n_states": 3,
+        "n_states_min": 3,
+        "n_states_max": 5,
+        "n_prob_components": 2
+    }
+}
