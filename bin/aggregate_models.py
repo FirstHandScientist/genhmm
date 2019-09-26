@@ -48,10 +48,8 @@ if __name__ == "__main__":
         assert(all([int(h.iclass) == int(i)+1 for i, h in enumerate(mdl.hmms)]))
         if options["Train"]["fine_tune"]:
             abs_path = "/home/antoine/Documents/projects/deep_news/proj/pre_infectious_detection/exp/split1/data/"
-            mdl.hmms[0].train_data_fname = abs_path + "train.feat0_class1.pkl"
-            mdl.hmms[1].train_data_fname = abs_path + "train.feat0_class2.pkl"
-            mdl.fine_tune(use_gpu=options["use_gpu"], Mul_gpu=options["Mul_gpu"])
-            print("fine tuning.")
+            mdl = mdl.fine_tune(use_gpu=options["use_gpu"], Mul_gpu=options["Mul_gpu"])
+            mdl.save_members()
 
     else:
         print("(should have been caught earlier) Unknown model type: {}".format(model_type), file=sys.stderr)

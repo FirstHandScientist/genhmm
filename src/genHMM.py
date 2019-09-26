@@ -6,7 +6,7 @@ from gm_hmm.src.realnvp import RealNVP
 import torch
 from torch import nn, distributions
 from gm_hmm.src._torch_hmmc import _compute_log_xi_sum, _forward, _backward
-from gm_hmm.src.utils import step_learning_rate_decay, load_model, to_device, data_read_parse,pad_data,TheDataset
+from gm_hmm.src.utils import step_learning_rate_decay, load_model, save_model, to_device, data_read_parse,pad_data,TheDataset
 from torch.utils.data import DataLoader
 
 class GenHMMclassifier(nn.Module):
@@ -20,6 +20,7 @@ class GenHMMclassifier(nn.Module):
             self.pclass = torch.ones(len(self.hmms))
 
         else:
+            self.mdlc_files = mdlc_files
             self.hmms = [load_model(fname) for fname in mdlc_files]
             self.pclass = torch.FloatTensor([h.number_training_data for h in self.hmms])
             self.pclass = (self.pclass / self.pclass.sum())
@@ -42,7 +43,7 @@ class GenHMMclassifier(nn.Module):
 
     def fine_tune(self, use_gpu=False, Mul_gpu=False, batch_size=64):
         self.hmms = [to_device(genhmm.train(), use_gpu=use_gpu, Mul_gpu=Mul_gpu) for genhmm in self.hmms]
-        data = [data_read_parse(genhmm.train_data_fname, dim_zero_padding=True) for genhmm in self.hmms]
+        data = [data_read_parse(genhmm.train_data_fname, dim_zero_padding=True)[:10] for genhmm in self.hmms]
         lengths = [[x.shape[0] for x in xtrain_class] for xtrain_class in data]
         data = [pad_data(xtrain, max([x.shape[0] for x in xtrain])) for xtrain in data]
         Y = np.concatenate([(int(g.iclass) - 1)*np.ones(len(classdata)) for g, classdata in zip(self.hmms, data)])
@@ -53,6 +54,20 @@ class GenHMMclassifier(nn.Module):
                                                    device='cpu'),
                                  batch_size=batch_size,
                                  shuffle=True)
+
+        for i, genhmm in enumerate(self.hmms):
+            self.hmms[i].optimizer = torch.optim.Adam(
+                sum([[p for p in flow.parameters() if p.requires_grad == True] for flow in
+                     self.hmms[i].networks.reshape(-1).tolist()], []), lr=self.hmms[i].lr)
+            ada_lr = step_learning_rate_decay(init_lr=self.hmms[i].lr,
+                                          global_step=self.hmms[i].global_step,
+                                          minimum=1e-4,
+                                          anneal_rate=0.98)
+
+            for j, param_group in enumerate(self.hmms[i].optimizer.param_groups):
+                self.hmms[i].optimizer.param_groups[j]['lr'] = ada_lr
+
+            self.hmms[i].optimizer.load_state_dict(self.hmms[i].optimizer.state_dict())
 
         with torch.enable_grad():
             for b in train_data:
@@ -73,8 +88,19 @@ class GenHMMclassifier(nn.Module):
                 for genhmm in self.hmms:
                     genhmm.optimizer.step()
 
-        print("here")
+        for genhmm in self.hmms:
+            genhmm._update_old_networks()
+            genhmm.old_eval()
+            genhmm.eval()
+            genhmm.pushto("cpu")
 
+        print("here")
+        return self
+
+    def save_members(self):
+        for genhmm, out_mdl in zip(self.hmms, self.mdlc_files):
+            save_model(genhmm, fname=out_mdl)
+        return self
 
     def pushto(self, device):
         self.hmms = [h.pushto(device) for h in self.hmms]
@@ -101,8 +127,8 @@ class GenHMM(torch.nn.Module):
         self.dtype = dtype
         self.n_prob_components = n_prob_components
  
-        self.device=device
-        self.dtype=dtype
+        self.device = device
+        self.dtype = dtype
         self.EPS = EPS
         self.lr = lr
         self.em_skip = em_skip
@@ -225,7 +251,7 @@ class GenHMM(torch.nn.Module):
         """load the parameters in self.networks (the one being optimized), into self.old_networks"""
         for i in range(self.n_states):
             for j in range(self.n_prob_components):
-                self.old_networks[i,j].load_state_dict( self.networks[i,j].state_dict() )
+                self.old_networks[i, j].load_state_dict(self.networks[i, j].state_dict())
         return self
 
     def _affirm_networks_update(self):
@@ -683,5 +709,3 @@ def normalize(a, axis=None):
     a_sum = a.sum(axis, keepdim=True)
     a_sum[a_sum==0] = 1
     a /= a_sum
-
-

@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     #  Load data
     xtrain = data_read_parse(train_class_inputfile, dim_zero_padding=True)
-
+    xtrain = xtrain[:10]
     # Get the length of all the sequences
     l = [x.shape[0] for x in xtrain]
 
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     mdl.device = 'cpu'
     mdl = to_device(mdl, use_gpu=options["use_gpu"], Mul_gpu=options["Mul_gpu"])
 
-    print("epoch:{}\tclass:{}\tPush model to {}. Done.".format(epoch_str,iclass_str, mdl.device), file=sys.stdout)
+    print("epoch:{}\tclass:{}\tPush model to {}. Done.".format(epoch_str, iclass_str, mdl.device), file=sys.stdout)
 
 
     # zero pad data for batch training
@@ -78,8 +78,10 @@ if __name__ == "__main__":
 
     # Push back to cpu for compatibility when GPU unavailable.
     mdl.pushto('cpu')
-    #with open(out_mdl, "wb") as fp:
+    # with open(out_mdl, "wb") as fp:
     #    pkl.dump(mdl, fp)
+    mdl.out_mdl = out_mdl
+
     save_model(mdl, fname=out_mdl)
     sys.exit(0)
 
