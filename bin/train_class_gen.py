@@ -2,12 +2,10 @@ import os
 import sys
 from parse import parse
 from gm_hmm.src.genHMM import GenHMM
-from gm_hmm.src.utils import pad_data, TheDataset, get_freer_gpu, data_read_parse,save_model, load_model
-import torch
+from gm_hmm.src.utils import pad_data, TheDataset, to_device, data_read_parse,save_model, load_model
 from torch.utils.data import DataLoader
 import json
 import numpy as np
-import time
 
 if __name__ == "__main__":
     usage = "python bin/train_class.py data/train13.pkl models/epoch1_class1.mdlc param.json"
@@ -25,17 +23,12 @@ if __name__ == "__main__":
     except IndexError:
         param_file = "default.json"
 
-
-    epoch_str, iclass_str = parse('epoch{}_class{}.mdlc',os.path.basename(out_mdl))
+    epoch_str, iclass_str = parse('epoch{}_class{}.mdlc', os.path.basename(out_mdl))
     train_class_inputfile = train_inputfile.replace(".pkl", "_class{}.pkl".format(iclass_str))
 
-
     #  Load data
-    xtrain = data_read_parse(train_class_inputfile)
-    if xtrain[0].shape[1] % 2 != 0:
-        xtrain = [np.concatenate([x, np.zeros((x.shape[0], 1))], axis=1) for x in xtrain]
+    xtrain = data_read_parse(train_class_inputfile, dim_zero_padding=True)
 
-    # xtrain = xtrain[:100]
     # Get the length of all the sequences
     l = [x.shape[0] for x in xtrain]
 
@@ -59,35 +52,17 @@ if __name__ == "__main__":
 
     mdl.iepoch = epoch_str
     mdl.iclass = iclass_str
-
+    mdl.train_data_fname = train_class_inputfile
 
     mdl.device = 'cpu'
-    if torch.cuda.is_available() and options["use_gpu"]:
-        if not options["Mul_gpu"]:
-            # default case, only one gpu
-            device = torch.device('cuda')
-            mdl.device = device
-            mdl.pushto(mdl.device)   
+    mdl = to_device(mdl, use_gpu=options["use_gpu"], Mul_gpu=options["Mul_gpu"])
 
-        else:
-            for i in range(4):
-                try:
-                    time.sleep(np.random.randint(20))
-                    device = torch.device('cuda:{}'.format(int(get_freer_gpu()) ))
-                    print("Try to push to device: {}".format(device))
-                    mdl.device = device
-                    mdl.pushto(mdl.device)   
-                    break
-                except:
-                    # if push error (maybe memory overflow, try again)
-                    print("Push to device cuda:{} fail, try again ...")
-                    continue
     print("epoch:{}\tclass:{}\tPush model to {}. Done.".format(epoch_str,iclass_str, mdl.device), file=sys.stdout)
-    
+
+
     # zero pad data for batch training
     max_len_ = max([x.shape[0] for x in xtrain])
     xtrain_padded = pad_data(xtrain, max_len_)
-
     traindata = DataLoader(dataset=TheDataset(xtrain_padded, lengths=l, device=mdl.device), batch_size=options["Train"]["batch_size"], shuffle=True)
 
     # niter counts the number of em steps before saving a model checkpoint
