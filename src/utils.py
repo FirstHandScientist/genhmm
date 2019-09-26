@@ -298,7 +298,7 @@ class TheDataset(Dataset):
         self.len = len(self.data)
 
     def __getitem__(self, index):
-        return (self.data[index], self.mask[index])
+        return (self.data[index], self.mask[index],self.y[index])
 
     def __len__(self):
         return self.len
