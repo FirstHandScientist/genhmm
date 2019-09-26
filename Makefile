@@ -65,7 +65,7 @@ test:
 	echo $(acc_dep)
 
 train: init
-	for i in $(MODELS_INTERM); do \
+	@for i in $(MODELS_INTERM); do \
 		if [[ `echo $${i%.*}_class*.mdlc | wc -w` != $(nclasses) ]]; then rm -f $$i.{mdl,acc}; fi; \
 		$(MAKE) -j $(j) $$i.mdl; \
 	 	$(MAKE) -j $(j) $$i.acc; \
@@ -82,7 +82,7 @@ $(MODELS)/%.acc: $(acc_dep)
 
 $(MODELS)/%.mdlc:
 	$(eval logfile=$(LOG)/`basename $@ | sed -e 's/^.*\(class\)/\1/g' -e 's/.mdlc/.log'/g`)
-	echo `date` ":" $(PYTHON) $(BIN)/train_class_$(model).py $(training_data) $@ >> $(logfile)
+	@echo `date` ":" $(PYTHON) $(BIN)/train_class_$(model).py $(training_data) $@ >> $(logfile)
 	$(PYTHON) $(BIN)/train_class_$(model).py $(training_data) $@ >> $(logfile)
 
 $(MODELS)/%.accc: $(MODELS)/%.mdlc
