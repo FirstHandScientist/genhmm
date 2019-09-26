@@ -290,6 +290,7 @@ class TheDataset(Dataset):
         if not (ytrain is None):
             self.y = ytrain
             assert(ytrain.shape[0] == len(self.data))
+
         self.lengths = lengths
         max_len_ = self.data[0].shape[0]
         self.mask = [torch.cat((torch.ones(l, dtype=torch.uint8), \
@@ -298,7 +299,10 @@ class TheDataset(Dataset):
         self.len = len(self.data)
 
     def __getitem__(self, index):
-        return (self.data[index], self.mask[index],self.y[index])
+        try:
+            return (self.data[index], self.mask[index], self.y[index])
+        except:
+            return (self.data[index], self.mask[index])
 
     def __len__(self):
         return self.len
