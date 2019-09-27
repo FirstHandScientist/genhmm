@@ -95,13 +95,13 @@ def to_device(mdl, use_gpu=False, Mul_gpu=False):
                 try:
                     time.sleep(np.random.randint(20))
                     device = torch.device('cuda:{}'.format(int(get_freer_gpu())))
-                    print("Try to push to device: {}".format(device))
+                    print("Try to push to device: {}".format(device), file=sys.stderr)
                     mdl.device = device
                     mdl.pushto(mdl.device)
                     break
                 except:
                     # if push error (maybe memory overflow, try again)
-                    print("Push to device cuda:{} fail, try again ...")
+                    print("Push to device cuda:{} fail, try again ...", file=sys.stderr)
                     continue
     return mdl
 
