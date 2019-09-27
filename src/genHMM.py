@@ -51,7 +51,7 @@ class GenHMMclassifier(nn.Module):
         train_data = DataLoader(dataset=TheDataset(sum(data, []),
                                                    ytrain=Y,
                                                    lengths=sum(lengths, []),
-                                                   device='cpu'),
+                                                   device='cuda'),
                                  batch_size=batch_size,
                                  shuffle=True)
 
