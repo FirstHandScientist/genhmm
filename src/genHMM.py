@@ -43,7 +43,8 @@ class GenHMMclassifier(nn.Module):
 
     def fine_tune(self, use_gpu=False, Mul_gpu=False, batch_size=64):
         self.hmms = [to_device(genhmm.train(), use_gpu=use_gpu, Mul_gpu=Mul_gpu) for genhmm in self.hmms]
-        data = [data_read_parse(genhmm.train_data_fname, dim_zero_padding=True)[:10] for genhmm in self.hmms]
+        self.pclass = self.pclass.reshape(-1,1).cuda()
+        data = [data_read_parse(genhmm.train_data_fname, dim_zero_padding=True) for genhmm in self.hmms]
         lengths = [[x.shape[0] for x in xtrain_class] for xtrain_class in data]
         data = [pad_data(xtrain, max([x.shape[0] for x in xtrain])) for xtrain in data]
         Y = np.concatenate([(int(g.iclass) - 1)*np.ones(len(classdata)) for g, classdata in zip(self.hmms, data)])
@@ -78,11 +79,11 @@ class GenHMMclassifier(nn.Module):
 
                 # llh = [[genhmm._getllh(genhmm.networks, b) for b in train_data] for genhmm in self.hmms]
 
-                denom = (llh + self.pclass.log().reshape(-1,1).sum(0)
+                denom = (llh + self.pclass.log()).sum(0)
                 # yy = (data[-1].long() - 1).byte()
                 y = torch.stack([~b[-1], b[-1]])
-                num = llh[y]
-                loss = (num - denom).sum()/float(batch_size)
+                num = llh[y] + self.pclass.repeat(1, y.shape[1])[y].log()
+                loss = - (num - denom).sum()/float(batch_size)
                 loss.backward()
 
                 for genhmm in self.hmms:
