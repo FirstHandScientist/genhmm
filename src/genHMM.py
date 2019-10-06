@@ -78,7 +78,7 @@ class GenHMMclassifier(nn.Module):
 
                 # llh = [[genhmm._getllh(genhmm.networks, b) for b in train_data] for genhmm in self.hmms]
 
-                denom = llh.sum(0)
+                denom = (llh + self.pclass.log().reshape(-1,1).sum(0)
                 # yy = (data[-1].long() - 1).byte()
                 y = torch.stack([~b[-1], b[-1]])
                 num = llh[y]
