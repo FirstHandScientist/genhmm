@@ -52,36 +52,6 @@ def normalize(xtrain, xtest):
     return f_perform_normalize(xtrain), f_perform_normalize(xtest)
 
 
-def getsubset(data, label, iphn):
-    # concat data
-    # find subset
-    idx = np.in1d(label, iphn)
-    return data[idx], label[idx]
-
-
-def find_change_loc(x):
-    dx = np.diff(x)
-    # Make a clean vector to delimit phonemes
-    change_locations = np.array([0] + (1 + np.argwhere(dx != 0)).reshape(-1).tolist() + [x.shape[0]])
-    # Make an array of size n_phoneme_in_sentence x 2, containing begining and end of each phoneme in a sentence
-
-    fmt_interv = np.array([[change_locations[i-1], change_locations[i]]\
-                                 for i in range(1, change_locations.shape[0]) ])
-    return fmt_interv, x[change_locations[:-1]]
-
-
-def test_find_change_loc():
-    l = np.array([1,1,1,1,1,1,1,0,0,0,0,0,0,2,2,2,2,2,2,3])
-    out, out2 = find_change_loc(l)
-    assert((out2 == np.array([1,0,2,3])).all())
-    assert((out == np.array([[0,  7], [7, 13],[13, 19],[19, 20]])).all())
-
-    l = np.array([1, 1, 0, 0, 2, 2])
-    out, out2 = find_change_loc(l)
-    assert((out2 == np.array([1, 0, 2])).all())
-    assert((out == np.array([[0, 2], [2, 4], [4, 6]])).all())
-
-
 def to_device(mdl, use_gpu=False, Mul_gpu=False):
     if use_gpu and torch.cuda.is_available():
         if not Mul_gpu:
@@ -104,80 +74,6 @@ def to_device(mdl, use_gpu=False, Mul_gpu=False):
                     print("Push to device cuda:{} fail, try again ...", file=sys.stderr)
                     continue
     return mdl
-
-def to_phoneme_level(DATA):
-    n_sequences = len(DATA)
-
-    seq_train = [0 for _ in range(n_sequences)]
-    targets_train = [0 for _ in range(n_sequences)]
-    data_tr = []
-    labels_tr = []
-
-    # For all sentences
-    for i, x in enumerate(DATA):
-        seq_train[i], targets_train[i] = find_change_loc(x[:, 0])
-
-        # Delete label from data
-        x[:, 0] = 0
-
-        # For each phoneme found in the sentence, get the sequence of MFCCs and the label
-        for j in range(seq_train[i].shape[0]):
-            data_tr += [x[seq_train[i][j][0]:seq_train[i][j][1]]]
-            labels_tr += [targets_train[i][j]]
-
-    # Return an array of arrays for the data, and an array of float for the labels
-    return np.array(data_tr), np.array(labels_tr)
-
-def remove_label(data, labels, phn2int_39):
-    keep_idx = labels != phn2int_39['-']
-    data_out = data[keep_idx]
-    label_out = labels[keep_idx]
-    assert(len(label_out) == data_out.shape[0])
-    return data_out, label_out
-
-
-def phn61_to_phn39(label_int_61, int2phn_61=None, data_folder=None, phn2int_39=None):
-    """Group labels based on info found on table 3 of html file."""
-    with open(os.path.join(data_folder, "phoneme_map_61_to_39.json"), "r") as fp:
-        phn61_to_39_map = json.load(fp)
-
-    label_str_61 = [int2phn_61[int(x)] for x in label_int_61]
-
-    label_str_39 = [phn61_to_39_map[x] if x in phn61_to_39_map.keys() else x for x in label_str_61 ]
-
-    # At this point there is still 40 different phones, but '-' will be deleted later.
-    if phn2int_39 is None:
-        unique_str_39 = list(set(label_str_39))
-        phn2int_39 = {k: v for k, v in zip(unique_str_39, range(len(unique_str_39)))}
-
-    label_int_39 = [phn2int_39[x] for x in label_str_39]
-    return np.array(label_int_39), phn2int_39
-
-
-def test_flip():
-    d = {k: v for k, v in zip(list("abcbdefg"), list(range(8)))}
-    assert(d == flip(flip(d)))
-
-def flip(d):
-    """In a dictionary, swap keys and values"""
-    return {v: k for k, v in d.items()}
-
-def read_classmap(folder):
-    fname = os.path.join(folder, "class_map.json")
-    if os.path.isfile(fname):
-        with open(fname, "r") as f:
-            return json.load(f)
-    else:
-        return {}
-
-
-def write_classmap(class2phn, folder):
-    """Write dictionary to a JSON file."""
-    with open(os.path.join(folder, "class_map.json"), "w") as outfile:
-        out_str = json.dumps(class2phn, indent=2)
-        print("Classes are: \n" + out_str, file=sys.stderr)
-        outfile.write(out_str+"\n")
-    return 0
 
 
 def accuracy_fun(data_file, mdl=None):
@@ -272,16 +168,17 @@ def test_acc_str():
 def append_class(data_file, iclass):
     return data_file.replace(".pkl", "_class" + str(iclass)+".pkl")
 
+def test_append_class():
+    assert( "sdnfnsljdg/nlfsdflsd_class100.pkl" == append_class("sdnfnsljdg/nlfsdflsd.pkl", 100) )
 
 def divide(res_int):
     return res_int[0] / res_int[1]
 
-
 def parse_(res_str):
-    res_str_split = res_str.split("/")
-    res_int = [int(x) for x in res_str_split]
-    return res_int
+    return list(parse("{:d}/{:d}",res_str))
 
+def test_parse():
+    assert([1, 2] == parse_("1/2"))
 
 class TheDataset(Dataset):
     """Wrapper for DataLoader input."""
@@ -317,6 +214,13 @@ def pad_data(x, length):
     d = x[0].shape[1]
     return [np.concatenate((xx, np.zeros((length - xx.shape[0], d)))) for xx in x]
 
+def test_pad_data():
+    x = [np.ones((3, 2)), np.ones((5, 2))]
+    max_len = max([xx.shape[0] for xx in x])
+    y = pad_data(x, max_len)
+
+    assert((y[0] == np.array([[1,1],[1,1],[1,1],[0,0],[0,0]])).all()
+           and (y[1] == x[1]).all())
 
 def norm_prob(x, axis=None):
     coef_ = x.sum(axis)
@@ -343,12 +247,17 @@ def step_learning_rate_decay(init_lr, global_step, minimum,
         rate = minimum
     return rate
 
+
 def get_freer_gpu():
-    os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp')
+    os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free > tmp')
     memory_available = [int(x.split()[2]) for x in open('tmp', 'r').readlines()]
     return np.argmax(memory_available)
 
 
 if __name__ == "__main__":
-    test_acc_str()
-    test_norm_prob()
+    #test_acc_str()
+    #test_norm_prob()
+    #test_pad_data()
+    test_append_class()
+    test_parse()
+    pass
