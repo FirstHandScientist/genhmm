@@ -31,16 +31,20 @@ ifndef model
 	model=gaus
 endif
 
+ifndef model_dir
+	model_dir=$(model).$(shell echo $(paramfile) | sed 's/.json//g')
+endif
+
 ifndef DATA
 	DATA=$(abspath $(EXP)/data)
 endif
 
 ifndef MODELS
-	MODELS=$(EXP)/models/$(model).$(dataname_trunk)
+	MODELS=$(EXP)/models/$(model_dir).$(dataname_trunk)
 endif
 
 ifndef LOG
-	LOG=$(EXP)/log/$(model).$(dataname_trunk)
+	LOG=$(EXP)/log/$(model_dir).$(dataname_trunk)
 endif
 ifndef dataname_trunk
 	dataname_trunk=39
