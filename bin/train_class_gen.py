@@ -37,9 +37,9 @@ if __name__ == "__main__":
         options = json.load(f_in)
 
     # adoptive to set number of states
-    options["Net"]["n_states"] = np.clip(int(np.floor(np.mean(l)/2)),
-                                         options["Train"]["n_states_min"],
-                                         options["Train"]["n_states_max"])
+    # options["Net"]["n_states"] = np.clip(int(np.floor(np.mean(l)/2)),
+    #                                      options["Train"]["n_states_min"],
+     #                                     options["Train"]["n_states_max"])
 
     options["Net"]["net_D"] = xtrain[0].shape[1]
     #  Load or create model

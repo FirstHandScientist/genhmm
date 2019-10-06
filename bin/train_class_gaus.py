@@ -44,15 +44,10 @@ if __name__ == "__main__":
     with open(param_file) as f_in:
         options = json.load(f_in)
 
-    # adoptive to set number of states
-    options["GMM"]["n_states"] = np.clip(int(np.floor(np.mean(l)/2)),
-                                         options["GMM"]["n_states_min"],
-                                         options["GMM"]["n_states_max"])
-
     #  Load or create model
     if epoch_str == '1':
         # init GaussianHMM model or GMM_HMM model by disable/comment one and enable another model. For GMM_HMM, we are now just maintaining diag type of covariance.
-        mdl = GMM_HMM(n_components=options["Net"]["n_states"], \
+        mdl = GMM_HMM(n_components=options["GMM"]["n_states"], \
                       n_mix=options["GMM"]["n_prob_components"], \
                       covariance_type="diag", tol=-np.inf, \
                       init_params="stwmc", params="stwmc", verbose=True)
