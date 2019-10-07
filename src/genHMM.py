@@ -6,7 +6,7 @@ from gm_hmm.src.realnvp import RealNVP
 import torch
 from torch import nn, distributions
 from gm_hmm.src._torch_hmmc import _compute_log_xi_sum, _forward, _backward
-from gm_hmm.src.utils import step_learning_rate_decay, load_model, save_model, to_device, data_read_parse,pad_data,TheDataset
+from gm_hmm.src.utils import step_learning_rate_decay, load_model, save_model, to_device, data_read_parse,pad_data,TheDataset, get_freer_gpu
 from torch.utils.data import DataLoader
 
 class GenHMMclassifier(nn.Module):
@@ -42,8 +42,10 @@ class GenHMMclassifier(nn.Module):
         return torch.stack(batch_llh)
 
     def fine_tune(self, use_gpu=False, Mul_gpu=False, batch_size=64):
-        self.hmms = [to_device(genhmm.train(), use_gpu=use_gpu, Mul_gpu=Mul_gpu) for genhmm in self.hmms]
-        self.pclass = self.pclass.reshape(-1,1).cuda()
+        device = torch.device('cuda:{}'.format(int(get_freer_gpu())))
+        
+        self.hmms = [genhmm.train().pushto(device) for genhmm in self.hmms]
+        self.pclass = self.pclass.reshape(-1,1).to(device)
         data = [data_read_parse(genhmm.train_data_fname, dim_zero_padding=True) for genhmm in self.hmms]
         lengths = [[x.shape[0] for x in xtrain_class] for xtrain_class in data]
         data = [pad_data(xtrain, max([x.shape[0] for x in xtrain])) for xtrain in data]
@@ -52,7 +54,7 @@ class GenHMMclassifier(nn.Module):
         train_data = DataLoader(dataset=TheDataset(sum(data, []),
                                                    ytrain=Y,
                                                    lengths=sum(lengths, []),
-                                                   device='cuda'),
+                                                   device=device),
                                  batch_size=batch_size,
                                  shuffle=True)
 
@@ -76,15 +78,15 @@ class GenHMMclassifier(nn.Module):
                     genhmm.optimizer.zero_grad()
 
                 llh = torch.stack([genhmm.get_logprob(genhmm.networks, b[:-1]) for genhmm in self.hmms]).squeeze()
-		log_pclass = self.pclass.log()
+                log_pclass = self.pclass.log()
                 # llh = [[genhmm._getllh(genhmm.networks, b) for b in train_data] for genhmm in self.hmms]
 		
-		denom = torch.logsumexp(llh + log_pclass, dim=0)
+                denom = torch.logsumexp(llh + log_pclass, dim=0)
                 
-		y = torch.stack([~b[-1], b[-1]])
+                y = torch.stack([~b[-1], b[-1]])
                 num = llh[y] + log_pclass.repeat(1, y.shape[1])[y]
                 
-		loss = - (num - denom).sum()/float(batch_size)
+                loss = - (num - denom).sum()/float(batch_size)
                 loss.backward()
 
                 for genhmm in self.hmms:
