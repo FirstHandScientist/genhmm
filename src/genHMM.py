@@ -76,14 +76,15 @@ class GenHMMclassifier(nn.Module):
                     genhmm.optimizer.zero_grad()
 
                 llh = torch.stack([genhmm.get_logprob(genhmm.networks, b[:-1]) for genhmm in self.hmms]).squeeze()
-
+		log_pclass = self.pclass.log()
                 # llh = [[genhmm._getllh(genhmm.networks, b) for b in train_data] for genhmm in self.hmms]
-
-                denom = (llh + self.pclass.log()).sum(0)
-                # yy = (data[-1].long() - 1).byte()
-                y = torch.stack([~b[-1], b[-1]])
-                num = llh[y] + self.pclass.repeat(1, y.shape[1])[y].log()
-                loss = - (num - denom).sum()/float(batch_size)
+		
+		denom = torch.logsumexp(llh + log_pclass, dim=0)
+                
+		y = torch.stack([~b[-1], b[-1]])
+                num = llh[y] + log_pclass.repeat(1, y.shape[1])[y]
+                
+		loss = - (num - denom).sum()/float(batch_size)
                 loss.backward()
 
                 for genhmm in self.hmms:
