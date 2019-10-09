@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     #  Load data
     xtrain = data_read_parse(train_class_inputfile, dim_zero_padding=True)
-    xtrain = xtrain[:10]
+    # xtrain = xtrain[:10]
     # Get the length of all the sequences
     l = [x.shape[0] for x in xtrain]
 
