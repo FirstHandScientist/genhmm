@@ -15,10 +15,6 @@ ifndef nepochs
 	nepochs=10
 endif
 
-ifndef nclasses
-	nclasses=2
-endif
-
 ifndef j
 	j=2
 endif
@@ -49,6 +45,12 @@ endif
 ifndef dataname_trunk
 	dataname_trunk=39
 endif
+
+
+ifndef nclasses
+	nclasses=$(shell find -f $(DATA)/train*_class*.pkl | wc -w | tr -d '[:space:]')
+endif
+
 ifndef training_data
 	training_data=$(DATA)/train.$(dataname_trunk).pkl
 endif
@@ -71,6 +73,7 @@ init:
 test:
 	echo $(mdl_dep)
 	echo $(acc_dep)
+	echo $(nclasses)
 
 train: init
 	@for i in $(MODELS_INTERM); do \
