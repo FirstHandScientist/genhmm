@@ -1,9 +1,7 @@
-# Other sub git repo
-/code/hmmlearn/.git*
+pyenv/
+envpy
 
-# Runable makefile
-Makefile_run
-
+.DS_Store
 # Pycharm cache
 .idea/
 
