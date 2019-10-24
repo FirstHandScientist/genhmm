@@ -2,7 +2,7 @@
 #
 
 SHELL=/bin/bash
-PYTHON=OPENBLAS_NUM_THREADS=10 pyasr/bin/python
+PYTHON=OPENBLAS_NUM_THREADS=10 pyenv/bin/python
 
 SRC=src
 BIN=$(abspath bin)
