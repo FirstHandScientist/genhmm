@@ -19,9 +19,11 @@ def data_read_parse(fname, dim_zero_padding=False):
     if isinstance(xtrain_[0], list):
         xtrain_ = [np.array(x).T for x in xtrain_]
 
+    if isinstance(xtrain_, np.ndarray) and isinstance(xtrain_[0], np.ndarray):
+        xtrain_ = xtrain_.tolist()
+
     if dim_zero_padding and xtrain_[0].shape[1] % 2 != 0:
         xtrain_ = [np.concatenate([x, np.zeros((x.shape[0], 1))], axis=1) for x in xtrain_]
-
 
     return xtrain_
 
@@ -45,7 +47,7 @@ def normalize(xtrain, xtest):
     min_tr = np.min(f_min(xtrain), axis=0)
     max_tr = np.max(f_max(xtrain), axis=0)
 
-    # The first component is zeros and can create division by 0
+    #  The first component is zeros and can create division by 0
     min_tr[0] = 0
     max_tr[0] = 1
     f_perform_normalize = np.vectorize(partial(norm_minmax, min_=min_tr, max_=max_tr), signature="()->()", otypes=[np.ndarray])
