@@ -32,15 +32,19 @@ if __name__ == "__main__":
     epoch_str, iclass_str = parse('epoch{}_class{}.mdlc', os.path.basename(out_mdl))
     train_class_inputfile = train_inputfile.replace(".pkl", "_class{}.pkl".format(iclass_str))
 
-    #  Load data
+    #   Load data
+    # Must output a list of arrays
+
     xtrain_ = data_read_parse(train_class_inputfile)
-
     xtrain = np.concatenate(xtrain_, axis=0)
+    iremove = np.argwhere(xtrain.std(0) == 0)
+    if iremove.shape == 0:
+        xtrain = np.delete(xtrain,iremove,axis=1)
 
-    # Get the length of all the sequences
+    #   Get the length of all the sequences
     l = [x.shape[0] for x in xtrain_]
     
-    # load the parameters
+    #   Load the parameters
     with open(param_file) as f_in:
         options = json.load(f_in)
 
@@ -66,12 +70,12 @@ if __name__ == "__main__":
 
     print("epoch:{}\tclass:{}\t.".format(epoch_str, iclass_str), file=sys.stdout)
     
-    # Zero pad data for batch training
-    # Niter counts the number of em steps before saving a model checkpoint
+    #  Zero pad data for batch training
+    #  Niter counts the number of em steps before saving a model checkpoint
     niter = options["Train"]["niter"]
     
-    # Add number of training data in model
-    # Mdl.number_training_data = len(xtrain)
+    #  Add number of training data in model
+    #  Mdl.number_training_data = len(xtrain)
     
     mdl.n_iter = niter
     mdl.fit(xtrain, lengths=l)
