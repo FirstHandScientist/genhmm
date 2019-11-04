@@ -5,7 +5,6 @@ from gm_hmm.src.genHMM import GenHMM
 from gm_hmm.src.utils import pad_data, TheDataset, to_device, data_read_parse,save_model, load_model
 from torch.utils.data import DataLoader
 import json
-import numpy as np
 
 if __name__ == "__main__":
     usage = "python bin/train_class.py data/train13.pkl models/epoch1_class1.mdlc param.json"
