@@ -212,9 +212,9 @@ class GenHMM(torch.nn.Module):
                                      nn.Dropout(p_drop), nn.Linear(H, D))
         # set mask
         if mask_type == "chunk":
-            masks = torch.from_numpy(np.array([[0]*d + [1]*(D-d), [1]*d + [0]*(D-d)] * nchain).astype(np.uint8))
+            masks = torch.from_numpy(np.array([[0]*d + [1]*(D-d), [1]*d + [0]*(D-d)] * nchain).astype(np.bool))
         elif mask_type == "cross":
-            masks = torch.from_numpy(np.array([[0, 1]*d, [1, 0]*d] * nchain).astype(np.uint8))
+            masks = torch.from_numpy(np.array([[0, 1]*d, [1, 0]*d] * nchain).astype(np.bool))
         elif mask_type == "conv":
             # To do
             pass
