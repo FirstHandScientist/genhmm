@@ -34,14 +34,13 @@ if __name__ == "__main__":
 
     #   Load data
     # Must output a list of arrays
-
     xtrain_ = data_read_parse(train_class_inputfile)
     xtrain = np.concatenate(xtrain_, axis=0)
     iremove = np.argwhere(xtrain.std(0) == 0)
-    if iremove.shape == 0:
-        xtrain = np.delete(xtrain,iremove,axis=1)
+    if iremove.shape[0] > 0:
+        xtrain = np.delete(xtrain, iremove, axis=1)
 
-    #   Get the length of all the sequences
+    #   Get the length of all the sequence
     l = [x.shape[0] for x in xtrain_]
     
     #   Load the parameters
