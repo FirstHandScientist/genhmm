@@ -49,7 +49,8 @@ if __name__ == "__main__":
 
     #  Load or create model
     if epoch_str == '1':
-        # init GaussianHMM model or GMM_HMM model by disable/comment one and enable another model. For GMM_HMM, we are now just maintaining diag type of covariance.
+        # Init GaussianHMM model or GMM_HMM model by disable/comment one and enable another model.
+        # For GMM_HMM, we are now just maintaining diag type of covariance.
         mdl = GMM_HMM(n_components=options["GMM"]["n_states"], \
                       n_mix=options["GMM"]["n_prob_components"], \
                       covariance_type="diag", tol=-np.inf, \

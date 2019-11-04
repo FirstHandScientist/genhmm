@@ -9,6 +9,7 @@ from gm_hmm.src._torch_hmmc import _compute_log_xi_sum, _forward, _backward
 from gm_hmm.src.utils import step_learning_rate_decay, load_model, save_model, to_device, data_read_parse,pad_data,TheDataset, get_freer_gpu
 from torch.utils.data import DataLoader
 
+
 class GenHMMclassifier(nn.Module):
     def __init__(self, mdlc_files=None, **options):
         """Initialize a model on CPU. Make sure to push to GPU at runtime."""
