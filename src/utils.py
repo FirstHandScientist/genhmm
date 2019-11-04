@@ -192,8 +192,8 @@ class TheDataset(Dataset):
 
         self.lengths = lengths
         max_len_ = self.data[0].shape[0]
-        self.mask = [torch.cat((torch.ones(l, dtype=torch.uint8), \
-                                torch.zeros(max_len_ - l, dtype=torch.uint8))).to(device) \
+        self.mask = [torch.cat((torch.ones(l, dtype=torch.bool), \
+                                torch.zeros(max_len_ - l, dtype=torch.bool))).to(device) \
                      for l in self.lengths]
         self.len = len(self.data)
 
