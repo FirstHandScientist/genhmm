@@ -1,3 +1,5 @@
+
+import subprocess
 import numpy as np
 import os
 import torch
@@ -253,15 +255,20 @@ def step_learning_rate_decay(init_lr, global_step, minimum,
 
 
 def get_freer_gpu():
-    os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free > tmp')
-    memory_available = [int(x.split()[2]) for x in open('tmp', 'r').readlines()]
-    return np.argmax(memory_available)
+    cmd = 'nvidia-smi -q -d Memory | grep -A4 GPU | grep Free'
+    out = subprocess.check_output(cmd, shell=True).decode("utf-8")
+    memory_available = [int(x.split()[2]) for x in out.split('\n')[:-1]]
+    return torch.device('cuda:{}'.format(np.argmax(memory_available)))
 
+def test_get_freer_gpu():
+    out = get_freer_gpu()
+    print(out)
 
 if __name__ == "__main__":
     #test_acc_str()
     #test_norm_prob()
     #test_pad_data()
-    test_append_class()
-    test_parse()
+    # test_append_class()
+    # test_parse()
+    test_get_freer_gpu()
     pass
