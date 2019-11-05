@@ -5,7 +5,6 @@ from torch.utils.data import Dataset,DataLoader
 import sys
 import pickle as pkl
 from parse import parse
-import json
 from functools import partial
 import time
 
@@ -37,7 +36,7 @@ def test_norm_minmax():
 
 
 def norm_minmax(x, min_=None, max_=None):
-    return ((x - min_.reshape(1, -1)) / (max_.reshape(1, -1) - min_.reshape(1, -1)))
+    return (x - min_.reshape(1, -1)) / (max_.reshape(1, -1) - min_.reshape(1, -1))
 
 
 def normalize(xtrain, xtest):
@@ -66,7 +65,7 @@ def to_device(mdl, use_gpu=False, Mul_gpu=False):
             for i in range(4):
                 try:
                     time.sleep(np.random.randint(20))
-                    device = torch.device('cuda:{}'.format(int(get_freer_gpu())))
+                    device = get_freer_gpu()
                     print("Try to push to device: {}".format(device), file=sys.stderr)
                     mdl.device = device
                     mdl.pushto(mdl.device)
@@ -144,7 +143,7 @@ def save_model(mdl, fname=None):
     return 0
 
 
-def load_model(fname):
+    def load_model(fname):
     """Loads a model on CPU by default."""
     return pkl.load(open(fname, "rb"))
 
@@ -226,12 +225,13 @@ def test_pad_data():
 
 def norm_prob(x, axis=None):
     coef_ = x.sum(axis)
-    if axis==0:
-        coef_ = coef_.reshape(1,-1)
-    elif axis==1:
+    if axis == 0:
+        coef_ = coef_.reshape(1, -1)
+    elif axis == 1:
         coef_ = coef_.reshape(-1, 1)
 
     return x / np.repeat(coef_, x.shape[axis], axis=axis)
+
 
 def test_norm_prob():
     x = np.array([[1, 2], [4, 5]])
@@ -257,9 +257,10 @@ def get_freer_gpu():
 
 
 if __name__ == "__main__":
-    #test_acc_str()
-    #test_norm_prob()
-    #test_pad_data()
+    # test_acc_str()
+    # test_norm_prob()
+    # test_pad_data()
     test_append_class()
     test_parse()
+
     pass
