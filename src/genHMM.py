@@ -43,9 +43,11 @@ class GenHMMclassifier(nn.Module):
         return torch.stack(batch_llh)
 
     def fine_tune(self, use_gpu=False, Mul_gpu=False, batch_size=64):
-        device = torch.device('cuda:{}'.format(int(get_freer_gpu())))
-        self.hmms = [genhmm.train().pushto(device) for genhmm in self.hmms]
-        self.pclass = self.pclass.reshape(-1,1).to(device)
+        device = get_freer_gpu()
+
+        print("device:", get_freer_gpu())
+        self.hmms = [genhmm.train().pushto(get_freer_gpu()) for genhmm in self.hmms]
+        self.pclass = self.pclass.reshape(-1,1).to(get_freer_gpu())
         data = [data_read_parse(genhmm.train_data_fname, dim_zero_padding=True) for genhmm in self.hmms]
         lengths = [[x.shape[0] for x in xtrain_class] for xtrain_class in data]
         max_len_ = max([max(l) for l in lengths])
@@ -56,7 +58,7 @@ class GenHMMclassifier(nn.Module):
                                                    ytrain=Y,
                                                    lengths=sum(lengths, []),
                                                    max_len_=max_len_,
-                                                   device=device),
+                                                   device=get_freer_gpu()),
                                  batch_size=batch_size,
                                  shuffle=True)
 
@@ -82,7 +84,7 @@ class GenHMMclassifier(nn.Module):
                 llh = torch.stack([genhmm.get_logprob(genhmm.networks, b[:-1]) for genhmm in self.hmms]).squeeze()
                 log_pclass = self.pclass.log()
                 denom = torch.logsumexp(llh + log_pclass, dim=0)
-
+                print("b[-1]",b[-1].shape)
                 y = torch.stack([~b[-1], b[-1]])
                 num = llh[y] + log_pclass.repeat(1, y.shape[1])[y]
                 
@@ -267,8 +269,8 @@ class GenHMM(torch.nn.Module):
                 for key, value in state_dict.items():
                     assert self.old_networks[i,j].state_dict()[key] == value
         return self
-        
-    
+
+
     def pushto(self, device):
         for s in range(self.n_states):
             for k in range(self.n_prob_components):
