@@ -184,14 +184,16 @@ def test_parse():
 
 class TheDataset(Dataset):
     """Wrapper for DataLoader input."""
-    def __init__(self, xtrain,  lengths, ytrain=None, device='cpu'):
+    def __init__(self, xtrain,  lengths, max_len_=None, ytrain=None, device='cpu'):
         self.data = [torch.FloatTensor(x).to(device) for x in xtrain]
         if not (ytrain is None):
             self.y = ytrain
             assert(ytrain.shape[0] == len(self.data))
-
         self.lengths = lengths
-        max_len_ = self.data[0].shape[0]
+        
+        if max_len_ is None:
+            max_len_ = max(d.shape[0] for d in self.data)
+        
         self.mask = [torch.cat((torch.ones(l, dtype=torch.bool), \
                                 torch.zeros(max_len_ - l, dtype=torch.bool))).to(device) \
                      for l in self.lengths]
