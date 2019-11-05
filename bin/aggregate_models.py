@@ -37,15 +37,15 @@ if __name__ == "__main__":
         print("No known model type found in {}".format(out_mdl_file),file=sys.stderr)
         sys.exit(1)
 
-    # Find all trained classes submodels
+    # Find all trained classes sub-models
     in_mdlc_files = sorted(glob.glob(out_mdl_file.replace(".mdl", "_class*.mdlc")), key=get_sort_key)
     if model_type == 'gaus':
         mdl = GaussianHMMclassifier(mdlc_files=in_mdlc_files)
-        assert(all([int(h.iclass) == int(i)+1 for i, h in enumerate(mdl.hmms)]))
-    
+        assert(all([int(h.iclass) == int(i) + 1 for i, h in enumerate(mdl.hmms)]))
+
     elif model_type == 'gen':
         mdl = GenHMMclassifier(mdlc_files=in_mdlc_files)
-        assert(all([int(h.iclass) == int(i)+1 for i, h in enumerate(mdl.hmms)]))
+        assert(all([int(h.iclass) == int(i) + 1 for i, h in enumerate(mdl.hmms)]))
         if options["Train"]["fine_tune"]:
             mdl = mdl.fine_tune(use_gpu=options["use_gpu"], Mul_gpu=options["Mul_gpu"])
             mdl.save_members()
@@ -53,6 +53,8 @@ if __name__ == "__main__":
     else:
         print("(should have been caught earlier) Unknown model type: {}".format(model_type), file=sys.stderr)
         sys.exit(1)
+
     mdl.pushto('cpu')
     save_model(mdl, out_mdl_file)
     sys.exit(0)
+
