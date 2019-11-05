@@ -43,9 +43,12 @@ class GenHMMclassifier(nn.Module):
         return torch.stack(batch_llh)
 
     def fine_tune(self, use_gpu=False, Mul_gpu=False, batch_size=64):
+    
         print("Load classes on GPUs ...", file=sys.stderr)
         self.hmms = [genhmm.train().pushto(get_freer_gpu() if use_gpu else 'cpu')
                      for genhmm in self.hmms]
+        
+        nclasses = len(self.hmms)
 
         print("Fetch data from disk ...", file=sys.stderr)
         data = [data_read_parse(genhmm.train_data_fname, dim_zero_padding=True)
@@ -84,6 +87,7 @@ class GenHMMclassifier(nn.Module):
             results_device = get_freer_gpu()
         else:
             results_device = 'cpu'
+        results_device = 'cpu'
 
         print("Results device:", results_device, file=sys.stderr)
         self.pclass = self.pclass.reshape(-1, 1).to(results_device)
@@ -95,19 +99,16 @@ class GenHMMclassifier(nn.Module):
                 i += 1
                 for genhmm in self.hmms:
                     genhmm.optimizer.zero_grad()
-
-                print("batch n:", i)
+                y = torch.nn.functional.one_hot(b[-1].long(), nclasses).transpose(0,1).bool()
+                print(log_pclass.repeat(1, y.shape[1])[y])
                 llh = torch.stack([genhmm.get_logprob(genhmm.networks,
-                                                    b[:-1]  
-                                                    )
+                                                    [b[0].to(genhmm.device),b[1].to(genhmm.device)]  
+                                                    ).to(results_device)
                                    for genhmm in self.hmms]).squeeze()
 
-                print("Likelihood n:", i, "on :", llh.device)
+                print("Likelihood n:", i, "on :", llh.device, file=sys.stderr)
                 denom = torch.logsumexp(llh + log_pclass, dim=0)
-
-                y = torch.stack([~b[-1], b[-1]])
                 num = llh[y] + log_pclass.repeat(1, y.shape[1])[y]
-                
                 loss = - (num - denom).sum()/float(batch_size)
                 loss.backward()
 
