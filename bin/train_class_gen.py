@@ -76,6 +76,7 @@ if __name__ == "__main__":
         mdl.fit(traindata)
 
     # Push back to cpu for compatibility when GPU unavailable.
+    mdl.eval()
     mdl.pushto('cpu')
     # with open(out_mdl, "wb") as fp:
     #    pkl.dump(mdl, fp)
