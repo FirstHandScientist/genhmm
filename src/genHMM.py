@@ -47,7 +47,8 @@ class GenHMMclassifier(nn.Module):
 
         print("device:", get_freer_gpu())
         self.hmms = [genhmm.train().pushto(get_freer_gpu()) for genhmm in self.hmms]
-        self.pclass = self.pclass.reshape(-1,1).to(get_freer_gpu())
+        print("devices:", [genhmm.device for genhmm in self.hmms])
+        self.pclass = self.pclass.reshape(-1, 1).to(get_freer_gpu())
         data = [data_read_parse(genhmm.train_data_fname, dim_zero_padding=True) for genhmm in self.hmms]
         lengths = [[x.shape[0] for x in xtrain_class] for xtrain_class in data]
         max_len_ = max([max(l) for l in lengths])
@@ -58,7 +59,7 @@ class GenHMMclassifier(nn.Module):
                                                    ytrain=Y,
                                                    lengths=sum(lengths, []),
                                                    max_len_=max_len_,
-                                                   device=get_freer_gpu()),
+                                                   device='cpu'),
                                  batch_size=batch_size,
                                  shuffle=True)
 
@@ -81,10 +82,10 @@ class GenHMMclassifier(nn.Module):
                 for genhmm in self.hmms:
                     genhmm.optimizer.zero_grad()
 
-                llh = torch.stack([genhmm.get_logprob(genhmm.networks, b[:-1]) for genhmm in self.hmms]).squeeze()
+                llh = torch.stack([genhmm.get_logprob(genhmm.networks, b[:-1].to(genhmm.device)) for genhmm in self.hmms]).squeeze()
                 log_pclass = self.pclass.log()
                 denom = torch.logsumexp(llh + log_pclass, dim=0)
-                print("b[-1]",b[-1].shape)
+                print("b[-1]", b[-1].shape)
                 y = torch.stack([~b[-1], b[-1]])
                 num = llh[y] + log_pclass.repeat(1, y.shape[1])[y]
                 
@@ -258,9 +259,9 @@ class GenHMM(torch.nn.Module):
         
         for i in range(self.n_states):
             for j in range(self.n_prob_components):
-                state_dict = self.networks[i,j].state_dict()
+                state_dict = self.networks[i, j].state_dict()
                 for key, value in state_dict.items():
-                    assert self.old_networks[i,j].state_dict()[key] == value
+                    assert self.old_networks[i, j].state_dict()[key] == value
         return self
 
 
@@ -268,15 +269,15 @@ class GenHMM(torch.nn.Module):
         for s in range(self.n_states):
             for k in range(self.n_prob_components):
                 # push new networks to device
-                self.networks[s,k].to(device)
-                p = self.networks[s,k].prior
-                self.networks[s,k].prior = type(p)(p.loc.to(device),
+                self.networks[s, k].to(device)
+                p = self.networks[s, k].prior
+                self.networks[s, k].prior = type(p)(p.loc.to(device),
                                                   p.covariance_matrix.to(device))
                 
-                # push the old networks to device
-                self.old_networks[s,k].to(device)
-                p = self.old_networks[s,k].prior
-                self.old_networks[s,k].prior = type(p)(p.loc.to(device),
+                # Push the old networks to device
+                self.old_networks[s, k].to(device)
+                p = self.old_networks[s, k].prior
+                self.old_networks[s, k].prior = type(p)(p.loc.to(device),
                                                   p.covariance_matrix.to(device))
                 
         self.startprob_ = self.startprob_.to(device)
