@@ -54,13 +54,16 @@ class GenHMMclassifier(nn.Module):
         data = [pad_data(xtrain, max_len_) for xtrain in data]
         Y = np.concatenate([(int(g.iclass) - 1)*np.ones(len(classdata)) for g, classdata in zip(self.hmms, data)])
         Y = torch.ByteTensor(Y)
-        train_data = DataLoader(dataset=TheDataset(sum(data, []),
-                                                   ytrain=Y,
-                                                   lengths=sum(lengths, []),
-                                                   max_len_=max_len_,
-                                                   device='cpu'),
-                                 batch_size=batch_size,
-                                 shuffle=True)
+
+        Train_data = [0 for _ in range(torch.cuda.device_count())]
+        for i in range(len(Train_data)):
+            Train_data[i] = DataLoader(dataset=TheDataset(sum(data, []),
+                                                       ytrain=Y,
+                                                       lengths=sum(lengths, []),
+                                                       max_len_=max_len_,
+                                                       device="cuda:{}".format(i)),
+                                     batch_size=batch_size,
+                                     shuffle=True)
 
         print("Define optimizers ...")
         for i, genhmm in enumerate(self.hmms):
@@ -83,14 +86,15 @@ class GenHMMclassifier(nn.Module):
         log_pclass = self.pclass.log()
         i = 0
         with torch.enable_grad():
-            for b in train_data:
+            for ibatch, b in enumerate(Train_data[0]):
                 i += 1
                 for genhmm in self.hmms:
                     genhmm.optimizer.zero_grad()
 
                 print("batch n:", i)
                 llh = torch.stack([genhmm.get_logprob(genhmm.networks,
-                                                      [b[0].to(genhmm.device), b[1].to(genhmm.device)]).to(results_device)
+                                                      Train_data[genhmm.device.index][ibatch]
+                                                      ).to(results_device)
                                    for genhmm in self.hmms]).squeeze()
                 print("Likelihood n:", i, "on :", llh.device)
 
@@ -282,7 +286,7 @@ class GenHMM(torch.nn.Module):
                 p = self.networks[s, k].prior
                 self.networks[s, k].prior = type(p)(p.loc.to(device),
                                                   p.covariance_matrix.to(device))
-                
+
                 # Push the old networks to device
                 self.old_networks[s, k].to(device)
                 p = self.old_networks[s, k].prior
@@ -293,10 +297,10 @@ class GenHMM(torch.nn.Module):
         self.transmat_ = self.transmat_.to(device)
         self.pi = self.pi.to(device)
         self.logPIk_s = self.logPIk_s.to(device)
-        
+
         self.device = device
         return self
-    
+
     def old_eval(self):
         for s in range(self.n_states):
             for k in range(self.n_prob_components):
@@ -310,7 +314,7 @@ class GenHMM(torch.nn.Module):
                 # set mode as eval model
                 self.networks[s,k].eval()
         return self
-    
+
     def train(self):
         for s in range(self.n_states):
             for k in range(self.n_prob_components):
