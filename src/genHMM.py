@@ -43,29 +43,28 @@ class GenHMMclassifier(nn.Module):
         return torch.stack(batch_llh)
 
     def fine_tune(self, use_gpu=False, Mul_gpu=False, batch_size=64):
-        print("Load classes on GPUs ...")
+        print("Load classes on GPUs ...", file=sys.stderr)
         self.hmms = [genhmm.train().pushto(get_freer_gpu()) for genhmm in self.hmms]
 
-        print("Fetch data from disk ...")
+        print("Fetch data from disk ...", file=sys.stderr)
         data = [data_read_parse(genhmm.train_data_fname, dim_zero_padding=True) for genhmm in self.hmms]
         lengths = [[x.shape[0] for x in xtrain_class] for xtrain_class in data]
         max_len_ = max([max(l) for l in lengths])
-        print("Build dataloader ...")
+
+        print("Build dataloader ...", file=sys.stderr)
         data = [pad_data(xtrain, max_len_) for xtrain in data]
-        Y = np.concatenate([(int(g.iclass) - 1)*np.ones(len(classdata)) for g, classdata in zip(self.hmms, data)])
+        Y = np.concatenate([(int(g.iclass) - 1) * np.ones(len(classdata)) for g, classdata in zip(self.hmms, data)])
         Y = torch.ByteTensor(Y)
 
-        Train_data = [0 for _ in range(torch.cuda.device_count())]
-        for i in range(len(Train_data)):
-            Train_data[i] = DataLoader(dataset=TheDataset(sum(data, []),
-                                                       ytrain=Y,
-                                                       lengths=sum(lengths, []),
-                                                       max_len_=max_len_,
-                                                       device="cuda:{}".format(i)),
-                                     batch_size=batch_size,
-                                     shuffle=True)
+        train_data = DataLoader(dataset=TheDataset(sum(data, []),
+                                                   ytrain=Y,
+                                                   lengths=sum(lengths, []),
+                                                   max_len_=max_len_,
+                                                   device="cpu"),
+                                 batch_size=batch_size,
+                                 shuffle=True)
 
-        print("Define optimizers ...")
+        print("Define optimizers ...", file=sys.stderr)
         for i, genhmm in enumerate(self.hmms):
             self.hmms[i].optimizer = torch.optim.Adam(
                 sum([[p for p in flow.parameters() if p.requires_grad == True] for flow in
@@ -81,23 +80,24 @@ class GenHMMclassifier(nn.Module):
             self.hmms[i].optimizer.load_state_dict(self.hmms[i].optimizer.state_dict())
 
         results_device = get_freer_gpu()
-        print("Results device:", results_device)
+        print("Results device:", results_device, file=sys.stderr)
         self.pclass = self.pclass.reshape(-1, 1).to(results_device)
         log_pclass = self.pclass.log()
         i = 0
+
         with torch.enable_grad():
-            for ibatch, b in enumerate(Train_data[0]):
+            for b in train_data:
                 i += 1
                 for genhmm in self.hmms:
                     genhmm.optimizer.zero_grad()
 
                 print("batch n:", i)
                 llh = torch.stack([genhmm.get_logprob(genhmm.networks,
-                                                      Train_data[genhmm.device.index][ibatch]
+                                                      [b[0].to(genhmm.device), b[1].to(genhmm.device)]
                                                       ).to(results_device)
                                    for genhmm in self.hmms]).squeeze()
-                print("Likelihood n:", i, "on :", llh.device)
 
+                print("Likelihood n:", i, "on :", llh.device)
                 denom = torch.logsumexp(llh + log_pclass, dim=0)
 
                 y = torch.stack([~b[-1], b[-1]])
