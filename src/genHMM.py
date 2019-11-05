@@ -119,7 +119,6 @@ class GenHMMclassifier(nn.Module):
             the_mdl.eval()
 
 
-
 class GenHMM(torch.nn.Module):
     def __init__(self, n_states=None, n_prob_components=None, device='cpu',\
                  dtype=torch.FloatTensor, \
@@ -152,7 +151,6 @@ class GenHMM(torch.nn.Module):
         # set the global_step
         self.global_step = 0
 
-        
     def init_startprob(self, startprob_type="random"):
         """
         Initialize HMM initial coefficients.
@@ -169,11 +167,8 @@ class GenHMM(torch.nn.Module):
 
         elif "uniform" in startprob_type:
             self.startprob_ = torch.ones(self.n_states)
-            
-            
+
         normalize(self.startprob_, axis=0)
-        
-            
         return self
 
     def init_transmat(self, transmat_type="random upper triangular"):
@@ -182,26 +177,27 @@ class GenHMM(torch.nn.Module):
         """
         if "random" in transmat_type:
             self.transmat_ = (torch.randn(self.n_states, self.n_states)).abs()
+
         elif "uniform" in transmat_type:
             init = 1/self.n_states
             self.transmat_ = torch.ones(self.n_states, self.n_states) * init
+
         elif "triangular" in transmat_type:
             # use upper tra matrix
             self.transmat_ = (torch.randn(self.n_states, self.n_states)).abs()
             for i in range(self.n_states):
                 for j in range(self.n_states):
                     if i > j:
-                        self.transmat_[i,j] = 0
+                        self.transmat_[i, j] = 0
 
         elif "ergodic" in transmat_type:
-            self.transmat_ = torch.ones(self.n_states, self.n_states) \
-                             + torch.randn(self.n_states, self.n_states) * 0.01 
+            self.transmat_ = torch.ones(self.n_states, self.n_states) + torch.randn(self.n_states, self.n_states) * 0.01
 
         normalize(self.transmat_, axis=1)
         return self
 
-    def init_gen(self, H, D, nchain, mask_type="cross", p_drop=0.25):
 
+    def init_gen(self, H, D, nchain, mask_type="cross", p_drop=0.25):
         """
         Initialize HMM probabilistic model.
         """
@@ -210,7 +206,7 @@ class GenHMM(torch.nn.Module):
         nets = lambda: nn.Sequential(nn.Linear(d, H), nn.LeakyReLU(), 
                                      nn.Linear(H, H), nn.LeakyReLU(), 
                                      nn.Dropout(p_drop), nn.Linear(H, D))
-        # set mask
+        # Set mask
         if mask_type == "chunk":
             masks = torch.from_numpy(np.array([[0]*d + [1]*(D-d), [1]*d + [0]*(D-d)] * nchain).astype(np.bool))
         elif mask_type == "cross":
@@ -223,21 +219,18 @@ class GenHMM(torch.nn.Module):
         except NameError:
             print("masks are not defined")
             assert False
-        
-        
+
         ### torch MultivariateNormal logprob gets error when input is cuda tensor
         ### thus changing it to implementation
         prior = distributions.MultivariateNormal(torch.zeros(D).to(self.device), torch.eye(D).to(self.device))
         # prior = lambda x: GaussianDiag.logp(torch.zeros(D), torch.zeros(D), x)
         # self.flow = RealNVP(nets, nett, masks, prior)
 
-
         #  Init mixture
         self.pi = self.dtype(np.random.rand(self.n_states, self.n_prob_components))
         normalize(self.pi, axis=1)
 
         self.logPIk_s = self.pi.log()
-
 
         # Init networks
         self.networks = [RealNVP(nets, masks, prior) for _ in range(self.n_prob_components*self.n_states)]
@@ -251,7 +244,7 @@ class GenHMM(torch.nn.Module):
         self.optimizer = torch.optim.Adam(
             sum([[p for p in flow.parameters() if p.requires_grad == True] for flow in self.networks.reshape(-1).tolist()], []), lr=self.lr)
         return self
-    
+
     def _update_old_networks(self):
         """load the parameters in self.networks (the one being optimized), into self.old_networks"""
         for i in range(self.n_states):

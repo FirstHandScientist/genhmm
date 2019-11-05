@@ -58,7 +58,7 @@ class RealNVP(torch.nn.Module):
             
             exp_s = s.exp()
             z_s = (z_s + t) * exp_s
-            z =  torch.cat((z_id, z_s), dim=2)
+            z = torch.cat((z_id, z_s), dim=2)
             
             log_det_J += torch.sum(s, dim=2)
         return z, log_det_J
