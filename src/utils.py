@@ -1,3 +1,5 @@
+
+import subprocess
 import numpy as np
 import os
 import torch
@@ -143,7 +145,7 @@ def save_model(mdl, fname=None):
     return 0
 
 
-    def load_model(fname):
+def load_model(fname):
     """Loads a model on CPU by default."""
     return pkl.load(open(fname, "rb"))
 
@@ -183,14 +185,16 @@ def test_parse():
 
 class TheDataset(Dataset):
     """Wrapper for DataLoader input."""
-    def __init__(self, xtrain,  lengths, ytrain=None, device='cpu'):
+    def __init__(self, xtrain,  lengths, max_len_=None, ytrain=None, device='cpu'):
         self.data = [torch.FloatTensor(x).to(device) for x in xtrain]
         if not (ytrain is None):
             self.y = ytrain
             assert(ytrain.shape[0] == len(self.data))
-
         self.lengths = lengths
-        max_len_ = self.data[0].shape[0]
+        
+        if max_len_ is None:
+            max_len_ = max(d.shape[0] for d in self.data)
+        
         self.mask = [torch.cat((torch.ones(l, dtype=torch.bool), \
                                 torch.zeros(max_len_ - l, dtype=torch.bool))).to(device) \
                      for l in self.lengths]
@@ -251,16 +255,20 @@ def step_learning_rate_decay(init_lr, global_step, minimum,
 
 
 def get_freer_gpu():
-    os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free > tmp')
-    memory_available = [int(x.split()[2]) for x in open('tmp', 'r').readlines()]
-    return np.argmax(memory_available)
+    cmd = 'nvidia-smi -q -d Memory | grep -A4 GPU | grep Free'
+    out = subprocess.check_output(cmd, shell=True).decode("utf-8")
+    memory_available = [int(x.split()[2]) for x in out.split('\n')[:-1]]
+    return torch.device('cuda:{}'.format(np.argmax(memory_available)))
 
+def test_get_freer_gpu():
+    out = get_freer_gpu()
+    print(out)
 
 if __name__ == "__main__":
     # test_acc_str()
     # test_norm_prob()
     # test_pad_data()
-    test_append_class()
-    test_parse()
-
+    # test_append_class()
+    # test_parse()
+    # test_get_freer_gpu()
     pass

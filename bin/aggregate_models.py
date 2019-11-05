@@ -47,13 +47,12 @@ if __name__ == "__main__":
         mdl = GenHMMclassifier(mdlc_files=in_mdlc_files)
         assert(all([int(h.iclass) == int(i)+1 for i, h in enumerate(mdl.hmms)]))
         if options["Train"]["fine_tune"]:
-            abs_path = "/home/antoine/Documents/projects/deep_news/proj/pre_infectious_detection/exp/split1/data/"
             mdl = mdl.fine_tune(use_gpu=options["use_gpu"], Mul_gpu=options["Mul_gpu"])
             mdl.save_members()
             mdl.pushto('cpu')
     else:
         print("(should have been caught earlier) Unknown model type: {}".format(model_type), file=sys.stderr)
         sys.exit(1)
-
+    mdl.pushto('cpu')
     save_model(mdl, out_mdl_file)
     sys.exit(0)
