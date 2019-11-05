@@ -44,10 +44,12 @@ class GenHMMclassifier(nn.Module):
 
     def fine_tune(self, use_gpu=False, Mul_gpu=False, batch_size=64):
         print("Load classes on GPUs ...", file=sys.stderr)
-        self.hmms = [genhmm.train().pushto(get_freer_gpu()) for genhmm in self.hmms]
+        self.hmms = [genhmm.train().pushto(get_freer_gpu() if use_gpu else 'cpu')
+                     for genhmm in self.hmms]
 
         print("Fetch data from disk ...", file=sys.stderr)
-        data = [data_read_parse(genhmm.train_data_fname, dim_zero_padding=True) for genhmm in self.hmms]
+        data = [data_read_parse(genhmm.train_data_fname, dim_zero_padding=True)
+                for genhmm in self.hmms]
         lengths = [[x.shape[0] for x in xtrain_class] for xtrain_class in data]
         max_len_ = max([max(l) for l in lengths])
 
@@ -78,8 +80,11 @@ class GenHMMclassifier(nn.Module):
                 self.hmms[i].optimizer.param_groups[j]['lr'] = ada_lr
 
             self.hmms[i].optimizer.load_state_dict(self.hmms[i].optimizer.state_dict())
+        if use_gpu:
+            results_device = get_freer_gpu()
+        else:
+            results_device = 'cpu'
 
-        results_device = get_freer_gpu()
         print("Results device:", results_device, file=sys.stderr)
         self.pclass = self.pclass.reshape(-1, 1).to(results_device)
         log_pclass = self.pclass.log()
