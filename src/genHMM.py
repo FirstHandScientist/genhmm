@@ -98,8 +98,8 @@ class GenHMMclassifier(nn.Module):
 
                 print("batch n:", i)
                 llh = torch.stack([genhmm.get_logprob(genhmm.networks,
-                                                      [b[0].to(genhmm.device), b[1].to(genhmm.device)]
-                                                      ).to(results_device)
+                                                    b[:-1]  
+                                                    )
                                    for genhmm in self.hmms]).squeeze()
 
                 print("Likelihood n:", i, "on :", llh.device)
