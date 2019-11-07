@@ -54,7 +54,7 @@ if __name__ == "__main__":
         print("(should have been caught earlier) Unknown model type: {}".format(model_type), file=sys.stderr)
         sys.exit(1)
 
-    mdl.pushto('cpu')
+    # mdl.pushto('cpu')
     save_model(mdl, out_mdl_file)
     sys.exit(0)
 
