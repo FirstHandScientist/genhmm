@@ -54,11 +54,22 @@ if __name__ == "__main__":
     mdl.train_data_fname = train_class_inputfile
 
     mdl.device = 'cpu'
+    # generative training once only and do fine tuning for rest checkpoints
+    # if it is not the first checkpoint, do not do generative training
+    # the saved model would be tuned and update in aggregate_model after fine tune
+    if epoch_str != '1':
+        mdl.eval()
+        mdl.pushto('cpu')
+        mdl.out_mdl = out_mdl
+        save_model(mdl, fname=out_mdl)
+        sys.exit(0)
+
+
     mdl = to_device(mdl, use_gpu=options["use_gpu"], Mul_gpu=options["Mul_gpu"])
 
     print("epoch:{}\tclass:{}\tPush model to {}. Done.".format(epoch_str, iclass_str, mdl.device), file=sys.stdout)
 
-
+    
     # zero pad data for batch training
     max_len_ = max([x.shape[0] for x in xtrain])
     xtrain_padded = pad_data(xtrain, max_len_)
