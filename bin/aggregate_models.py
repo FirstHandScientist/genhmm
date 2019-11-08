@@ -28,6 +28,8 @@ if __name__ == "__main__":
 
     # Find the model used, 'gen' or 'gaus'
     model_type_ = parse("{}/models/{}/{}.mdl", out_mdl_file)[1]
+    # Find the checkpoint string 
+    str_iepoch = parse("{}/models/{}/{}.mdl", out_mdl_file)[2]
 
     if "gaus" in model_type_:
         model_type = "gaus"
@@ -46,13 +48,15 @@ if __name__ == "__main__":
     elif model_type == 'gen':
         mdl = GenHMMclassifier(mdlc_files=in_mdlc_files)
         assert(all([int(h.iclass) == int(i) + 1 for i, h in enumerate(mdl.hmms)]))
-        if options["Train"]["fine_tune"]:
+        # Skip the fine tune at first checkpoint
+        if options["Train"]["fine_tune"] and str_iepoch != 'epoch1':
             mdl = mdl.fine_tune(use_gpu=options["use_gpu"],
                                 Mul_gpu=options["Mul_gpu"],
                                 batch_size=options['Train']["tune_batch_size"],
                                 tune_niter=options['Train']["tune_niter"])
-            mdl.save_members()
+            
             mdl.pushto('cpu')
+            mdl.save_members()
     else:
         print("(should have been caught earlier) Unknown model type: {}".format(model_type), file=sys.stderr)
         sys.exit(1)

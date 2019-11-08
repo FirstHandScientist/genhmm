@@ -103,7 +103,7 @@ class GenHMMclassifier(nn.Module):
                     for genhmm in self.hmms:
                         genhmm.optimizer.zero_grad()
                     y = torch.nn.functional.one_hot(b[-1].long(), nclasses).transpose(0,1).bool()
-                    print(log_pclass.repeat(1, y.shape[1])[y])
+                    # print(log_pclass.repeat(1, y.shape[1])[y])
                     if b[0].device != results_device:
                         b[0], b[1] = b[0].to(results_device), b[1].to(results_device)
                     llh = torch.stack([genhmm.get_logprob(genhmm.networks,
@@ -111,11 +111,12 @@ class GenHMMclassifier(nn.Module):
                                                         )
                                        for genhmm in self.hmms]).squeeze()
 
-                    print("Likelihood tune_iteration, n:", tune_n, i, "on :", llh.device, file=sys.stderr)
                     denom = torch.logsumexp(llh + log_pclass, dim=0)
                     num = llh[y] + log_pclass.repeat(1, y.shape[1])[y]
                     loss = - (num - denom).sum()/float(batch_size)
                     loss.backward()
+                    print("Tune_iteration, n:", tune_n, i,
+                          "on :", llh.device, "Loss:", loss.data, file=sys.stderr)
 
                     for genhmm in self.hmms:
                         genhmm.optimizer.step()
