@@ -42,10 +42,18 @@ class GenHMMclassifier(nn.Module):
             batch_llh = [classHMM.pred_score(x) for classHMM in self.hmms]
         return torch.stack(batch_llh)
 
-    def fine_tune(self, use_gpu=False, Mul_gpu=False, batch_size=64):
+    def fine_tune(self, use_gpu=False, Mul_gpu=False, batch_size=64, tune_niter=1):
     
         print("Load classes on GPUs ...", file=sys.stderr)
-        self.hmms = [genhmm.train().pushto(get_freer_gpu() if use_gpu else 'cpu')
+        if use_gpu:
+            results_device = get_freer_gpu()
+        else:
+            results_device = 'cpu'
+        # results_device = 'cpu'
+
+        print("Results device:", results_device, file=sys.stderr)
+
+        self.hmms = [genhmm.train().pushto(results_device)
                      for genhmm in self.hmms]
         
         nclasses = len(self.hmms)
@@ -83,37 +91,34 @@ class GenHMMclassifier(nn.Module):
                 self.hmms[i].optimizer.param_groups[j]['lr'] = ada_lr
 
             self.hmms[i].optimizer.load_state_dict(self.hmms[i].optimizer.state_dict())
-        if use_gpu:
-            results_device = get_freer_gpu()
-        else:
-            results_device = 'cpu'
-        results_device = 'cpu'
-
-        print("Results device:", results_device, file=sys.stderr)
         self.pclass = self.pclass.reshape(-1, 1).to(results_device)
         log_pclass = self.pclass.log()
-        i = 0
+
 
         with torch.enable_grad():
-            for b in train_data:
-                i += 1
-                for genhmm in self.hmms:
-                    genhmm.optimizer.zero_grad()
-                y = torch.nn.functional.one_hot(b[-1].long(), nclasses).transpose(0,1).bool()
-                print(log_pclass.repeat(1, y.shape[1])[y])
-                llh = torch.stack([genhmm.get_logprob(genhmm.networks,
-                                                    [b[0].to(genhmm.device),b[1].to(genhmm.device)]  
-                                                    ).to(results_device)
-                                   for genhmm in self.hmms]).squeeze()
+            for tune_n in range(tune_niter):
+                i = 0                
+                for b in train_data:
+                    i += 1
+                    for genhmm in self.hmms:
+                        genhmm.optimizer.zero_grad()
+                    y = torch.nn.functional.one_hot(b[-1].long(), nclasses).transpose(0,1).bool()
+                    print(log_pclass.repeat(1, y.shape[1])[y])
+                    if b[0].device != results_device:
+                        b[0], b[1] = b[0].to(results_device), b[1].to(results_device)
+                    llh = torch.stack([genhmm.get_logprob(genhmm.networks,
+                                                        [b[0],b[1]]  
+                                                        )
+                                       for genhmm in self.hmms]).squeeze()
 
-                print("Likelihood n:", i, "on :", llh.device, file=sys.stderr)
-                denom = torch.logsumexp(llh + log_pclass, dim=0)
-                num = llh[y] + log_pclass.repeat(1, y.shape[1])[y]
-                loss = - (num - denom).sum()/float(batch_size)
-                loss.backward()
+                    print("Likelihood tune_iteration, n:", tune_n, i, "on :", llh.device, file=sys.stderr)
+                    denom = torch.logsumexp(llh + log_pclass, dim=0)
+                    num = llh[y] + log_pclass.repeat(1, y.shape[1])[y]
+                    loss = - (num - denom).sum()/float(batch_size)
+                    loss.backward()
 
-                for genhmm in self.hmms:
-                    genhmm.optimizer.step()
+                    for genhmm in self.hmms:
+                        genhmm.optimizer.step()
 
         for genhmm in self.hmms:
             genhmm._update_old_networks()
