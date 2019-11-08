@@ -47,7 +47,10 @@ if __name__ == "__main__":
         mdl = GenHMMclassifier(mdlc_files=in_mdlc_files)
         assert(all([int(h.iclass) == int(i) + 1 for i, h in enumerate(mdl.hmms)]))
         if options["Train"]["fine_tune"]:
-            mdl = mdl.fine_tune(use_gpu=options["use_gpu"], Mul_gpu=options["Mul_gpu"])
+            mdl = mdl.fine_tune(use_gpu=options["use_gpu"],
+                                Mul_gpu=options["Mul_gpu"],
+                                batch_size=options['Train']["tune_batch_size"],
+                                tune_niter=options['Train']["tune_niter"])
             mdl.save_members()
             mdl.pushto('cpu')
     else:
