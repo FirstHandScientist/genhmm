@@ -37,4 +37,18 @@ exp/
 *.log
 *.out
 *tex.gz
+*.bbl
+*.blg
+manuscript/auto/
 
+# code
+bin/
+code/
+src/
+models/
+results/
+pyenv/
+datac61f13/
+
+# zip
+*.zip
