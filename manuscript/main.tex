@@ -608,11 +608,12 @@ Transition matrix $\bm{A}$ is initialized as upper triangular matrix for GenHMM.
 \begin{table}
   \caption{Test accuracy table for $39$ dimensional features and folded $39$ Phonemes }\label{tab:acc-classification39f_a}
   \centering  
-  \begin{tabular}{l|c|c|c}
+  \begin{tabular}{l|c|c|c|c}
     \toprule
-    {Model} &  K=1 &  K=3 &  K=5  \\  \midrule
-    GMM-HMM & $62.3\%$ &  $68.0\%$ &  $68.7\%$  \\ \midrule
-    GenHMM & $76.7\%$ & $77.7\%$ &  $77.7\%$ \\ 
+    {Model}& Criteria &  K=1 &  K=3 &  K=5  \\  \midrule
+    \multirow{2}{*}{GMM-HMM} & {Acc.} & $62.3\%$ &  $68.0\%$ &  $68.7\%$  \\
+           & p &{} &{} &{}  \\ \midrule
+    GenHMM & &$76.7\%$ & $77.7\%$ &  $77.7\%$ \\ 
     \bottomrule                                                                  
   \end{tabular}
 \end{table}
