@@ -101,7 +101,7 @@ The probabilistic model is used to represent the relationship between a state of
 
 Given the success of GMM-HMM, it is not efficient for modeling data in nonlinear manifold. Research attempts at training HMM with neural networks have been made to boost the modeling capacity of HMM. A successful work of this track has brought deep neural network (DNN) that is defined by restrictive Boltzmann machines (RBMs) \cite{Hinton2012} into HMM based models \cite{hinton2012deepSpeech,li2013hybrid,Miao2013ImprovingLC}. RBM based HMM is trained with a hierarchical scheme consisting of multiple-step unsupervised learning, formatting of a classification network and then supervised learning. The hierarchical procedure comes from the empirical expertise in this domain. To be more specific, the hierarchical learning scheme of RBM/DNN based HMM consists of: i) RBMs are trained one after the other in unsupervised fashion, and are stacked together as one deep neural network model, ii) then a final softmax layer is added to the stack of RBMs to represent the probability of a HMM state given a data input, iii) a discriminative training is performed for the final tuning of the model at the final stage.
 
-Another track of related work is hybrid method of temporal neural network models and HMM. In \cite{liu2019lstmHmmHyb,buys2018bridging,vik2016rnnHmm}, a long short-term memory (LSTM) model/recurrent neural network (RNN) is combined with HMM as hybrid. A hierarchical training is carried out by: i) training a HMM first, ii) then doing modified training of LSTM using trained HMM. This hierarchical training procedure is motivated by the intuition of using LSTM or RNN to fill in the gap where HMM can not learn. \textcolor{red}{explain more here...}
+Another track of related work is hybrid method of temporal neural network models and HMM. In \cite{liu2019lstmHmmHyb,buys2018bridging,vik2016rnnHmm}, a long short-term memory (LSTM) model/recurrent neural network (RNN) is combined with HMM as hybrid. A hierarchical training is carried out by: i) training a HMM first, ii) then doing modified training of LSTM using trained HMM. This hierarchical training procedure is motivated by the intuition of using LSTM or RNN to fill in the gap where HMM can not learn. 
 
 % work of epfl fiting GMM with neural network...
 
@@ -122,7 +122,7 @@ Our contributions in the paper are as follows:
 \item Proposing a neural network based HMM for sequential data modeling, i.e. GenHMM. GenHMM has the tractability of exact likelihood.
 \item Designing practical algorithm for training GenHMM under EM framework. Stochastic gradient  search in batch fashion is embedded in this algorithm.
 \item Giving convergence analysis for GenHMM under the proposed learning algorithm.
-\item Verifying the efficiency of the proposed model on practical sequential data.
+\item Verifying the proposed model on practical sequential data.
 \end{itemize}
 
 
@@ -581,7 +581,7 @@ As described by the pseudocode in Algorithm~\ref{algo:genhmm}, the learning of G
 
 
 \section{Experiments}
-To show the validity of our model, we implement our model in PyTorch and test it with sequential data. The code is available at github repository\footnote{Due to double-blind review, the code is submitted in supplementary file.}. We first discuss the experimental setups and then show the experimental results.
+To show the validity of our model, we implement our model in PyTorch and test it with sequential data. We first discuss the experimental setups and then show the experimental results.
 
 \subsection{Experimental Setups}
 The dataset used for sequential data modeling and classification is TIMIT where the speech signal is sampled at $16$kHz.
