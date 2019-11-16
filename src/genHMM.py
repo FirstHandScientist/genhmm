@@ -120,7 +120,10 @@ class GenHMMclassifier(nn.Module):
 
                     for genhmm in self.hmms:
                         genhmm.optimizer.step()
-
+        # update the global steps stored in each submodels
+        for genhmm in self.hmms:
+            genhmm.global_step += tune_niter
+        # the old network is actually not used in fine tuning 
         for genhmm in self.hmms:
             genhmm._update_old_networks()
             genhmm.old_eval()
