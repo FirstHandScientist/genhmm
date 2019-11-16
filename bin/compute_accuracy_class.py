@@ -72,7 +72,10 @@ if __name__ == "__main__":
    
     #f = lambda x: divide(parse_(accuracy_fun(x, mdl=mdl)))
     
-    results = list(map(f, data_files))
+    results_ = list(map(f, data_files))
+    results = [r[0] for r in results_]
+    userdata = [r[1] for r in results_]
 
     print("epoch: {} class: {} accc train: {} test: {}".format(epoch, iclass, results[0], results[1]), file=sys.stdout)
+    print("epoch: {} class: {} llh train: {} test: {}".format(epoch, iclass, userdata[0], userdata[1]), file=sys.stdout)
     sys.exit(0)

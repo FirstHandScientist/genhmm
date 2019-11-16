@@ -158,7 +158,7 @@ def accuracy_fun(data_file, mdl=None):
     class_hat = np.argmax(out, axis=0) + 1
     istrue = class_hat == int(true_class)
     print(data_file, "Done ...", "{}/{}".format(str(istrue.sum()), str(istrue.shape[0])), file=sys.stderr)
-    return "{}/{}".format(str(istrue.sum()), str(istrue.shape[0]))
+    return "{}/{}".format(str(istrue.sum()), str(istrue.shape[0])), format_out_list(out_list)
 
 
 def accuracy_fun_torch(data_file, mdl=None, batch_size_=128):
@@ -185,12 +185,14 @@ def accuracy_fun_torch(data_file, mdl=None, batch_size_=128):
     class_hat = torch.argmax(out, dim=0) + 1
     print(data_file, "Done ...", "{}".format(acc_str(class_hat, true_class)), file=sys.stderr)
 
-    return acc_str(class_hat, true_class)
+    return acc_str(class_hat, true_class), format_out_list(out.cpu().numpy().T.tolist())
 
 def acc_str(class_hat, class_true):
     istrue = class_hat == int(class_true)
     return "{}/{}".format(str(istrue.sum().cpu().numpy()), str(istrue.shape[0]))
 
+def format_out_list(out_list):
+    return ";".join([",".join(list(map(str, o))) for o in out_list])
 
 def test_acc_str():
     class_hat = torch.FloatTensor([1, 2])

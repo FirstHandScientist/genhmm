@@ -7,7 +7,7 @@ from gm_hmm.src.ref_hmm import GaussianHMMclassifier
 import numpy as np
 from parse import parse
 from gm_hmm.src.utils import divide, acc_str, append_class, parse_, accuracy_fun
-
+from gm_hmm.src.eval_utils import write_eval_line, to_onehot
 import torch
 from torch.utils.data import DataLoader
 
@@ -53,17 +53,37 @@ if __name__ == "__main__":
 
     # rebuild information
     mdl_file = os.path.join(models_dir,"epoch{}.mdl".format(epoch))
+    out_results = os.path.join(models_dir,"epoch{}.report".format(epoch))
     data_files = np.array([[append_class(training_data_file, iclass+1), append_class(testing_data_file, iclass+1)]
                    for iclass in range(nclasses)])
 
     # Read results
+    def parse_out_list(out_list_str):
+        return [list(map(np.float64, x.split(","))) for x in out_list_str.split(";")]
+    
     def file2str(fname):
-        with open(fname,"r") as f:
-            line = f.read().strip().split("\n")[0]
-        _, train_res, test_res = parse("{}accc train: {} test: {}", line)
-        return train_res, test_res
+        with open(fname, "r") as f:
+            lines = f.read().strip().split("\n")
+        _, train_res, test_res = parse("{}accc train: {} test: {}", lines[0])
+        _, raw_train, raw_test = parse("{}llh train: {} test:{}", lines[1])
+        return train_res, test_res, parse_out_list(raw_train), parse_out_list(raw_test)
 
-    results = np.array([list(file2str(x)) for x in accc_files])
+    out = [list(file2str(x)) for x in accc_files]
+    userdata = [o[2:] for o in out]
+
+    mdl_userdata = {"xtrain_hat": np.concatenate([np.array(userdata[i][0]) for i in range(nclasses)]),
+             "ttrain": np.concatenate([i*np.ones(len(userdata[i][0])) for i in range(nclasses)]),
+             "xtest_hat": np.concatenate([np.array(userdata[i][1]) for i in range(nclasses)]),
+             "ttest": np.concatenate([i * np.ones(len(userdata[i][1])) for i in range(nclasses)]),
+             }
+    mdl_userdata["ttest"] = to_onehot(mdl_userdata["ttest"])
+    mdl_userdata["ttrain"] = to_onehot(mdl_userdata["ttrain"])
+
+    write_eval_line(mdl_userdata, "dumy_dir", out_results)
+
+    results = np.array([o[:2] for o in out])
+
+
 
     print_results(mdl_file, data_files, results)
     sys.exit(0)

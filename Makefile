@@ -33,7 +33,7 @@ ifndef exp_name
 	exp_name=default
 endif
 
-ROBUST=robust
+ROBUST=report
 EXP=exp/$(model)
 EXP_DIR=$(EXP)/$(nfeats)feats/$(exp_name)
 
