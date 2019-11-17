@@ -3,8 +3,8 @@
 \usepackage{graphicx}
 \usepackage{latexsym}
 
-%\ecaisubmission   % inserts page numbers. Use only for submission of paper.
-                  % Do NOT use for camera-ready version of paper.
+% \ecaisubmission   % inserts page numbers. Use only for submission of paper.
+% Do NOT use for camera-ready version of paper.
 
 %%%%%%%%%%%%%%%%%%%%%%%% 
 
@@ -47,7 +47,7 @@
   \institute{
     $^{\dagger}$KTH Royal Institute of Technology, Stockholm, Sweden \newline
     $^{\ast}$Karolinska Institute, Stockholm, Sweden \newline
-  E-mail: \{doli, honore, sach, lkra\}@kth.se}}
+    E-mail: \{doli, honore, sach, lkra\}@kth.se}}
 
 
 % \title{Guidelines for Preparing a Paper for the \\
@@ -75,21 +75,21 @@
 %   E-mail: \{doli, mtvu, sach, lkra\}@kth.se}
 
 \begin{abstract}
-Hidden Markov model (HMM) has been successfully used for sequential
-data modeling problems.
-In this work, we propose to power the modeling capacity of HMM by
-bringing in neural network based generative models.
-The proposed model is termed as GenHMM.
-In the proposed GenHMM, each HMM hidden state is associated with a
-neural network based generative model that has
-tractability of exact likelihood and provides efficient likelihood
-computation.
-A generative model in GenHMM consists of a mixture of generators
-that are realized by flow models.
-A learning algorithm for GenHMM is proposed in
-expectation-maximization framework.
-The convergence of the learning GenHMM is analyzed.
-We demonstrate the efficiency of GenHMM by classification tasks on practical sequential data.
+  Hidden Markov model (HMM) has been successfully used for sequential
+  data modeling problems.
+  In this work, we propose to power the modeling capacity of HMM by
+  bringing in neural network based generative models.
+  The proposed model is termed as GenHMM.
+  In the proposed GenHMM, each HMM hidden state is associated with a
+  neural network based generative model that has
+  tractability of exact likelihood and provides efficient likelihood
+  computation.
+  A generative model in GenHMM consists of a mixture of generators
+  that are realized by flow models.
+  A learning algorithm for GenHMM is proposed in
+  expectation-maximization framework.
+  The convergence of the learning GenHMM is analyzed.
+  We demonstrate the efficiency of GenHMM by classification tasks on practical sequential data.
 \end{abstract}
 
 \section{Introduction}
@@ -110,9 +110,9 @@ The above works help improve modeling capacity of HMM based models by bringing i
 In this work, we propose a generative model based HMM, termed as GenHMM. Specifically, a generative model in our GenHMM is generator-mixed, where a generator is realized by a neural network to help the model gain high modeling capacity.
 Our proposed model, GenHMM:
 \begin{itemize}
-  \item has high modeling capacity of sequential data, due to the neural network based generators;
+\item has high modeling capacity of sequential data, due to the neural network based generators;
 \item is easy to train. Training of GenHMM employs expectation maximization (EM) framework. Therefore, training a GenHMM is as easy as training a GMM-HMM model, while configuration of GenHMM is flexible;
-% \item has high modeling capability of sequence data, though its training and using are handy
+  % \item has high modeling capability of sequence data, though its training and using are handy
 \item is able to compute loglikelihood exactly and efficiently.
 \end{itemize}
 Instead of using softmax for probability representation, our GenHMM has tractability of exact loglikelihood of given sequential data, which is based on the change of variable formula. To make the loglikelihood computation efficient, neural network based generators of GenHMM are realized as flow models. 
@@ -320,26 +320,26 @@ For a flow model, let us assume that
 the feature $\bm{h}_l$ at the $l$'th layer has two subparts as
 $\bm{h}_l = [\bm{h}_{l,a}^{\intercal} \, , \, \bm{h}_{l,b}^{\intercal}]^{\intercal}$. The efficient invertible mapping of flow model comes from following forward and inverse relations between $(l-1)$'th and $l$'th layers
 \begin{align}\label{eq-gl}
-    \bm{h}_{l} &=
-    \begin{bmatrix}
-      \bm{h}_{l,a}\\
-      \bm{h}_{l,b}
-    \end{bmatrix}
-    =
-    \begin{bmatrix}
-      \bm{h}_{l-1,a}\\
-      \left(  \bm{h}_{l-1,b} - \bm{m}_b(\bm{h}_{l-1,a}) \right)\oslash \bm{m}_a(\bm{h}_{l-1,a}) 
-    \end{bmatrix}, \nonumber\\
-        \bm{h}_{l-1} \hspace{-0.1cm}&=\hspace{-0.1cm}
-    \begin{bmatrix}
-      \bm{h}_{l-1,a}\\
-      \bm{h}_{l-1,b}
-    \end{bmatrix}
-    \hspace{-0.1cm}=\hspace{-0.1cm}
-    \begin{bmatrix}
-      \bm{h}_{l,a}\\
-      \bm{m}_a(\bm{h}_{l,a})\odot \bm{h}_{l,b} + \bm{m}_b(\bm{h}_{l,a})
-    \end{bmatrix},
+  \bm{h}_{l} &=
+               \begin{bmatrix}
+                 \bm{h}_{l,a}\\
+                 \bm{h}_{l,b}
+               \end{bmatrix}
+  =
+  \begin{bmatrix}
+    \bm{h}_{l-1,a}\\
+    \left(  \bm{h}_{l-1,b} - \bm{m}_b(\bm{h}_{l-1,a}) \right)\oslash \bm{m}_a(\bm{h}_{l-1,a}) 
+  \end{bmatrix}, \nonumber\\
+  \bm{h}_{l-1} \hspace{-0.1cm}&=\hspace{-0.1cm}
+                                \begin{bmatrix}
+                                  \bm{h}_{l-1,a}\\
+                                  \bm{h}_{l-1,b}
+                                \end{bmatrix}
+  \hspace{-0.1cm}=\hspace{-0.1cm}
+  \begin{bmatrix}
+    \bm{h}_{l,a}\\
+    \bm{m}_a(\bm{h}_{l,a})\odot \bm{h}_{l,b} + \bm{m}_b(\bm{h}_{l,a})
+  \end{bmatrix},
 \end{align}
 where $\odot$ denotes element-wise product, $\oslash$ denotes
 element-wise division, and $\bm{m}_a(\cdot), \bm{m}_b(\cdot)$ can be
@@ -364,19 +364,19 @@ where $\bm{I}_a$ is identity matrix and $\mathrm{diag}(\cdot)$ returns a square 
 % \textcolor{red}{do I still need this?}
 % Then the pdf is
 % \begin{align}
-%   p(\bm{x}) & =  p(\bm{z}) \big| \mathrm{det}(\bm{J}) |_{\bm{z}={\bm{f}}({\bm{x}})}\big| \nonumber\\
-%             &  = p(\bm{z}) \prod_{l=1}^L \abs{\det\left( \mathrm{diag}(\bm{m}_a(\bm{h}_{l,a}))]  \right)}.
-                %   \end{align}
+    %     p(\bm{x}) & =  p(\bm{z}) \big| \mathrm{det}(\bm{J}) |_{\bm{z}={\bm{f}}({\bm{x}})}\big| \nonumber\\
+    %                     &  = p(\bm{z}) \prod_{l=1}^L \abs{\det\left( \mathrm{diag}(\bm{m}_a(\bm{h}_{l,a}))]  \right)}.
+                            %   \end{align}
 
 \eqref{eq-gl} describes a \textit{coupling} layer in a flow model. A flow model is basically a stack of multiple coupling layers. But the issue of direct concatenation of multiple such coupling mappings is partial identity mapping of the whole model. This issue can be addressed by alternating hidden signal order after each coupling layer.
 
-% Since the coupling has a partial identity mapping, direct concatenation of multiple such coupling mappings would result in a partial identity mapping of the whole neural network $\tilde{\bm{g}}$. Alternating the positions of identity mapping \cite{2016arXiv160508803D} or using $1\times1$ convolution operations \cite{kingma2018glow} before each coupling mapping is used to treat the issue.
-% \textcolor{blue}{Some reading problem in this sentence: Since the coupling has a partial identity mapping, alternating the positions of identity mapping \cite{2016arXiv160508803D} or using $1\times1$ convolution operations \cite{2018arXiv180703039K} when
-% concatenating multiple layers together were proposed to avoid the situation that a part of the output is equal to a part of the input.} %In addition, applying affine mapping does not affect its advantage of trivial inverse and determinate computation.
-% Furthermore, \cite{2016arXiv160508803D}\cite{kingma2018glow} split some hidden
-% layer signal $\bm{h}$ and model a part of it directly as standard Gaussian to reduce computation and memory burden.
-% % \textcolor{blue}{Therefore the dimension
-% of latent signal $\bm{z}$ to model can be smaller than $N$.}
+                            %                             Since the coupling has a partial identity mapping, direct concatenation of multiple such coupling mappings would result in a partial identity mapping of the whole neural network $\tilde{\bm{g}}$. Alternating the positions of identity mapping \cite{2016arXiv160508803D} or using $1\times1$ convolution operations \cite{kingma2018glow} before each coupling mapping is used to treat the issue.
+                            %                             \textcolor{blue}{Some reading problem in this sentence: Since the coupling has a partial identity mapping, alternating the positions of identity mapping \cite{2016arXiv160508803D} or using $1\times1$ convolution operations \cite{2018arXiv180703039K} when
+                            %                             concatenating multiple layers together were proposed to avoid the situation that a part of the output is equal to a part of the input.} %In addition, applying affine mapping does not affect its advantage of trivial inverse and determinate computation.
+                            %                             Furthermore, \cite{2016arXiv160508803D}\cite{kingma2018glow} split some hidden
+                            %                             layer signal $\bm{h}$ and model a part of it directly as standard Gaussian to reduce computation and memory burden.
+                            % %                             \textcolor{blue}{Therefore the dimension
+                            %                             of latent signal $\bm{z}$ to model can be smaller than $N$.}
 
 \subsection{Learning of GenHMM}\label{subsec:optmGenHMM}
 In this subsection, we address the problem of learning GenHMM.
@@ -537,11 +537,11 @@ In pursuit of representing a dataset by GenHMM,  we are interested if the learni
   
   % Therefore
   % \begin{align*}
-  %   KL(\hat{p}(\ubm{x})\|p(\ubm{x};\bm{H}^{\mathrm{new}})) = &\EE_{\hat{p}(\ubm{x})}\left[ \log\,\frac{\hat{p}(\ubm{x})}{p(\ubm{x};\bm{H}^{\mathrm{new}})} \right] \nonumber \\
-  %   \leq &\EE_{\hat{p}(\ubm{x})}\left[ \log\,\frac{\hat{p}(\ubm{x})}{p(\ubm{x};\bm{H}^{\mathrm{old}})} \right] \\
-  %   = & KL(\hat{p}(\ubm{x})\|p(\ubm{x};\bm{H}^{\mathrm{old}})).
-  % \end{align*}
-  % Since KL divergence is non-negative and thus lower bounded, GenHMM will converge.
+      %       KL(\hat{p}(\ubm{x})\|p(\ubm{x};\bm{H}^{\mathrm{new}})) = &\EE_{\hat{p}(\ubm{x})}\left[ \log\,\frac{\hat{p}(\ubm{x})}{p(\ubm{x};\bm{H}^{\mathrm{new}})} \right] \nonumber \\
+      %       \leq &\EE_{\hat{p}(\ubm{x})}\left[ \log\,\frac{\hat{p}(\ubm{x})}{p(\ubm{x};\bm{H}^{\mathrm{old}})} \right] \\
+      %       = & KL(\hat{p}(\ubm{x})\|p(\ubm{x};\bm{H}^{\mathrm{old}})).
+                  %     \end{align*}
+                  %                   Since KL divergence is non-negative and thus lower bounded, GenHMM will converge.
 \end{proof}
 
 \subsection{Algorithm of GenHMM}
@@ -591,7 +591,7 @@ We performed experiments in two cases: i) full $61$-phoneme classification case;
 For extraction of feature vectors, we use $25$ms frame length and $10$ms frame shift to convert sound track into standard Mel-frequency cepstral coefficients (MFCCs) features. Experiments using the deltas and delta-deltas of the features are also carried out.
 
 
-Our experiments are performed for: i) standard classification tasks (Table~\ref{tab:acc-classification39f_a}, \ref{tab:acc-classification39f_b}, \ref{tab:acc-classification13f_a}, \ref{tab:acc-classification13f_b}), ii) classification under noise perturbation (table~\ref{tab:acc-classification39f_noise_snr}, \ref{tab:acc-classification39f_noise_type}).
+Our experiments are performed for: i) standard classification tasks (Table~\ref{tab:acc-classification39f_a}, \ref{tab:acc-classification39f_b}, \ref{tab:acc-classification13f_a}, \ref{tab:acc-classification13f_b}), ii) classification under noise perturbation (table~\ref{tab:acc-classification39f_noise_snr}, \ref{tab:acc-classification39f_noise_type}). The criterion used to report the results includes accuracy, precision and F1 score.
 In all experiments, generators $\left\{\bm{g}_{s,\kappa}|s\in \Ss, \kappa=1, 2, \cdots, K \right\}$ of GenHMM are implemented as flow models. Specifically, our generator structure follows that of a RealNVP described in \cite{2016arXiv160508803D}.
 As discussed, the coupling layer shown in \eqref{eq-gl} maps a part of its input signal identically.
 The implementation is such that layer $l+1$ would alternate the input signal order of layer $l$ such that no signal remains the same after two consecutive coupling layers.
@@ -608,11 +608,18 @@ Transition matrix $\bm{A}$ is initialized as upper triangular matrix for GenHMM.
 \begin{table}
   \caption{Test accuracy table for $39$ dimensional features and folded $39$ phonemes.}\label{tab:acc-classification39f_a}
   \centering  
-  \begin{tabular}{l|c|c|c}
+  \begin{tabular}{l|l|c|c|c}
     \toprule
-    {Model} &  K=1 &  K=3 &  K=5  \\  \midrule
-    GMM-HMM & $62.3\%$ &  $68.0\%$ &  $68.7\%$  \\ \midrule
-    GenHMM & $76.7\%$ & $77.7\%$ &  $77.7\%$ \\ 
+    {Model} & Criterion &  K=1 &  K=3 &  K=5  \\  \midrule
+    \multirow{3}{*}{GMM-HMM}
+            & Accuracy    & $62.3\%$ &  $68.0\%$ &  $68.7\%$  \\
+            & {Precision} & $67.9\%$ &  $72.6\%$ &  $73.0\%$  \\
+            & {F1}        & $63.7\%$ &  $69.1\%$ &  $69.7\%$ \\
+    \midrule
+    \multirow{3}{*}{GenHMM}
+            & Accuracy    & $76.7\%$   & $77.7\%$ &  $77.7\%$ \\ 
+            & {Precision} & $76.9\%$   & $78.1\%$ &  $78.0\%$ \\
+            & {F1}        & $76.1\%$   & $77.1\%$ &  $77.0\%$\\
     \bottomrule                                                                  
   \end{tabular}
 \end{table}
@@ -620,40 +627,62 @@ Transition matrix $\bm{A}$ is initialized as upper triangular matrix for GenHMM.
 \begin{table}
   \caption{Test accuracy table for $39$ dimensional features and $61$ phonemes.}\label{tab:acc-classification39f_b}
   \centering  
-  \begin{tabular}{l|c|c|c} \toprule
-    {Model} &  K=1 &  K=3 &  K=5
+  \begin{tabular}{l|l|c|c|c} \toprule
+    {Model} & Criterion & K=1 &  K=3 &  K=5
     \\ \midrule
-    GMM-HMM & $53.6\%$ &  $59.6\%$ & $61.9\%$  \\ \midrule
-    GenHMM & $69.5\%$ & $70.6\%$ & $70.7\%$   \\ 
+    \multirow{4}{*}{GMM-HMM}
+            & Accuracy    & $53.6\%$ &  $59.6\%$ & $61.9\%$  \\
+            & {Precision} & $59.1\%$ &  $63.9\%$ & $65.7\%$ \\
+            & {F1}        & $54.7\%$ &  $60.5\%$ & $62.7\%$\\
+    \midrule
+    \multirow{3}{*}{GenHMM}
+            & Accuracy    & $69.5\%$ & $70.6\%$ & $70.7\%$   \\
+            & {Precision} & $69.2\%$ & $70.5\%$ & $71.0\%$ \\
+            & {F1}        & $68.6\%$ & $69.6\%$ & $69.6\%$\\
     \bottomrule
   \end{tabular}
   \vspace{0.2cm}
 \end{table}
 We firstly show the phoneme classification using 39 dimensional MFCC features (MFCC coefficients, deltas, and delta-deltas), to validate one possible usage of our proposed model. Since generative training is carried out in our experiments, GMM-HMM is trained and tested as a reference model in our experiments. Training and testing of GMM-HMM is in the same condition as GenHMMs are trained and tested. Dataset usage for GenMM and GMM-HMM is the same, and number of states for GMM-HMM is the same as that for GenHMM in modeling each phoneme. Apart from setting the reference model, we also run the experiment comparisons with different total number of mixture components.
 
-Table \ref{tab:acc-classification39f_a} and \ref{tab:acc-classification39f_b} shows the results for this experiments, in which we test both the folded $39$-phoneme classification case (the conventional way) in table \ref{tab:acc-classification39f_a} and the $61$-phoneme classification case in table \ref{tab:acc-classification39f_b}. As shown in both $61$-phoneme and $39$-phoneme cases, GenHMM gets significant higher accuracy than GMM-HMM for the same number of mixture components. As our expectation, GenHMM should have better modeling capacity of sequential data since we bring in the neural network based generators into GenHMM, which should be able to represent complex relationship between states of HMM and sequential data. This is some increase of accuracy as total number of mixture components in GenHMM is increased from $K=1$ to $K=5$. The sequential dependency of data is modeled by HMM itself, while each state of HMM can have better representation using a mixture probabilistic model if data represented by the state is multi-mode. Comparing the results in $39$-phoneme and $61$-phoneme cases, GenHMM gets higher accuracy for $39$-phoneme classification than it does for $61$-phoneme classification. The total training dataset size remains the same as $61$ phonemes are folded into $39$ phonemes. There are less training data available per phonemes and more classes to be recognized in the $61$-phoneme case, which makes the task more challenging.
+Table \ref{tab:acc-classification39f_a} and \ref{tab:acc-classification39f_b} shows the results for this experiments, in which we test both the folded $39$-phoneme classification case (the conventional way) in table \ref{tab:acc-classification39f_a} and the $61$-phoneme classification case in table \ref{tab:acc-classification39f_b}. As shown in both $61$-phoneme and $39$-phoneme cases, GenHMM gets significant higher accuracy than GMM-HMM for the same number of mixture components. The comparisons with regarding to precision and F1 scores show similar trends and also demonstrate significant improvement of GenHMM's performance. As our expectation, GenHMM should have better modeling capacity of sequential data since we bring in the neural network based generators into GenHMM, which should be able to represent complex relationship between states of HMM and sequential data. This is some increase of accuracy as total number of mixture components in GenHMM is increased from $K=1$ to $K=5$. The sequential dependency of data is modeled by HMM itself, while each state of HMM can have better representation using a mixture probabilistic model if data represented by the state is multi-mode. Comparing the results in $39$-phoneme and $61$-phoneme cases, GenHMM gets higher accuracy for $39$-phoneme classification than it does for $61$-phoneme classification. The total training dataset size remains the same as $61$ phonemes are folded into $39$ phonemes. There are less training data available per phonemes and more classes to be recognized in the $61$-phoneme case, which makes the task more challenging.
 
 \begin{table}
   \caption{Test accuracy table for $13$ dimensional features and folded $39$ phonemes.}\label{tab:acc-classification13f_a}
   \centering  
-  \begin{tabular}{l|c|c|c}
+  \begin{tabular}{l|l|c|c|c}
     \toprule
-    {Model} &  K=1 &  K=3 &  K=5  \\  \midrule
-    GMM-HMM & $48.5\%$ &  $51.2\%$ &  $52.4\%$  \\ \midrule
-    GenHMM & $61.1\%$ & $62.1\%$ & $62.1\%$   \\ 
+    {Model} & Criterion & K=1 &  K=3 &  K=5  \\  \midrule
+    \multirow{3}{*}{GMM-HMM}
+            & Accuracy & $48.5\%$ &  $51.2\%$ &  $52.4\%$  \\
+            & Precision& $56.2\%$ &  $58.3\%$ &  $59.5\%$  \\
+            & F1       & $50.3\%$ &  $53.0\%$ &  $54.2\%$  \\
+    \midrule
+    \multirow{3}{*}{GenHMM}
+            & Accuracy & $61.1\%$ &  $62.1\%$ & $62.1\%$   \\ 
+            & Precision& $61.1\%$ &  $61.9\%$ &  $62.1\%$  \\
+            & F1       & $59.7\%$ &  $60.7\%$ &  $60.2\%$  \\
+
     \bottomrule                                                                  
   \end{tabular}
 \end{table}
+
 \begin{table}
   \caption{Test accuracy table for $13$ dimensional features and $61$
     phonemes.}\label{tab:acc-classification13f_b}
   \centering
-  \begin{tabular}{l|c|c|c}
+  \begin{tabular}{l|l|c|c|c}
     \toprule
-    {Model} &  K=1 &  K=3 &  K=5
-    \\ \midrule
-    GMM-HMM & $37.1\%$ &  $40.6\%$ & $42.2\%$  \\ \midrule
-    GenHMM & $50.3\%$ & $51.0\%$ & $52.3\%$   \\ 
+    {Model} & Criterion &  K=1 &  K=3 &  K=5 \\ \midrule
+    \multirow{3}{*}{GMM-HMM}
+            & Accuracy & $37.1\%$ &  $40.6\%$ & $42.2\%$  \\
+            &Precision & $44.6\%$ &  $47.4\%$ & $48.8\%$  \\
+            & F1       & $38.8\%$ &  $42.1\%$ & $43.7\%$ \\
+    \midrule
+    \multirow{3}{*}{GenHMM}
+            & Accuracy & $50.3\%$ & $50.8\%$ & $52.3\%$   \\
+            & Precision& $49.3\%$ & $50.9\%$ & $52.1\%$ \\
+            &F1        & $47.8\%$ & $48.3\%$ & $49.3\%$ \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -665,11 +694,23 @@ Similar experiments are carried out by using only the MFCC coefficients as featu
   \label{tab:acc-classification39f_noise_snr}
   \vspace{-0.1cm}
   \centering
-  \begin{tabular}{l|c|c|c|c}
+  \begin{tabular}{l|l|c|c|c|c}
     \toprule
-    {SNR} &  15dB &  20dB &  25dB & 30 dB  \\  \midrule
-    GMM-HMM & $36.6\%$ &  $44.2\%$ &  $50.8\%$ & $57.1\%$  \\ \midrule
-    GenHMM & $52.4\%$ & $62.0\%$ &  $69.7\%$ & $74.3\%$ \\ 
+    \multirow{2}{*}{Model} & \multirow{2}{*}{Criterion} &
+                              \multicolumn{4}{c}{White Noise SNR} \\
+    \cline{3-6}
+                          && 15dB &  20dB &  25dB & 30 dB  \\
+    \midrule
+    \multirow{3}{*}{GMM-HMM}
+            & Accuracy & $36.6\%$ &  $44.2\%$ &  $50.8\%$ & $57.1\%$
+ \\
+            &Precision & $59.2\%$ &  $64.2\%$ &  $68.4\%$ & $70.6\%$  \\
+            & F1       & $39.9\%$ &  $47.7\%$ &  $53.9\%$ & $59.9\%$ \\
+    \midrule
+    \multirow{3}{*}{GenHMM}
+            & Accuracy & $52.4\%$ & $62.0\%$ &  $69.7\%$ & $74.3\%$ \\
+            &Precision & $60.0\%$ &  $65.9\%$ &  $71.7\%$ & $74.8\%$  \\
+            & F1       & $52.5\%$ &  $62.0\%$ &  $69.3\%$ & $73.5\%$ \\
     \bottomrule                                                                  
   \end{tabular}
   \vspace{0.1cm}
@@ -679,17 +720,30 @@ Similar experiments are carried out by using only the MFCC coefficients as featu
   \label{tab:acc-classification39f_noise_type}
   \vspace{-0.1cm}
   \centering
-  \begin{tabular}{l|c|c|c|c}
+  \begin{tabular}{l|l|c|c|c|c}
     \toprule
-    {Noise Type} &  White &  Pink &  Babble & Volvo  \\  \midrule
-    GMM-HMM & $44.2\%$ &  $48.8\%$ &  $57.7\%$ & $66.6\%$  \\ \midrule
-    GenHMM & $62.0\%$ & $65.1\%$ &  $70.0\%$ & $75.7\%$ \\ 
+    \multirow{2}{*}{Model} & \multirow{2}{*}{Criterion} &
+                              \multicolumn{4}{c}{Noise Type} \\
+    \cline{3-6}
+    
+                           &  &  White &  Pink &  Babble & Volvo  \\
+    \midrule
+    \multirow{3}{*}{GMM-HMM}
+            & Accuracy & $44.2\%$ &  $48.8\%$ &  $57.7\%$ & $66.6\%$
+    \\
+            &Precision & $64.2\%$ &  $66.1\%$ &  $67.0\%$ & $71.9\%$  \\
+            & F1       & $47.7\%$ &  $52.3\%$ &  $59.7\%$ & $67.8\%$ \\
+    \midrule
+    \multirow{3}{*}{GenHMM}
+            & Accuracy & $62.0\%$ &  $65.1\%$ &  $70.0\%$ & $75.7\%$ \\
+            &Precision & $65.9\%$ &  $67.8\%$ &  $70.4\%$ & $75.9\%$  \\
+            & F1       & $62.0\%$ &  $64.6\%$ &  $69.0\%$ & $75.3\%$ \\
     \bottomrule                                                                  
   \end{tabular}
   \vspace{0.3cm}
 \end{table}
 
-Apart from standard classification testing, we also test the robustness of our model to noise perturbations. We train GenHMM with $K=3$ by clean TIMIT training data in the case of folded $39$ phonemes with $39$ dimensional features. The testing dataset is perturbed by either the same type of noise with different signal-to-noise ratio (SNR) as shown in table~\ref{tab:acc-classification39f_noise_snr}, or different type of noises with the same SNR as shown in table~\ref{tab:acc-classification39f_noise_type}. The noise data is from NOISEX-92 database. The baseline of these two sets of experiments is the accuracy testing of GenHMM and GMM-HMM on clean testing data in the same experimental condition, where GenHMM has $77.7\%$ and GMM-HMM gets $68.0\%$ as shown in table~\ref{tab:acc-classification39f_a}. It is shown in table~\ref{tab:acc-classification39f_noise_snr} that GMM-HMM's performance degenerates more than GenHMM's performance at the same level of noise perturbation, though the accuracy of both models increases along the increase of SNR. Especially, for SNR=$30$dB, the accuracy of GenHMM drops only about $3\%$ (from $77.7\%$ to $74.3\%$), while GMM-HMM encounters more than $10\%$ decrease (from $68.0\%$ to $57.1\%$) due to the noise perturbation. In table~\ref{tab:acc-classification39f_noise_type}, the SNR remains constant and GenHMM is tested with perturbation of different noise types. It is shown that GenHMM still has higher accuracy at different types of noise perturbations than GMM-HMM. Among these four types of noise, white noise shows most significant impact to GenHMM while the impact of volvo noise is negligible.
+Apart from standard classification testing, we also test the robustness of our model to noise perturbations. We train GenHMM with $K=3$ by clean TIMIT training data in the case of folded $39$ phonemes with $39$ dimensional features. The testing dataset is perturbed by either the same type of noise with different signal-to-noise ratio (SNR) as shown in table~\ref{tab:acc-classification39f_noise_snr}, or different type of noises with the same SNR as shown in table~\ref{tab:acc-classification39f_noise_type}. The noise data is from NOISEX-92 database. The baseline of these two sets of experiments is the accuracy testing of GenHMM and GMM-HMM on clean testing data in the same experimental condition, where GenHMM has $77.7\%$ and GMM-HMM gets $68.0\%$ as shown in table~\ref{tab:acc-classification39f_a}. Similar superior performance of GenHMM with regarding to precision and F1 scores is also shown. It is shown in table~\ref{tab:acc-classification39f_noise_snr} that GMM-HMM's performance degenerates more than GenHMM's performance at the same level of noise perturbation, though the accuracy of both models increases along the increase of SNR. Especially, for SNR=$30$dB, the accuracy of GenHMM drops only about $3\%$ (from $77.7\%$ to $74.3\%$), while GMM-HMM encounters more than $10\%$ decrease (from $68.0\%$ to $57.1\%$) due to the noise perturbation. In table~\ref{tab:acc-classification39f_noise_type}, the SNR remains constant and GenHMM is tested with perturbation of different noise types. It is shown that GenHMM still has higher accuracy at different types of noise perturbations than GMM-HMM. Among these four types of noise, white noise shows most significant impact to GenHMM while the impact of volvo noise is negligible.
 
 
 \section{Conclusion}
