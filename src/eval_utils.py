@@ -1,6 +1,6 @@
 from sklearn.metrics import mean_squared_error, accuracy_score,\
                             roc_auc_score, precision_score,\
-                            recall_score, average_precision_score
+                            recall_score, average_precision_score, f1_score
 from parse import parse
 from sklearn.preprocessing import OneHotEncoder
 import numpy as np
@@ -10,10 +10,11 @@ import subprocess
 
 eval_metrics = {"MSE": lambda y_true, y_hat: mean_squared_error(y_true, y_hat),
                 "Acc": lambda y_true, y_hat: accuracy_score(y_true, cont_to_binary(y_hat,n=y_true.shape[1])),
-                "AUROC": lambda y_true, y_hat: roc_auc_score(y_true, y_hat),
-                "p": lambda y_true, y_hat: partial(precision_score, average="macro")(y_true, cont_to_binary(y_hat,n=y_true.shape[1])),
-                "r": lambda y_true, y_hat: partial(recall_score, average="macro")(y_true, cont_to_binary(y_hat,n=y_true.shape[1])),
-                "avgPr": lambda y_true, y_hat: partial(average_precision_score, average="macro")(y_true, y_hat)
+                "AUROC": lambda y_true, y_hat: roc_auc_score(y_true, y_hat, "weighted"),
+                "p": lambda y_true, y_hat: partial(precision_score, average="weighted")(y_true, cont_to_binary(y_hat,n=y_true.shape[1])),
+                "r": lambda y_true, y_hat: partial(recall_score, average="weighted")(y_true, cont_to_binary(y_hat,n=y_true.shape[1])),
+                "avgPr": lambda y_true, y_hat: partial(average_precision_score, average="weighted")(y_true, y_hat),
+                "f1": lambda y_true, y_hat: partial(f1_score, average="weighted")(y_true, cont_to_binary(y_hat,n=y_true.shape[1]))
                 }
 
 
