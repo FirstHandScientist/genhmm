@@ -8,6 +8,13 @@ from torch import nn, distributions
 from gm_hmm.src._torch_hmmc import _compute_log_xi_sum, _forward, _backward
 from gm_hmm.src.utils import step_learning_rate_decay, load_model, save_model, to_device, data_read_parse,pad_data,TheDataset, get_freer_gpu
 from torch.utils.data import DataLoader
+import torch.multiprocessing as mp
+from functools import partial
+
+try:
+     mp.set_start_method('spawn', force=True)
+except RuntimeError:
+    print("start error")
 
 
 class GenHMMclassifier(nn.Module):
@@ -103,11 +110,16 @@ class GenHMMclassifier(nn.Module):
                     for genhmm in self.hmms:
                         genhmm.optimizer.zero_grad()
                     y = torch.nn.functional.one_hot(b[-1].long(), nclasses).transpose(0,1).bool()
-                    llh = torch.stack([genhmm.get_logprob(genhmm.networks,
-                                                        [b[0].to(genhmm.device),\
-                                                         b[1].to(genhmm.device)]\
-                                                        ).to(results_device)
-                                       for genhmm in self.hmms]).squeeze()
+                    f_p = partial(partial_function, b=b, results_device=results_device)
+                    # with mp.Pool(2 * torch.cuda.device_count()) as pool_multiple:
+                    #     out= pool_multiple.map(f_p, self.hmms)
+                    out = [f_p(x) for x in self.hmms]
+                    llh = torch.stack(out).squeeze()
+                    # llh = torch.stack([genhmm.get_logprob(genhmm.networks,
+                    #                                     [b[0].to(genhmm.device),\
+                    #                                      b[1].to(genhmm.device)]\
+                    #                                     ).to(results_device)
+                    #                    for genhmm in self.hmms]).squeeze()
 
                     denom = torch.logsumexp(llh + log_pclass, dim=0)
                     num = llh[y] + log_pclass.repeat(1, y.shape[1])[y]
@@ -734,3 +746,7 @@ def normalize(a, axis=None):
     a_sum = a.sum(axis, keepdim=True)
     a_sum[a_sum==0] = 1
     a /= a_sum
+
+
+def partial_function(genhmm, b=None, results_device=None):
+    return genhmm.get_logprob(genhmm.networks, [b[0].to(genhmm.device),b[1].to(genhmm.device)]).to(results_device)
