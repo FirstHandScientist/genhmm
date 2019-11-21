@@ -53,7 +53,7 @@ class GenHMMclassifier(nn.Module):
 
         print("Results device:", results_device, file=sys.stderr)
 
-        self.hmms = [genhmm.train().pushto(results_device)
+        self.hmms = [genhmm.train().pushto(get_freer_gpu())
                      for genhmm in self.hmms]
         
         nclasses = len(self.hmms)
@@ -84,7 +84,7 @@ class GenHMMclassifier(nn.Module):
                      self.hmms[i].networks.reshape(-1).tolist()], []), lr=self.hmms[i].lr)
             ada_lr = step_learning_rate_decay(init_lr=self.hmms[i].lr,
                                           global_step=self.hmms[i].global_step,
-                                          minimum=1e-4,
+                                          minimum=1e-3,
                                           anneal_rate=0.98)
 
             for j, param_group in enumerate(self.hmms[i].optimizer.param_groups):
@@ -103,20 +103,18 @@ class GenHMMclassifier(nn.Module):
                     for genhmm in self.hmms:
                         genhmm.optimizer.zero_grad()
                     y = torch.nn.functional.one_hot(b[-1].long(), nclasses).transpose(0,1).bool()
-                    # print(log_pclass.repeat(1, y.shape[1])[y])
-                    if b[0].device != results_device:
-                        b[0], b[1] = b[0].to(results_device), b[1].to(results_device)
                     llh = torch.stack([genhmm.get_logprob(genhmm.networks,
-                                                        [b[0],b[1]]  
-                                                        )
+                                                        [b[0].to(genhmm.device),\
+                                                         b[1].to(genhmm.device)]\
+                                                        ).to(results_device)
                                        for genhmm in self.hmms]).squeeze()
 
                     denom = torch.logsumexp(llh + log_pclass, dim=0)
                     num = llh[y] + log_pclass.repeat(1, y.shape[1])[y]
                     loss = - (num - denom).sum()/float(batch_size)
                     loss.backward()
-                    print("Tune_iteration, n:", tune_n, i,
-                          "on :", llh.device, "Loss:", loss.data, file=sys.stderr)
+                    print("Tune_iteration, n:", tune_n, i, \
+                          "Loss:", loss.data, file=sys.stderr)
 
                     for genhmm in self.hmms:
                         genhmm.optimizer.step()
@@ -128,7 +126,7 @@ class GenHMMclassifier(nn.Module):
             genhmm._update_old_networks()
             genhmm.old_eval()
             genhmm.eval()
-            genhmm.pushto("cpu")
+            # genhmm.pushto("cpu")
 
         print("here")
         return self
