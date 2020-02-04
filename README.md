@@ -1,5 +1,7 @@
 # Powering HMM by Generative Models
 
+Code for our work: [Powering Hidden Markov Model by Neural Network based Generative Models](https://arxiv.org/abs/1910.05744)
+
 ### Virtual environment
 Create a virtual environment with a python3 interpreter, in the newly created `gm_hmm/` directory.
 ```bash
