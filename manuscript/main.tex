@@ -275,7 +275,7 @@ We can see that the solution of $\bm{H}$ depends on the posterior probability $p
 
 With such a solution framework ready for GenHMM, there are still remaining problems to address before it can be employed for practical usage, including
 \begin{itemize}
-\item how to realize GenHMM by neural network based generators such that likelihoond of their induced distributions can be computed explicitly and exactly?
+\item how to realize GenHMM by neural network based generators such that likelihood of their induced distributions can be computed explicitly and exactly?
 \item how to train GenHMM to solve problem in \eqref{eq:ml-of-hmm} using practical algorithm?
 \item would the training of GenHMM converge?
 \end{itemize}
@@ -314,7 +314,7 @@ $\bm{g}_{s,\kappa}=\bm{g}_{s,\kappa}^{[L]}\circ \bm{g}_{s,\kappa}^{[L-1]}\circ \
     \draw[dotted,line width = 0.3 mm] (xi2) -- (xi3);
   \end{tikzpicture}
 \end{equation*}
-where $\bm{f}_{s,\kappa}^{[l]}$ is the $l$-th layer of $\bm{f}_{s,\kappa}$. We have $\bm{z}=\bm{f}_{s,\kappa}(\bm{x})$. If every layer of $\bm{g}_{s,\kappa}$ is invertible, the full feed-forward neural network is invertible. Flow model, proposed in \cite{DBLP:journals/corr/DinhKB14} as an image generating model, is such an invertible feed-forward layer-wise neural network. It is further improved in subsquential works \cite{2016arXiv160508803D,kingma2018glow} for high-fidelity and high-resolution image generating and representation. As shown in \eqref{eq:changel-variable}, the challenge lies at the computation of Jacobin determinant. {Another track of flow models uses a continuous-depth models instead. The variable change is defined by an ordinary differential equation implemented by a neural network \cite{NIPS2018_7892, DBLP:grathwohl2018FFJORD}, where the key becomes to solve the ODE problem. We use the layer-wise flow model to model the variable change in \eqref{eq:changel-variable} in which the efficient Jacobian computation is available.}
+where $\bm{f}_{s,\kappa}^{[l]}$ is the $l$-th layer of $\bm{f}_{s,\kappa}$. We have $\bm{z}=\bm{f}_{s,\kappa}(\bm{x})$. If every layer of $\bm{g}_{s,\kappa}$ is invertible, the full feed-forward neural network is invertible. Flow model, proposed in \cite{DBLP:journals/corr/DinhKB14} as an image generating model, is such an invertible feed-forward layer-wise neural network. It is further improved in subsquential works \cite{2016arXiv160508803D,kingma2018glow} for high-fidelity and high-resolution image generating and representation. As shown in \eqref{eq:changel-variable}, the challenge lies at the computation of Jacobian determinant. {Another track of flow models uses a continuous-depth models instead. The variable change is defined by an ordinary differential equation implemented by a neural network \cite{NIPS2018_7892, DBLP:grathwohl2018FFJORD}, where the key becomes to solve the ODE problem. We use the layer-wise flow model to model the variable change in \eqref{eq:changel-variable} in which the efficient Jacobian computation is available.}
 
 For a flow model, let us assume that
 the feature $\bm{h}_l$ at the $l$'th layer has two subparts as
@@ -488,7 +488,7 @@ where
   \bar{\xi}_{i,j} = \sum_{r= 1}^{R} \sum_{t= 1}^{T^{r}-1}{p(\smtr{s}{t}{r}=i, \smtr{s}{t+1}{r}=j| \ubmr{x}{r}; \bm{H}^{\mathrm{old}})}.
 \end{equation}
 \subsection{On Convergence of GenHMM}
-In pursuit of representing a dataset by GenHMM,  we are interested if the learning solution discussed in subsection~\ref{subsec:optmGenHMM} would convergence. The properties on GenHMM's convergence are analyzed as follows.
+In pursuit of representing a dataset by GenHMM,  we are interested if the learning solution discussed in subsection~\ref{subsec:optmGenHMM} would converge. The properties on GenHMM's convergence are analyzed as follows.
 
 \begin{prop}\label{proposition1}
   Assume that parameter $\bm{\Theta} = \left\{ \bm{\theta}_{s,\kappa}| s\in \Ss, \kappa=1, 2, \cdots, K \right\}$ is in a compact set,  $\bm{f}_{s,\kappa}$ and  ${\nabla\bm{f}_{s,\kappa}}$ are continuous w.r.t. ${\bm\theta}_{s,\kappa}$ in GenHMM. Then GenHMM converges.
@@ -593,9 +593,9 @@ As described by the pseudocode in Algorithm~\ref{algo:genhmm}, the learning of G
 
 
 \section{Experiments}
-To show the validity of our model, we implement our model in PyTorch and test it with sequential data. We first discuss the experimental setups and then show the experimental results.
+To show the validity of our model, we implement our model in PyTorch and test it with sequential data. We first discuss the experimental setups and then show the experimental results. Code for experiments is available at {https://github.com/FirstHandScientist/genhmm}.
 
-\subsection{Experimental Setups}
+\subsection{Experimental Setup}
 The dataset used for sequential data modeling and classification is TIMIT where the speech signal is sampled at $16$kHz.
 The TIMIT dataset consists of $5300$ phoneme-labeled speech utterances which are partitioned into two sets: {a train set consists of $4620$ utterance, and a test set consists of $1680$ utterances.} There are totally $61$ different types of phones in TIMIT.
 We performed experiments in two cases: i) full $61$-phoneme classification case; ii) $39$-phonme classification case, where $61$ phonemes are folded onto $39$ phonemes as described in \cite{Perdigao11}.
@@ -614,7 +614,7 @@ i.e. $p_{s,\kappa}(\bm{z})$ is the density function of standard
 Gaussian. The configuration for each generator is shown as Table~\ref{table:generator-setting}.
 
 \begin{table}
-  \caption{Configuration of generators in Experiments}\label{table:generator-setting}
+  \caption{Configuration of generators of GenHMM in Experiments}\label{table:generator-setting}
   \centering
   \begin{tabular}{l|c}
     \toprule
@@ -636,7 +636,6 @@ For each GenHMM, the number of states is adapted to the training dataset.
 The exact number of states is decided by computing the average length of MFCC frames per phone in training dataset, and clipping the average length into $\left\{ 3,4,5 \right\}$.
 Transition matrix $\bm{A}$ is initialized as upper triangular matrix for GenHMM.
 
-\subsection{Experimental Results}
 
 \begin{table}
   \caption{Test accuracy table for $39$ dimensional features and folded $39$ phonemes.}\label{tab:acc-classification39f_a}
@@ -676,6 +675,10 @@ Transition matrix $\bm{A}$ is initialized as upper triangular matrix for GenHMM.
   \end{tabular}
   \vspace{0.5cm}
 \end{table}
+
+
+\subsection{Experimental Results}
+
 We firstly show the phoneme classification using 39 dimensional MFCC features (MFCC coefficients, deltas, and delta-deltas), to validate one possible usage of our proposed model. Since generative training is carried out in our experiments, GMM-HMM is trained and tested as a reference model in our experiments. Training and testing of GMM-HMM is in the same condition as GenHMMs are trained and tested. Dataset usage for GenMM and GMM-HMM is the same, and number of states for GMM-HMM is the same as that for GenHMM in modeling each phoneme. Apart from setting the reference model, we also run the experiment comparisons with different total number of mixture components.
 
 Table \ref{tab:acc-classification39f_a} and \ref{tab:acc-classification39f_b} shows the results for this experiments, in which we test both the folded $39$-phoneme classification case (the conventional way) in Table~\ref{tab:acc-classification39f_a} and the $61$-phoneme classification case in Table~\ref{tab:acc-classification39f_b}. As shown in both $61$-phoneme and $39$-phoneme cases, GenHMM gets significant higher accuracy than GMM-HMM for the same number of mixture components. The comparisons with regarding to precision and F1 scores show similar trends and also demonstrate significant improvement of GenHMM's performance. As our expectation, GenHMM has better modeling capacity of sequential data since we bring in the neural network based generators into GenHMM, which should be able to represent complex relationship between states of HMM and sequential data. Apart from the gain of using neural network based generative models, there are also increases of accuracy, precision and F1 scores as the number of mixture components in GenHMM is increased from $K=1$ to $K=5$. The sequential dependency of data is modeled by HMM itself, while each state of HMM can have better representation using a mixture probabilistic model if data represented by the state is multi-mode. Comparing the results in $39$-phoneme and $61$-phoneme cases, GenHMM gets higher accuracy for $39$-phoneme classification than it does for $61$-phoneme classification. The total training dataset size remains the same as $61$ phonemes are folded into $39$ phonemes. There are less training data available per phonemes and more classes to be recognized in the $61$-phoneme case, which makes the task more challenging.
