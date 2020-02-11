@@ -15,6 +15,10 @@ class Rescale(torch.nn.Module):
         return x
 
 class RealNVP(torch.nn.Module):
+    """
+    RealNVP module.
+    Adapted from https://github.com/senya-ashukha/real-nvp-pytorch
+    """
     def __init__(self, nets, mask, prior):
         super(RealNVP, self).__init__()
         
