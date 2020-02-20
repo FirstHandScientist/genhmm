@@ -3,6 +3,12 @@
 Code for our work: [Powering Hidden Markov Model by Neural Network based Generative Models](https://arxiv.org/abs/1910.05744)
 
 ### Virtual environment
+Please rename the default directory "genhmm" into "gm_hmm"  (current module importing depents on this directory name), e.g.
+```bash
+$ mv genhmm gm_hmm
+```
+and create the environment as follows.
+
 Create a virtual environment with a python3 interpreter, in the newly created `gm_hmm/` directory.
 ```bash
 $ cd gm_hmm
